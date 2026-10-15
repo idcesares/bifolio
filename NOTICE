@@ -1,0 +1,10 @@
+Bifolio
+Copyright 2026 Isaac D'Césares
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Bifolio is an independent implementation. See PROVENANCE.md.
+
+Third-party components and fonts bundled with the application are listed,
+with their licenses, in the in-app "Open source licenses" screen and in
+docs/design/FONTS.md.

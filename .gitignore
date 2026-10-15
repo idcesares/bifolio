@@ -1,0 +1,31 @@
+# Gradle and build
+.gradle/
+build/
+**/build/
+.kotlin/
+captures/
+*.apk
+*.aab
+*.ap_
+output-metadata.json
+
+# Local config and secrets
+local.properties
+keystore.properties
+*.jks
+*.keystore
+signing/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+.externalNativeBuild/
+.cxx/
+
+# Claude Code local files
+.claude/settings.local.json
+.claude/worktrees/
+
+# Generated test data
+testdata/generated/
