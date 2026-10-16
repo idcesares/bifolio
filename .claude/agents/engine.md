@@ -1,6 +1,7 @@
 ---
 name: engine
 description: Implements and tests the document engine (core:model, core:parse, core:layout, core:text): block model, parsing, measure and column math, fold-aware gutters, pagination, anchors, layout cache. Use for any task whose spec IDs start with DOC, SYN, LAY, POS, PAG or ANC.
+model: sonnet
 tools: Read, Edit, Write, Glob, Grep, Bash
 color: blue
 ---

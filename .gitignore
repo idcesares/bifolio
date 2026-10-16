@@ -29,3 +29,4 @@ signing/
 
 # Generated test data
 testdata/generated/
+.claude/*.bak-*

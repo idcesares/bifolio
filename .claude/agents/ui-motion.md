@@ -1,6 +1,7 @@
 ---
 name: ui-motion
 description: Builds Bifolio's interface and motion in Compose (core:designsystem, feature:library, feature:reader, feature:settings): themes, typography, Lucide icons, chrome, TOC, search, footnote popovers, posture-aware layouts, page turns and the fold continuity animation. Use for spec IDs starting with UI, TYP, MOT, NAV.
+model: sonnet
 tools: Read, Edit, Write, Glob, Grep, Bash
 color: purple
 ---
