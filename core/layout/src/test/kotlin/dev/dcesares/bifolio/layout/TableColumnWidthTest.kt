@@ -38,7 +38,10 @@ class TableColumnWidthTest {
     @Test
     fun `when the longest words alone exceed the column the table scrolls and no cell is narrower than its word`() {
         val table = tableDraw("| Alphabetical | Descriptions |\n| --- | --- |\n| a | b |\n", 200)
-        assertTrue(table.totalWidth > table.available, "framed figure scrolls: ${table.totalWidth} vs ${table.available}")
+        assertTrue(
+            table.totalWidth > table.available,
+            "framed figure scrolls: ${table.totalWidth} vs ${table.available}",
+        )
         assertTrue(table.cells[0].width >= 120)
         assertTrue(table.cells[1].width >= 120)
     }

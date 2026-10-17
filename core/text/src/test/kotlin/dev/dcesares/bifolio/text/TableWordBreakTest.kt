@@ -5,8 +5,8 @@ import dev.dcesares.bifolio.layout.FlowMetrics
 import dev.dcesares.bifolio.layout.GeometryCalculator
 import dev.dcesares.bifolio.layout.PageDetailer
 import dev.dcesares.bifolio.layout.Paginator
+import dev.dcesares.bifolio.layout.TextLeaf
 import dev.dcesares.bifolio.layout.WindowSpec
-import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.parse.MarkdownParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -48,18 +48,10 @@ class TableWordBreakTest {
         val draw = PageDetailer(doc, measurer, geometry).detail(flow.pages.first(), 0)
         val rows = draw.items.filterIsInstance<DrawTableRow>()
         assertTrue("the table is drawn", rows.isNotEmpty())
-        val broken = ArrayList<String>()
-        for (row in rows) {
-            for (cell in row.cells) {
-                val leaf = cell.leaf ?: continue
-                val m = measurer.measureLines(leaf.text, leaf.role, leaf.width, leaf.styles)
-                for (i in 0 until m.count - 1) {
-                    val last = leaf.text[m.ends[i] - 1]
-                    if (!last.isWhitespace()) broken.add("'${leaf.text}' breaks after '${last}' in line $i")
-                }
-            }
-        }
-        return broken
+        return rows
+            .flatMap { it.cells }
+            .mapNotNull { it.leaf }
+            .flatMap { leaf -> midWordBreaks(measurer, leaf) }
     }
 
     @Test
@@ -67,4 +59,14 @@ class TableWordBreakTest {
 
     @Test
     fun `no table cell breaks inside a word at 200 percent`() = assertEquals(emptyList<String>(), brokenWords(2f))
+
+    private fun midWordBreaks(
+        measurer: StaticLayoutBlockMeasurer,
+        leaf: TextLeaf,
+    ): List<String> {
+        val m = measurer.measureLines(leaf.text, leaf.role, leaf.width, leaf.styles)
+        return (0 until m.count - 1)
+            .filter { !leaf.text[m.ends[it] - 1].isWhitespace() }
+            .map { "'${leaf.text}' breaks inside a word in line $it" }
+    }
 }

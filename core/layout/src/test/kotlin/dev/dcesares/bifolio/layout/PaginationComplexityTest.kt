@@ -4,10 +4,10 @@ import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.Block
 import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.parse.MarkdownParser
-import kotlin.random.Random
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import kotlin.random.Random
 
 /** Measurer wrapper that counts calls and characters measured. */
 private class CountingMeasurer(
@@ -46,11 +46,16 @@ class PaginationComplexityTest {
         words: Int,
     ): String {
         val rng = Random(seed)
-        val vocab = "the of and to in that is was for with as his on be at by this had not are but from or have".split(' ')
+        val vocab =
+            "the of and to in that is was for with as his on be at by this had not are but from or have".split(
+                ' ',
+            )
         val out = StringBuilder()
         var count = 0
         var chapter = 0
+
         fun sentence() = (1..rng.nextInt(8, 22)).joinToString(" ") { vocab[rng.nextInt(vocab.size)] } + "."
+
         fun paragraph() = (1..rng.nextInt(3, 8)).joinToString(" ") { sentence() }
         while (count < words) {
             out.append("# Chapter ${++chapter}\n\n")
@@ -58,8 +63,11 @@ class PaginationComplexityTest {
                 when (rng.nextInt(8)) {
                     0 -> out.append(List(rng.nextInt(2, 6)) { "- ${sentence()}" }.joinToString("\n")).append("\n\n")
                     1 -> out.append("> ${paragraph()}\n\n")
-                    3 -> out.append("```\n").append(List(rng.nextInt(4, 14)) { "let v$it = $it" }.joinToString("\n"))
-                        .append("\n```\n\n")
+                    3 ->
+                        out
+                            .append("```\n")
+                            .append(List(rng.nextInt(4, 14)) { "let v$it = $it" }.joinToString("\n"))
+                            .append("\n```\n\n")
                     else -> out.append(paragraph()).append("\n\n")
                 }
                 count += 80
@@ -71,7 +79,8 @@ class PaginationComplexityTest {
     private fun run(
         doc: Document,
         measurer: CountingMeasurer,
-    ): Int = Paginator(doc, measurer, testGeometry(lines = 30, columns = 1, columnWidth = 400)).paginateAll()!!.pages.size
+    ): Int =
+        Paginator(doc, measurer, testGeometry(lines = 30, columns = 1, columnWidth = 400)).paginateAll()!!.pages.size
 
     @Test
     fun `doubling the document at most doubles measurements`() {
@@ -114,7 +123,11 @@ class PaginationComplexityTest {
         val page = flow.pages[flow.pages.size / 2]
         detailer.detail(page, 0)
         detailer.detail(page, 0)
-        val blocksOnPage = page.slices.map { it.blockIndex }.distinct().size
+        val blocksOnPage =
+            page.slices
+                .map { it.blockIndex }
+                .distinct()
+                .size
         assertTrue(counting.lineCalls - before <= blocksOnPage * 4, "detail measured ${counting.lineCalls - before}")
     }
 }
