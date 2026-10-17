@@ -121,7 +121,7 @@ Normative words: **MUST** is required for v1.0. **SHOULD** is expected unless an
 | SYN-12 | Math: `$...$` inline, `$$...$$` and fenced `math` display | Native renderer (ADR-0006); on parse failure show the TeX source in monospace with a subtle error mark |
 | SYN-13 | YAML front matter | Metadata card at top; `title` used as document title; `lang` sets hyphenation locale |
 | SYN-14 | Mermaid fences | Source shown as code with a "Diagram (not rendered)" label |
-| SYN-15 | Horizontal rules | Centered ornament spacing, never a page break |
+| SYN-15 | Horizontal rules | Centered ornament spacing, never a page break (it does not force one and is never split; it may sit at the top of a page) |
 
 ---
 
@@ -145,7 +145,7 @@ All values in px at the current density; `W` is the usable window width after in
 | LAY-05 | `outerMargin = max(20dp, 0.06 × W)` per side, rounded to whole px. User margin setting scales this by 0.75, 1.0 or 1.35 |
 | LAY-06 | `baseGap = max(32dp, 2.5 × charW)` |
 | LAY-07 | **Auto columns:** `cols = clamp(floor((W − 2·outerMargin + baseGap) / (minMeasure + baseGap)), 1, 3)` |
-| LAY-08 | **Forced columns** (user chose 1, 2 or 3) act as a **maximum**: `cols = min(userChoice, autoColsWithFloor)` where `autoColsWithFloor` uses a floor of `34 × charW` instead of `minMeasure`. A forced count that cannot fit drops columns silently |
+| LAY-08 | **Forced columns** (user chose 1, 2 or 3) act as a **maximum**: `cols = min(userChoice, autoColsWithFloor)` where `autoColsWithFloor` uses a floor of `34 × charW` instead of `minMeasure`. A forced count that cannot fit drops columns silently. `maxMeasure` bounds only the single-column layout: with 2 or 3 columns each column takes the available width divided evenly, never below the floor. Page height is the window height minus two vertical margins, each `min(outerMargin, H / 8)` |
 | LAY-09 | If `cols == 1` and the column would exceed `maxMeasure`, the column is centered and the extra width becomes margin |
 | LAY-10 | If a **separating vertical fold** intersects the window, `cols` MUST be even (round down to 2 if 3; force 2 if 1 and each side fits `34 × charW`) |
 
@@ -180,10 +180,10 @@ All values in px at the current density; `W` is the usable window width after in
 | PAG-03 | **Keep with next:** a heading MUST be followed by at least 2 lines of its next block on the same page; otherwise the heading moves to the next page |
 | PAG-04 | Code blocks split between lines (never inside a line). A continued code block shows a quiet continuation mark at the top of the next page |
 | PAG-05 | Quotes and callouts split by line; the left rule is continuous on both pages; the callout title is not repeated |
-| PAG-06 | Tables never split inside a row. A table taller than a page splits between rows and repeats the header row. A table wider than its column renders as a framed figure that scrolls horizontally inside the page and can open full screen on tap |
+| PAG-06 | Tables never split inside a row. A table taller than a page splits between rows and repeats the header row. A table wider than its column renders as a framed figure that scrolls horizontally inside the page and can open full screen on tap. A row taller than an empty column is placed alone on its page and may overflow it (clip or inner scroll is a UI decision). A split never leaves only the header on a page that already has content: the whole table moves to the next page. The continuation mark is drawn in the margin and takes no line height |
 | PAG-07 | Images, display math and front matter cards are atomic. They scale to fit the column width and at most 85% of page height. If an atomic block does not fit the remaining space, it moves to the next page and the remaining space stays empty (no reflow of later text above it in v1) |
 | PAG-08 | List items split like paragraphs; the marker stays with the first line |
-| PAG-09 | Pagination MUST be **anchored and lazy**: lay out the spread containing the anchor first, then the neighbours (at least ±2 spreads), then the rest in the background. The total page count is estimated until the background pass finishes, and the estimate is visibly marked as approximate in progress UI only if it changes by more than 5% |
+| PAG-09 | Pagination MUST be **anchored and lazy**: lay out the spread containing the anchor first, then the neighbours (at least ±2 spreads), then the rest in the background. The total page count is estimated until the background pass finishes, and the estimate is visibly marked as approximate in progress UI only if it changes by more than 5%. The provisional window starts at the anchor line and may break pages differently from the canonical pagination; the invariant is that the anchor is on the first provisional page and on the spread returned for it in the canonical and complete runs |
 | PAG-10 | A layout cache MUST key on (document content hash, geometry hash). Returning to a previous geometry (fold then unfold) reuses it |
 | PAG-11 | Page identity is the anchor of its first slice, never an integer index alone |
 | PAG-12 | A spread advances by `cols` pages. The first page of the document starts in the leftmost column (left-to-right documents). The final spread may contain empty columns; the last page ends with a small end ornament |
