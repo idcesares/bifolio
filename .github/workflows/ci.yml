@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Static checks, policy and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Accept SDK licenses and install platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Policy (PRV-01 to PRV-03, ADR-0001 licenses)
+        run: ./gradlew checkPolicy
+
+      - name: Static checks (QA-04)
+        run: ./gradlew ktlintCheck detekt lintDebug
+
+      - name: Unit tests, including build-logic
+        run: ./gradlew testDebugUnitTest :core:model:test :core:parse:test :core:layout:test :build-logic:convention:test
+
+      - name: Debug build
+        run: ./gradlew :app:assembleDebug
