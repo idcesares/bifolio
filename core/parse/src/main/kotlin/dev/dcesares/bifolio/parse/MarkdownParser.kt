@@ -22,7 +22,7 @@ public object MarkdownParser {
                     StrikethroughExtension.create(),
                     TaskListItemsExtension.create(),
                 ),
-            ).includeSourceSpans(IncludeSourceSpans.BLOCKS)
+            ).includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
             .build()
 
     /**
@@ -32,7 +32,7 @@ public object MarkdownParser {
     public fun parse(text: String): Document {
         val source = TextDecoder.normalizeLineEndings(text)
         val root = parser.parse(source)
-        val converter = BlockConverter(source.length, ::summaryInlines)
+        val converter = BlockConverter(source, ::summaryInlines)
         val blocks = converter.convertChildren(root, 0)
         val title =
             blocks
@@ -42,7 +42,7 @@ public object MarkdownParser {
     }
 
     private fun summaryInlines(markdown: String): List<Inline> {
-        val blocks = BlockConverter(markdown.length) { emptyList() }.convertChildren(parser.parse(markdown), 0)
-        return (blocks.singleOrNull() as? Paragraph)?.content ?: InlineConverter.plainLines(markdown)
+        val blocks = BlockConverter(markdown) { emptyList() }.convertChildren(parser.parse(markdown), 0)
+        return (blocks.singleOrNull() as? Paragraph)?.content ?: InlineConverter(markdown).plainLines(markdown)
     }
 }

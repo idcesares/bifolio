@@ -43,10 +43,12 @@ internal const val MAX_NESTING = 32
  * Containers deeper than [MAX_NESTING] are flattened into their parent, never dropped (DOC-08).
  */
 internal class BlockConverter(
-    private val sourceLength: Int,
+    private val source: String,
     private val inlineParser: (String) -> List<Inline>,
 ) {
     private val slugs = SlugGenerator()
+    private val inlines = InlineConverter(source)
+    private val sourceLength = source.length
 
     fun convertChildren(
         parent: Node,
@@ -80,10 +82,10 @@ internal class BlockConverter(
         val range = rangeOf(node)
         when (node) {
             is CmHeading -> {
-                val content = InlineConverter.convert(node)
+                val content = inlines.convert(node)
                 out.add(Heading(node.level, content, slugs.next(plainText(content)), range))
             }
-            is CmParagraph -> out.add(Paragraph(InlineConverter.convert(node), range))
+            is CmParagraph -> out.add(Paragraph(inlines.convert(node), range))
             is CmListBlock -> convertList(node, depth, range, out)
             is CmBlockQuote ->
                 if (depth >=
@@ -104,8 +106,8 @@ internal class BlockConverter(
             is FencedCodeBlock -> out.add(CodeBlock(languageOf(node.info), trimOneNewline(node.literal), true, range))
             is IndentedCodeBlock -> out.add(CodeBlock(null, trimOneNewline(node.literal), false, range))
             is CmThematicBreak -> out.add(ThematicBreak(range))
-            is HtmlBlock -> out.add(Paragraph(InlineConverter.plainLines(node.literal.trimEnd('\n')), range))
-            is TableBlock -> out.add(TableConverter.convert(node, range))
+            is HtmlBlock -> out.add(Paragraph(inlines.plainLines(node.literal.trimEnd('\n'), range), range))
+            is TableBlock -> out.add(TableConverter.convert(node, range, inlines))
             else -> Unit
         }
     }
@@ -152,12 +154,12 @@ internal class BlockConverter(
         val open = nodes[index] as HtmlBlock
         val openRange = rangeOf(open)
         val head = DetailsHtml.parseOpening(open.literal)
-        val summary = head.summaryMarkdown?.let(inlineParser) ?: emptyList()
+        val summary = summaryInlines(head.summaryMarkdown, openRange)
         val inner = ArrayList<Block>()
         val innerDepth = depth + 1
         if (head.bodyBeforeClose.isNotBlank()) {
             inner.add(
-                Paragraph(InlineConverter.plainLines(head.bodyBeforeClose.trim()), openRange),
+                Paragraph(inlines.plainLines(head.bodyBeforeClose.trim(), openRange), openRange),
             )
         }
         var end = openRange.end
@@ -173,12 +175,12 @@ internal class BlockConverter(
                 val parts = DetailsHtml.splitAtClose(closeBlock.literal)
                 if (parts.before.isNotBlank()) {
                     inner.add(
-                        Paragraph(InlineConverter.plainLines(parts.before.trim()), closeRange),
+                        Paragraph(inlines.plainLines(parts.before.trim(), closeRange), closeRange),
                     )
                 }
                 if (parts.after.isNotBlank()) {
                     trailing =
-                        Paragraph(InlineConverter.plainLines(parts.after.trim()), closeRange)
+                        Paragraph(inlines.plainLines(parts.after.trim(), closeRange), closeRange)
                 }
                 end = if (trailing == null) closeRange.end else closeRange.start
                 next = close + 1
@@ -187,7 +189,7 @@ internal class BlockConverter(
                 next = stop
             }
         } else if (head.after.isNotBlank()) {
-            trailing = Paragraph(InlineConverter.plainLines(head.after.trim()), openRange)
+            trailing = Paragraph(inlines.plainLines(head.after.trim(), openRange), openRange)
         }
         val range = SourceRange(openRange.start, maxOf(openRange.start, end))
         if (depth >= MAX_NESTING) {
@@ -197,6 +199,18 @@ internal class BlockConverter(
         }
         trailing?.let { out.add(it) }
         return next
+    }
+
+    /** Parses the summary text and moves its ranges from the substring to document offsets. */
+    private fun summaryInlines(
+        markdown: String?,
+        openRange: SourceRange,
+    ): List<Inline> {
+        if (markdown == null) return emptyList()
+        val parsed = inlineParser(markdown)
+        val at = source.indexOf(markdown, openRange.start)
+        val inside = at >= 0 && at + markdown.length <= openRange.end
+        return shiftRanges(parsed, if (inside) at else null)
     }
 
     private fun findClosingBlock(
@@ -282,6 +296,7 @@ internal object TableConverter {
     fun convert(
         table: TableBlock,
         range: SourceRange,
+        inlines: InlineConverter,
     ): Table {
         var header: List<CmTableCell> = emptyList()
         val bodyRows = ArrayList<List<CmTableCell>>()
@@ -301,12 +316,12 @@ internal object TableConverter {
             bodyRows.map { cells ->
                 TableRow(
                     List(columns) { c ->
-                        cells.getOrNull(c)?.let { TableCell(InlineConverter.convert(it)) }
+                        cells.getOrNull(c)?.let { TableCell(inlines.convert(it)) }
                             ?: TableCell(emptyList())
                     },
                 )
             }
-        return Table(alignments, TableRow(header.map { TableCell(InlineConverter.convert(it)) }), rows, range)
+        return Table(alignments, TableRow(header.map { TableCell(inlines.convert(it)) }), rows, range)
     }
 
     private fun alignmentOf(cell: CmTableCell): ColumnAlignment =

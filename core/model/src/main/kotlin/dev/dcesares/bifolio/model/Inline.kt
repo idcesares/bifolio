@@ -3,10 +3,20 @@ package dev.dcesares.bifolio.model
 /** Styles carried by the HTML subset allowed by DOC-09. */
 public enum class InlineStyle { SUBSCRIPT, SUPERSCRIPT, KEYBOARD, MARK, UNDERLINE }
 
-/** Inline content of text blocks. Immutable. */
+/**
+ * Inline content of text blocks. Immutable.
+ *
+ * Inlines that produce rendered text ([Text], [Code], [Image], [InlineMath]) carry `range`: the window of
+ * [Document.source] the rendered text comes from (ADR-0005). The rendered text may be shorter than the window
+ * (markers, escapes and entities are dropped), never longer, and its characters appear in the window in order.
+ * It is null when the origin is unknown; the layout then aligns the text itself. Breaks have no range: a break
+ * is the gap between its neighbours' ranges.
+ */
 public sealed interface Inline {
     public data class Text(
         val text: String,
+        /** Source window of the text; includes escapes and entities, so it can be longer than [text]. */
+        val range: SourceRange? = null,
     ) : Inline
 
     public data class Emphasis(
@@ -23,6 +33,8 @@ public sealed interface Inline {
 
     public data class Code(
         val text: String,
+        /** Source window of the code span content, without the backtick delimiters. */
+        val range: SourceRange? = null,
     ) : Inline
 
     public data class Link(
@@ -46,6 +58,8 @@ public sealed interface Inline {
         val source: String,
         val title: String?,
         val alt: String,
+        /** Source window of the whole image syntax; the alt text is a subsequence of it. */
+        val range: SourceRange? = null,
     ) : Inline
 
     /** Reserved for M5 (SYN-09). */
@@ -56,6 +70,8 @@ public sealed interface Inline {
     /** Reserved for M5 (SYN-12). */
     public data class InlineMath(
         val tex: String,
+        /** Source window of the TeX source. */
+        val range: SourceRange? = null,
     ) : Inline
 }
 
