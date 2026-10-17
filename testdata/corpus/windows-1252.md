@@ -1,0 +1,3 @@
+# Windows 1252
+
+Café, ação, “aspas curvas”, € 10, travessão – e reticências…
