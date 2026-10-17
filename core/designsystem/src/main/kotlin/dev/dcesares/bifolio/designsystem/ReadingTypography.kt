@@ -29,6 +29,7 @@ private const val BODY_LINE_HEIGHT = 1.5f
 private const val CODE_SCALE = 0.88f
 private const val CODE_LINE_HEIGHT = 1.45f
 private const val CAPTION_SCALE = 0.8f
+private const val CAPTION_LINE_HEIGHT = 1.4f
 private const val PARAGRAPH_GAP_LINES = 0.6f
 private const val H5_TRACKING = 0.04f
 private const val H5_INDEX = 4
@@ -86,7 +87,12 @@ public fun readingTypography(
                 fontSize = (size * CODE_SCALE).sp,
                 lineHeight = (size * CODE_SCALE * CODE_LINE_HEIGHT).sp,
             ),
-        caption = body.copy(fontSize = (size * CAPTION_SCALE).sp, color = palette.inkMuted),
+        caption =
+            body.copy(
+                fontSize = (size * CAPTION_SCALE).sp,
+                lineHeight = (size * CAPTION_SCALE * CAPTION_LINE_HEIGHT).sp,
+                color = palette.inkMuted,
+            ),
         paragraphGapEm = PARAGRAPH_GAP_LINES * BODY_LINE_HEIGHT,
     )
 }

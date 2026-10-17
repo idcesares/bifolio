@@ -13,6 +13,9 @@ public object Spacing {
     public val Xxl: Dp = 32.dp
     public val Xxxl: Dp = 48.dp
 
+    /** Progress hairlines (UI-05 uses 2dp). */
+    public val Hairline: Dp = 2.dp
+
     /** Minimum touch target. */
     public val TouchTarget: Dp = 48.dp
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">Library</string>
+    <string name="library_open_action">Open document</string>
+    <string name="library_empty_message">Open a Markdown file to start reading. Bifolio remembers your place.</string>
+    <string name="library_recents_heading">Recent</string>
+    <string name="library_remove_description">Remove %1$s from recents</string>
+    <string name="library_last_read">Last read %1$s</string>
+    <string name="library_progress">%1$d%% read</string>
+    <string name="library_meta_separator">%1$s · %2$s</string>
+    <string name="library_notice_unreadable">Could not open that file. If it moved or was deleted, remove it from recents.</string>
+    <string name="library_notice_dismiss">Dismiss</string>
+</resources>

@@ -97,6 +97,20 @@ public object BifolioIcons {
             lineTo(12f, 8f)
         }
 
+    public val ChevronRight: ImageVector =
+        icon("chevron-right") {
+            moveTo(9f, 5f)
+            lineTo(16f, 12f)
+            lineTo(9f, 19f)
+        }
+
+    public val ChevronDown: ImageVector =
+        icon("chevron-down") {
+            moveTo(5f, 9f)
+            lineTo(12f, 16f)
+            lineTo(19f, 9f)
+        }
+
     public val ChevronLeft: ImageVector =
         icon("chevron-left") {
             moveTo(15f, 5f)
