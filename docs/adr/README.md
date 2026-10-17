@@ -16,6 +16,7 @@ Each ADR records one decision, its context and its consequences. ADRs are immuta
 | [0010](0010-window-and-fold-detection.md) | Layout from window metrics and WindowManager folds | Accepted |
 | [0011](0011-testing-strategy.md) | Testing strategy and verification ladder | Accepted |
 | [0012](0012-android-runtime-dependencies.md) | Android runtime and UI test dependencies for M1 | Accepted |
+| [0013](0013-text-measurer-threading.md) | Text measurer on StaticLayout, off the main thread | Accepted |
 
 Template for new ADRs:
 
