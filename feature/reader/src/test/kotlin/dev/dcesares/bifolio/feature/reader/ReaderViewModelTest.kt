@@ -1,6 +1,7 @@
 package dev.dcesares.bifolio.feature.reader
 
 import dev.dcesares.bifolio.data.ContentHash
+import dev.dcesares.bifolio.data.ReadingPreferences
 import dev.dcesares.bifolio.data.RecentsRepository
 import dev.dcesares.bifolio.data.UriGrants
 import dev.dcesares.bifolio.model.Anchor
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Test
 import java.io.File
 import java.io.IOException
 
-private class RecordingGrants : UriGrants {
+internal class RecordingGrants : UriGrants {
     val held = mutableSetOf<String>()
 
     override fun take(uri: String): Boolean = held.add(uri)
@@ -32,19 +33,19 @@ private class RecordingGrants : UriGrants {
     override fun isHeld(uri: String): Boolean = uri in held
 }
 
-private class FakeReader(
+internal class FakeReader(
     private val files: Map<String, RawDocument>,
 ) : DocumentReader {
     override suspend fun read(uri: String): RawDocument = files[uri] ?: throw IOException("missing $uri")
 }
 
-private fun raw(
+internal fun raw(
     text: String,
     name: String? = "doc.md",
     declaredSize: Long? = null,
 ) = RawDocument(name, declaredSize ?: text.toByteArray().size.toLong(), text.toByteArray())
 
-private const val MIB = 1024L * 1024L
+internal const val MIB = 1024L * 1024L
 
 /** DOC-01 (octet-stream by name), DOC-02 (grants), DOC-05 (size policy), DOC-03 (notice), ANC-02 (anchor save). */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -63,6 +64,7 @@ class ReaderViewModelTest {
         ReaderViewModel(
             reader = FakeReader(files.toMap()),
             repository = repo,
+            preferences = ReadingPreferences(InMemoryPreferences()),
             clock = { now },
             computeDispatcher = Dispatchers.Main,
         )

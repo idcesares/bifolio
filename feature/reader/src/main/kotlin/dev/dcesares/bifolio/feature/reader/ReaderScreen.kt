@@ -2,6 +2,7 @@ package dev.dcesares.bifolio.feature.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,6 +37,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -43,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.dcesares.bifolio.data.ReadingMode
 import dev.dcesares.bifolio.designsystem.BifolioButton
 import dev.dcesares.bifolio.designsystem.BifolioIcon
 import dev.dcesares.bifolio.designsystem.BifolioIcons
@@ -57,6 +61,9 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+/** Same thirds as the page turn zones (NAV-02): the middle 40% is not a turn. */
+private const val CENTER_START = 0.30f
+private const val CENTER_END = 0.70f
 private const val BIG_HEADING_GAP = 1.5f
 private const val HEADING_AFTER_GAP = 0.5f
 private const val BIG_HEADING_MAX_LEVEL = 2
@@ -69,8 +76,33 @@ public fun ReaderRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val mode by viewModel.mode.collectAsStateWithLifecycle()
     when (val current = state) {
-        is ReaderUiState.Ready -> ReaderScreen(current, viewModel::onAnchorSettled, modifier)
+        is ReaderUiState.Ready ->
+            // A new surface per document and mode; the anchor carries the place across (ANC-04).
+            key(current.contentHash, mode) {
+                if (mode == ReadingMode.PAGED) {
+                    val paged by viewModel.paged.collectAsStateWithLifecycle()
+                    PagedSurface(
+                        layout = paged,
+                        initialAnchor = viewModel.anchor.value,
+                        onRequest = viewModel::paginate,
+                        onSettled = viewModel::onAnchorSettled,
+                        onFirstDrawn = viewModel::onFirstSpreadDrawn,
+                        onToggleMode = viewModel::toggleMode,
+                        modifier = modifier,
+                        notices = current.notices,
+                    )
+                } else {
+                    ReaderScreen(
+                        ready = current,
+                        onAnchorSettled = viewModel::onAnchorSettled,
+                        modifier = modifier,
+                        startAnchor = viewModel.anchor.value,
+                        onToggleMode = viewModel::toggleMode,
+                    )
+                }
+            }
         is ReaderUiState.Failed -> ReaderFailure(current.reason, onBack, modifier)
         ReaderUiState.Idle, ReaderUiState.Loading ->
             Box(modifier.fillMaxSize().background(BifolioTheme.palette.page))
@@ -86,13 +118,15 @@ public fun ReaderScreen(
     ready: ReaderUiState.Ready,
     onAnchorSettled: (Anchor) -> Unit,
     modifier: Modifier = Modifier,
+    startAnchor: Anchor = ready.initialAnchor,
+    onToggleMode: (() -> Unit)? = null,
 ) {
     val palette = BifolioTheme.palette
     val blocks = ready.document.blocks
     val gap = paragraphGap()
     val reducedMotion = rememberReducedMotion()
     val scope = rememberCoroutineScope()
-    val start = ready.initialAnchor.blockIndex.coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
+    val start = startAnchor.blockIndex.coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = start)
     val slugs = remember(blocks) { SlugIndex(blocks) }
     val onLink =
@@ -109,7 +143,7 @@ public fun ReaderScreen(
         }
 
     LaunchedEffect(ready.contentHash) {
-        val anchor = ready.initialAnchor
+        val anchor = startAnchor
         val blockLength = blocks.getOrNull(start)?.range?.length ?: 0
         if (anchor.blockIndex == start && anchor.charOffset > 0 && blockLength > 0) {
             val height =
@@ -136,7 +170,20 @@ public fun ReaderScreen(
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val direction = LocalLayoutDirection.current
 
-    BoxWithConstraints(modifier.fillMaxSize().background(palette.page)) {
+    BoxWithConstraints(
+        modifier
+            .fillMaxSize()
+            .background(palette.page)
+            // TODO(M4): the center tap summons the chrome (NAV-02). Until it exists it switches the reading mode.
+            .pointerInput(onToggleMode) {
+                if (onToggleMode != null) {
+                    detectTapGestures { offset ->
+                        val x = offset.x / size.width
+                        if (x in CENTER_START..CENTER_END) onToggleMode()
+                    }
+                }
+            },
+    ) {
         val insetStart = insets.calculateStartPadding(direction)
         val insetEnd = insets.calculateEndPadding(direction)
         val usable = maxWidth - insetStart - insetEnd
@@ -184,7 +231,7 @@ private fun headingTop(
 ): Dp = if (level <= BIG_HEADING_MAX_LEVEL) gap * BIG_HEADING_GAP else gap
 
 @Composable
-private fun NoticeStack(
+internal fun NoticeStack(
     notices: Set<ReaderNotice>,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,

@@ -142,7 +142,7 @@ internal fun BlockContent(
 }
 
 @Composable
-private fun calloutLabel(kind: CalloutKind): String =
+internal fun calloutLabel(kind: CalloutKind): String =
     stringResource(
         when (kind) {
             CalloutKind.NOTE -> R.string.reader_callout_note

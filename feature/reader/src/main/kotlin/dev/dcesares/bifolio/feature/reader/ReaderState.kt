@@ -33,5 +33,7 @@ public sealed interface ReaderUiState {
         public val notices: Set<ReaderNotice>,
         /** Where to resume: the anchor stored for this content, clamped to the document. */
         public val initialAnchor: Anchor,
+        /** Too large for pages: always scroll, whatever the reading mode says (DOC-05). */
+        public val scrollOnly: Boolean = false,
     ) : ReaderUiState
 }

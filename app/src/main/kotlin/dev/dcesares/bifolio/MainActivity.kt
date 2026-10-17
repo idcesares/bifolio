@@ -1,8 +1,10 @@
 package dev.dcesares.bifolio
 
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -24,6 +26,7 @@ import dev.dcesares.bifolio.feature.library.LibraryViewModel
 import dev.dcesares.bifolio.feature.reader.ContentResolverDocumentReader
 import dev.dcesares.bifolio.feature.reader.FailureReason
 import dev.dcesares.bifolio.feature.reader.OpenRequest
+import dev.dcesares.bifolio.feature.reader.PerfLog
 import dev.dcesares.bifolio.feature.reader.ReaderRoute
 import dev.dcesares.bifolio.feature.reader.ReaderUiState
 import dev.dcesares.bifolio.feature.reader.ReaderViewModel
@@ -36,12 +39,22 @@ private const val KEY_EXTERNAL = "open.external"
 class MainActivity : ComponentActivity() {
     private val app get() = application as BifolioApp
 
+    /** Debug builds write the PRF-04 timings to logcat under the tag below. Release builds log nothing. */
+    private fun perfLog(): PerfLog =
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            PerfLog { name, millis -> Log.i("BifolioPerf", "$name=${millis}ms") }
+        } else {
+            PerfLog.None
+        }
+
     private val reader: ReaderViewModel by viewModels {
         viewModelFactory {
             initializer {
                 ReaderViewModel(
-                    ContentResolverDocumentReader(contentResolver),
-                    app.recents,
+                    reader = ContentResolverDocumentReader(contentResolver),
+                    repository = app.recents,
+                    preferences = app.readingPreferences,
+                    perf = perfLog(),
                 )
             }
         }
