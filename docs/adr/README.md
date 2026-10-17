@@ -15,6 +15,7 @@ Each ADR records one decision, its context and its consequences. ADRs are immuta
 | [0009](0009-fonts-and-icons.md) | Bundled OFL fonts and Lucide icons | Accepted, licenses pending OPN-03, OPN-04 |
 | [0010](0010-window-and-fold-detection.md) | Layout from window metrics and WindowManager folds | Accepted |
 | [0011](0011-testing-strategy.md) | Testing strategy and verification ladder | Accepted |
+| [0012](0012-android-runtime-dependencies.md) | Android runtime and UI test dependencies for M1 | Accepted |
 
 Template for new ADRs:
 

@@ -11,6 +11,7 @@ dependencies {
     implementation(libs.plugins.android.application.toDep())
     implementation(libs.plugins.kotlin.jvm.toDep())
     implementation(libs.plugins.kotlin.compose.toDep())
+    implementation(libs.plugins.roborazzi.toDep())
     implementation(libs.plugins.ktlint.toDep())
     implementation(libs.plugins.detekt.toDep())
 }
