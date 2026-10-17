@@ -75,20 +75,40 @@ internal class TableFlattener(
     ): IntArray {
         val pad = 2 * metrics.tableCellPadding
         val natural = IntArray(columns)
+        val word = IntArray(columns)
         for ((r, row) in cells.withIndex()) {
             val role = if (r == 0) TextRole.TABLE_HEADER else TextRole.TABLE_CELL
             for (c in 0 until columns) {
-                natural[c] = maxOf(natural[c], measurer.intrinsicWidth(row[c].text, role, row[c].styles) + pad)
+                val cell = row[c]
+                natural[c] = maxOf(natural[c], measurer.intrinsicWidth(cell.text, role, cell.styles) + pad)
+                word[c] = maxOf(word[c], longestWord(cell, role) + pad)
             }
         }
         val total = natural.sum()
-        return when {
-            total <= width || columns * metrics.tableMinColumn > width -> natural
-            else ->
-                IntArray(
-                    columns,
-                ) { c -> maxOf(metrics.tableMinColumn, (width.toLong() * natural[c] / total).toInt()) }
-        }
+        if (total <= width) return natural
+        // A column never goes below its longest word (no mid-word breaks), nor below the readable minimum
+        // unless its content is narrower than that. If even those minimums do not fit, the table scrolls.
+        val floor = IntArray(columns) { c -> minOf(natural[c], maxOf(word[c], metrics.tableMinColumn)) }
+        val floorTotal = floor.sum()
+        if (floorTotal > width) return natural
+        val demand = natural.indices.sumOf { (natural[it] - floor[it]).toLong() }
+        val spare = (width - floorTotal).toLong()
+        return IntArray(columns) { c -> floor[c] + (spare * (natural[c] - floor[c]) / demand).toInt() }
+    }
+
+    /**
+     * Width of the widest unbreakable word of [cell]. Whitespace becomes a newline, which keeps every character
+     * offset (so style runs still apply) and makes the longest "line" of the measurer the longest word.
+     */
+    private fun longestWord(
+        cell: Rendered,
+        role: TextRole,
+    ): Int {
+        val text = cell.text
+        if (text.isEmpty()) return 0
+        val chars = text.toCharArray()
+        for (i in chars.indices) if (chars[i].isWhitespace()) chars[i] = '\n'
+        return measurer.intrinsicWidth(String(chars), role, cell.styles)
     }
 
     private fun sourceLineStarts(block: Table): IntArray {
