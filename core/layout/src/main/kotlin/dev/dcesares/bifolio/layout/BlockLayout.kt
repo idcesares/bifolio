@@ -16,6 +16,7 @@ internal class Units(
  * paragraph is one unit; every line of code and every table row is its own unit; a heading, a rule and an
  * atomic block is one unit that must stay whole ([unitKeep]).
  */
+@Suppress("LongParameterList") // Parallel arrays of one immutable value; grouping them would only add indirection.
 internal class BlockLayout(
     /** Line top and bottom in px from the top of the block. Nondecreasing. */
     val tops: IntArray,
@@ -31,6 +32,8 @@ internal class BlockLayout(
     val headerHeight: Int,
     /** True for headings (PAG-03). */
     val keepWithNext: Boolean,
+    /** What to draw for each line (indent, text leaf, decorations). */
+    val draw: LineDraws,
 ) {
     val lineCount: Int get() = tops.size
 
@@ -99,6 +102,16 @@ internal class BlockLayoutBuilder {
     private var unitFirst = IntArray(INITIAL)
     private var unitLength = IntArray(INITIAL)
     private var unitKeep = BooleanArray(INITIAL)
+    private var kinds = IntArray(INITIAL)
+    private var xs = IntArray(INITIAL)
+    private var ws = IntArray(INITIAL)
+    private var leaves = arrayOfNulls<TextLeaf>(INITIAL)
+    private var leafTops = IntArray(INITIAL)
+    private var leafBottoms = IntArray(INITIAL)
+    private var tables = arrayOfNulls<TableDraw>(INITIAL)
+    private var callouts = IntArray(INITIAL)
+    private val markers = ArrayList<MarkerRec>()
+    private val bars = ArrayList<BarRec>()
     var lineCount = 0
         private set
     private var unitCount = 0
@@ -155,6 +168,36 @@ internal class BlockLayoutBuilder {
         lineCount++
     }
 
+    /** Describes how the line just added is drawn. */
+    fun draw(
+        kind: Int,
+        x: Int,
+        width: Int,
+        leaf: TextLeaf? = null,
+        leafTop: Int = 0,
+        leafBottom: Int = 0,
+        table: TableDraw? = null,
+        callout: Int = 0,
+    ) {
+        val i = lineCount - 1
+        kinds[i] = kind
+        xs[i] = x
+        ws[i] = width
+        leaves[i] = leaf
+        leafTops[i] = leafTop
+        leafBottoms[i] = leafBottom
+        tables[i] = table
+        callouts[i] = callout
+    }
+
+    fun marker(rec: MarkerRec) {
+        markers.add(rec)
+    }
+
+    fun bar(rec: BarRec) {
+        bars.add(rec)
+    }
+
     /** Moves [y] below the lines just added; [consumed] is the run height measured from [y]. */
     fun advance(consumed: Int) {
         y += consumed
@@ -168,6 +211,14 @@ internal class BlockLayoutBuilder {
         srcEnd = srcEnd.copyOf(n)
         chars = chars.copyOf(n)
         unitOf = unitOf.copyOf(n)
+        kinds = kinds.copyOf(n)
+        xs = xs.copyOf(n)
+        ws = ws.copyOf(n)
+        leaves = leaves.copyOf(n)
+        leafTops = leafTops.copyOf(n)
+        leafBottoms = leafBottoms.copyOf(n)
+        tables = tables.copyOf(n)
+        callouts = callouts.copyOf(n)
     }
 
     fun build(keepWithNext: Boolean): BlockLayout =
@@ -187,9 +238,72 @@ internal class BlockLayoutBuilder {
             headerLines = headerLines,
             headerHeight = headerHeight,
             keepWithNext = keepWithNext,
+            draw =
+                LineDraws(
+                    kinds.copyOf(lineCount),
+                    xs.copyOf(lineCount),
+                    ws.copyOf(lineCount),
+                    leaves.copyOf(lineCount),
+                    leafTops.copyOf(lineCount),
+                    leafBottoms.copyOf(lineCount),
+                    tables.copyOf(lineCount),
+                    callouts.copyOf(lineCount),
+                    markers.toList(),
+                    bars.toList(),
+                ),
         )
 
     private companion object {
         const val INITIAL = 16
     }
 }
+
+/** What a flattened line is, for drawing. */
+internal object LineKind {
+    const val TEXT = 0
+    const val CODE = 1
+    const val RULE = 2
+    const val ATOMIC = 3
+    const val TABLE_ROW = 4
+    const val TITLE = 5
+}
+
+internal class MarkerRec(
+    val line: Int,
+    val x: Int,
+    val width: Int,
+    val kind: MarkerKind,
+    val number: Int,
+)
+
+internal class BarRec(
+    val firstLine: Int,
+    val lastLine: Int,
+    val x: Int,
+    val kind: BarKind,
+)
+
+internal class TableDraw(
+    val cells: List<DrawCell>,
+    val totalWidth: Int,
+    val header: Boolean,
+    /** Width the table may use before it has to scroll. */
+    val available: Int,
+)
+
+/** Per-line drawing data of a [BlockLayout], parallel to its line arrays. */
+@Suppress("LongParameterList") // Parallel per-line arrays, same shape as BlockLayout.
+internal class LineDraws(
+    val kind: IntArray,
+    val x: IntArray,
+    val width: IntArray,
+    val leaf: Array<TextLeaf?>,
+    /** Top and bottom of the line inside its leaf, in px. */
+    val leafTop: IntArray,
+    val leafBottom: IntArray,
+    val table: Array<TableDraw?>,
+    /** Ordinal of the callout kind for [LineKind.TITLE] lines. */
+    val callout: IntArray,
+    val markers: List<MarkerRec>,
+    val bars: List<BarRec>,
+)

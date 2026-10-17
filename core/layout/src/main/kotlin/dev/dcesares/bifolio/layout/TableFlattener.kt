@@ -1,9 +1,9 @@
 package dev.dcesares.bifolio.layout
 
+import dev.dcesares.bifolio.model.ColumnAlignment
 import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.model.Table
 import dev.dcesares.bifolio.model.TableRow
-import dev.dcesares.bifolio.model.plainText
 
 /**
  * Flattens a GFM table into one line per row (PAG-06). The header is row 0 and is repeated on continuation
@@ -18,22 +18,42 @@ internal class TableFlattener(
     fun flatten(
         block: Table,
         width: Int,
+        x: Int,
         top: Int,
         out: BlockLayoutBuilder,
     ) {
         val rows = ArrayList<TableRow>(block.rows.size + 1)
         rows.add(block.header)
         rows.addAll(block.rows)
-        val texts = Array(rows.size) { r -> Array(block.columnCount) { c -> cellText(rows[r], c) } }
-        val widths = columnWidths(texts, block.columnCount, width)
+        val columns = block.columnCount
+        val cells = Array(rows.size) { r -> Array(columns) { c -> cell(rows[r], c) } }
+        val widths = columnWidths(cells, columns, width)
+        val total = widths.sum()
+        val pad = 2 * metrics.tableCellPadding
         val lineStarts = sourceLineStarts(block)
         out.beginRun()
         for (r in rows.indices) {
-            val h = rowHeight(texts[r], widths)
+            val role = if (r == 0) TextRole.TABLE_HEADER else TextRole.TABLE_CELL
+            var h = 0
+            var left = 0
+            var chars = 0
+            val drawn = ArrayList<DrawCell>(columns)
+            for (c in 0 until columns) {
+                val cell = cells[r][c]
+                val inner = maxOf(widths[c] - pad, 1)
+                val m = measurer.measureLines(cell.text.ifEmpty { " " }, role, inner, cell.styles)
+                h = maxOf(h, m.height)
+                chars += cell.text.length
+                val leaf = if (cell.text.isEmpty()) null else TextLeaf(cell.text, cell.styles, role, inner)
+                drawn.add(DrawCell(leaf, left, widths[c], block.alignments.getOrElse(c) { ColumnAlignment.NONE }))
+                left += widths[c]
+            }
+            h += pad
             val s0 = rowSource(lineStarts, block, r)
             val s1 = rowSourceEnd(lineStarts, block, r)
             out.beginUnit(false)
-            out.line(0, h, s0 - top, s1 - top, texts[r].sumOf { it.length })
+            out.line(0, h, s0 - top, s1 - top, chars)
+            out.draw(LineKind.TABLE_ROW, x, total, table = TableDraw(drawn, total, r == 0, width))
             out.advance(h)
             if (r == 0) {
                 out.headerLines = 1
@@ -42,26 +62,23 @@ internal class TableFlattener(
         }
     }
 
-    private fun cellText(
+    private fun cell(
         row: TableRow,
         column: Int,
-    ): String =
-        row.cells
-            .getOrNull(column)
-            ?.content
-            ?.let { plainText(it) } ?: ""
+    ): Rendered = RenderedText.cell(row.cells.getOrNull(column)?.content ?: emptyList())
 
     /** Natural widths when they fit; proportional wrapping when the columns stay readable; else unwrapped. */
     private fun columnWidths(
-        texts: Array<Array<String>>,
+        cells: Array<Array<Rendered>>,
         columns: Int,
         width: Int,
     ): IntArray {
         val pad = 2 * metrics.tableCellPadding
         val natural = IntArray(columns)
-        for (row in texts) {
+        for ((r, row) in cells.withIndex()) {
+            val role = if (r == 0) TextRole.TABLE_HEADER else TextRole.TABLE_CELL
             for (c in 0 until columns) {
-                natural[c] = maxOf(natural[c], measurer.intrinsicWidth(row[c], TextRole.TABLE_CELL) + pad)
+                natural[c] = maxOf(natural[c], measurer.intrinsicWidth(row[c].text, role, row[c].styles) + pad)
             }
         }
         val total = natural.sum()
@@ -72,20 +89,6 @@ internal class TableFlattener(
                     columns,
                 ) { c -> maxOf(metrics.tableMinColumn, (width.toLong() * natural[c] / total).toInt()) }
         }
-    }
-
-    private fun rowHeight(
-        cells: Array<String>,
-        widths: IntArray,
-    ): Int {
-        val pad = 2 * metrics.tableCellPadding
-        var h = 0
-        for (c in cells.indices) {
-            val text = cells[c].ifEmpty { " " }
-            val m = measurer.measureLines(text, TextRole.TABLE_CELL, maxOf(widths[c] - pad, 1))
-            h = maxOf(h, m.height)
-        }
-        return h + pad
     }
 
     private fun sourceLineStarts(block: Table): IntArray {

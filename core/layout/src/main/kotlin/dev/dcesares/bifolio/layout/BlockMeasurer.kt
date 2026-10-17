@@ -13,6 +13,7 @@ public enum class TextRole {
     HEADING_6,
     CODE,
     TABLE_CELL,
+    TABLE_HEADER,
 }
 
 /**
@@ -60,12 +61,14 @@ public interface BlockMeasurer {
         text: String,
         role: TextRole,
         widthPx: Int,
+        styles: TextStyles = TextStyles.NONE,
     ): LineMetrics
 
     /** Width in px of the longest unbroken line of [text] for [role] (used for table column sizing). */
     public fun intrinsicWidth(
         text: String,
         role: TextRole,
+        styles: TextStyles = TextStyles.NONE,
     ): Int
 
     /** Natural size of an atomic [block] when laid out at [widthPx]. The paginator scales it (PAG-07). */

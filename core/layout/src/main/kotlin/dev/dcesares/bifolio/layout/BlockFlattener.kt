@@ -15,6 +15,7 @@ import dev.dcesares.bifolio.model.MathBlock
 import dev.dcesares.bifolio.model.MermaidFence
 import dev.dcesares.bifolio.model.Paragraph
 import dev.dcesares.bifolio.model.Table
+import dev.dcesares.bifolio.model.TaskState
 import dev.dcesares.bifolio.model.ThematicBreak
 
 /**
@@ -22,6 +23,7 @@ import dev.dcesares.bifolio.model.ThematicBreak
  * turn or a re-pagination never measures the same block at the same width twice. Not thread-safe: one
  * instance per pagination run.
  */
+@Suppress("TooManyFunctions") // One small function per block kind.
 internal class BlockFlattener(
     private val document: Document,
     private val measurer: BlockMeasurer,
@@ -30,6 +32,9 @@ internal class BlockFlattener(
     private val metrics = geometry.metrics
     private val cache = HashMap<Long, BlockLayout>()
     private val tables = TableFlattener(document, measurer, metrics)
+
+    /** The callout whose title line is still to be placed in front of its first content (PAG-05). */
+    private var pendingTitle: Callout? = null
 
     val blockCount: Int get() = document.blocks.size
 
@@ -47,14 +52,23 @@ internal class BlockFlattener(
     ): BlockLayout {
         val block = document.blocks[blockIndex]
         val out = BlockLayoutBuilder()
-        flatten(block, width, block.range.start, out)
+        pendingTitle = null
+        flatten(block, Place(width, 0, block.range.start), out)
         return out.build(keepWithNext = block is Heading)
+    }
+
+    /** Where a block goes: the width left for it, its indent in the column and the source offset of its container. */
+    private class Place(
+        val width: Int,
+        val x: Int,
+        val top: Int,
+    ) {
+        fun indented(by: Int): Place = Place(maxOf(width - by, 1), x + by, top)
     }
 
     private fun flatten(
         block: Block,
-        width: Int,
-        top: Int,
+        place: Place,
         out: BlockLayoutBuilder,
     ) {
         when (block) {
@@ -62,8 +76,7 @@ internal class BlockFlattener(
                 leaf(
                     RenderedText.of(block.content, document.source, block.range.start, block.range.end),
                     headingRole(block.level),
-                    width,
-                    top,
+                    place,
                     out,
                     keep = true,
                 )
@@ -71,77 +84,109 @@ internal class BlockFlattener(
                 leaf(
                     RenderedText.of(block.content, document.source, block.range.start, block.range.end),
                     TextRole.BODY,
-                    width,
-                    top,
+                    place,
                     out,
                     keep = false,
                 )
-            is CodeBlock -> code(block.code, block, width, top, out)
-            is MermaidFence -> code(block.source, block, width, top, out)
-            is ThematicBreak -> rule(block, top, out)
-            is Table -> tables.flatten(block, width, top, out)
-            is ListBlock -> list(block, width, top, out)
-            is BlockQuote -> children(block.blocks, width - metrics.quoteIndent, top, out)
-            is Callout -> children(block.blocks, width - metrics.quoteIndent, top, out)
-            is FootnoteDefinition -> children(block.blocks, width - metrics.quoteIndent, top, out)
-            is HtmlDetails -> details(block, width, top, out)
-            is ImageBlock, is MathBlock, is FrontMatter -> atomic(block, width, top, out)
+            is CodeBlock -> code(block.code, block, place, out)
+            is MermaidFence -> code(block.source, block, place, out)
+            is ThematicBreak -> rule(block, place, out)
+            is Table -> {
+                flushTitle(place, out)
+                tables.flatten(block, place.width, place.x, place.top, out)
+            }
+            is ListBlock -> list(block, place, out)
+            is BlockQuote -> quote(block, place, out)
+            is Callout -> callout(block, place, out)
+            is FootnoteDefinition -> children(block.blocks, place.indented(metrics.quoteIndent), out)
+            is HtmlDetails -> details(block, place, out)
+            is ImageBlock, is MathBlock, is FrontMatter -> atomic(block, place, out)
         }
     }
 
     private fun children(
         blocks: List<Block>,
-        width: Int,
-        top: Int,
+        place: Place,
         out: BlockLayoutBuilder,
     ) {
-        val w = maxOf(width, 1)
         for ((i, child) in blocks.withIndex()) {
             if (i > 0) out.gap(metrics.innerGap)
-            flatten(child, w, top, out)
+            flatten(child, place, out)
         }
+    }
+
+    private fun quote(
+        block: BlockQuote,
+        place: Place,
+        out: BlockLayoutBuilder,
+    ) {
+        val first = out.lineCount
+        children(block.blocks, place.indented(metrics.quoteIndent), out)
+        if (out.lineCount > first) out.bar(BarRec(first, out.lineCount - 1, place.x, BarKind.QUOTE))
+    }
+
+    private fun callout(
+        block: Callout,
+        place: Place,
+        out: BlockLayoutBuilder,
+    ) {
+        val first = out.lineCount
+        val saved = pendingTitle
+        pendingTitle = block
+        val inner = place.indented(metrics.quoteIndent)
+        children(block.blocks, inner, out)
+        flushTitle(inner, out)
+        pendingTitle = saved
+        if (out.lineCount > first) out.bar(BarRec(first, out.lineCount - 1, place.x, BarKind.CALLOUT))
     }
 
     private fun list(
         block: ListBlock,
-        width: Int,
-        top: Int,
+        place: Place,
         out: BlockLayoutBuilder,
     ) {
-        val w = maxOf(width - metrics.listIndent, 1)
+        val inner = place.indented(metrics.listIndent)
         for ((n, item) in block.items.withIndex()) {
+            val first = out.lineCount
             for ((i, child) in item.blocks.withIndex()) {
                 when {
                     i > 0 -> out.gap(metrics.innerGap)
                     n > 0 -> out.gap(if (block.tight) 0 else metrics.innerGap)
                 }
-                flatten(child, w, top, out)
+                flatten(child, inner, out)
+            }
+            if (out.lineCount > first) {
+                val kind =
+                    when {
+                        item.task == TaskState.CHECKED -> MarkerKind.TASK_CHECKED
+                        item.task == TaskState.UNCHECKED -> MarkerKind.TASK_UNCHECKED
+                        block.ordered -> MarkerKind.NUMBER
+                        else -> MarkerKind.BULLET
+                    }
+                out.marker(MarkerRec(first, place.x, metrics.listIndent, kind, block.startNumber + n))
             }
         }
     }
 
     private fun details(
         block: HtmlDetails,
-        width: Int,
-        top: Int,
+        place: Place,
         out: BlockLayoutBuilder,
     ) {
         leaf(
             RenderedText.of(block.summary, document.source, block.range.start, block.range.end),
             TextRole.BODY,
-            width,
-            top,
+            place,
             out,
             keep = false,
         )
-        if (block.open) children(block.blocks, width - metrics.quoteIndent, top, out)
+        if (block.open) children(block.blocks, place.indented(metrics.quoteIndent), out)
     }
 
     private fun code(
         text: String,
         block: Block,
-        width: Int,
-        top: Int,
+        place: Place,
         out: BlockLayoutBuilder,
     ) {
         val fenced = (block as? CodeBlock)?.fenced ?: true
@@ -153,23 +198,27 @@ internal class BlockFlattener(
                 block.range.start
             }
         val map = CodeSourceMap.build(text, document.source, from, block.range.end)
-        leaf(Rendered(text, map), TextRole.CODE, width, top, out, keep = false, free = true)
+        leaf(Rendered(text, map), TextRole.CODE, place, out, keep = false, free = true)
     }
 
     private fun leaf(
         rendered: Rendered,
         role: TextRole,
-        width: Int,
-        top: Int,
+        place: Place,
         out: BlockLayoutBuilder,
         keep: Boolean,
         free: Boolean = false,
     ) {
         val map = rendered.map
-        val m = measurer.measureLines(rendered.text, role, maxOf(width, 1))
+        val w = maxOf(place.width, 1)
+        val top = place.top
+        val m = measurer.measureLines(rendered.text, role, w, rendered.styles)
         if (m.count == 0) return
+        val leaf = TextLeaf(rendered.text, rendered.styles, role, w)
+        val kind = if (role == TextRole.CODE) LineKind.CODE else LineKind.TEXT
         out.beginRun()
         if (!free) out.beginUnit(keep)
+        titleLine(place, out, free)
         for (i in 0 until m.count) {
             if (free) out.beginUnit(false)
             val s = m.starts[i]
@@ -177,43 +226,80 @@ internal class BlockFlattener(
             val src0 = if (out.isEmpty) 0 else map[s] - top
             val src1 = if (e > s) map[e - 1] + 1 - top else map[e] - top
             out.line(m.tops[i], m.bottoms[i], src0, src1, e - s)
+            out.draw(kind, place.x, w, leaf, m.tops[i], m.bottoms[i])
         }
         out.advance(m.bottoms[m.count - 1])
     }
 
-    private fun rule(
-        block: ThematicBreak,
-        top: Int,
+    /** Places the pending callout title as the first line of the run being built. */
+    private fun titleLine(
+        place: Place,
+        out: BlockLayoutBuilder,
+        ownUnit: Boolean,
+    ) {
+        val callout = pendingTitle ?: return
+        pendingTitle = null
+        val m = measurer.measureLines(TITLE_SAMPLE, TextRole.BODY, maxOf(place.width, 1))
+        if (m.count == 0) return
+        val h = m.bottoms[0] - m.tops[0]
+        if (ownUnit) out.beginUnit(true)
+        val src = callout.range.start - place.top
+        out.line(0, h, src, src, 0)
+        out.draw(LineKind.TITLE, place.x, place.width, callout = callout.kind.ordinal)
+        out.advance(h)
+    }
+
+    /** A callout whose first content is not text (a table, a rule) still shows its title first. */
+    private fun flushTitle(
+        place: Place,
         out: BlockLayoutBuilder,
     ) {
+        if (pendingTitle == null) return
+        out.beginRun()
+        titleLine(place, out, ownUnit = true)
+    }
+
+    private fun rule(
+        block: ThematicBreak,
+        place: Place,
+        out: BlockLayoutBuilder,
+    ) {
+        flushTitle(place, out)
         out.beginRun()
         out.beginUnit(true)
-        out.line(0, metrics.ruleHeight, block.range.start - top, block.range.end - top, 0)
+        out.line(0, metrics.ruleHeight, block.range.start - place.top, block.range.end - place.top, 0)
+        out.draw(LineKind.RULE, place.x, place.width)
         out.advance(metrics.ruleHeight)
     }
 
     /** Images, display math and front matter cards: one line, scaled to the column (PAG-07). */
     private fun atomic(
         block: Block,
-        width: Int,
-        top: Int,
+        place: Place,
         out: BlockLayoutBuilder,
     ) {
-        val size = measurer.measureAtomic(block, maxOf(width, 1))
+        flushTitle(place, out)
+        val width = maxOf(place.width, 1)
+        val size = measurer.measureAtomic(block, width)
         val maxHeight = maxOf(geometry.columnHeight * metrics.atomicMaxHeightPercent / PERCENT, 1)
         var scale = 1.0
         if (size.width > width) scale = width.toDouble() / size.width
         if (size.height * scale > maxHeight) scale = maxHeight.toDouble() / size.height
         val h = maxOf(kotlin.math.ceil(size.height * scale).toInt(), 1)
+        val w = minOf(maxOf(kotlin.math.ceil(size.width * scale).toInt(), 1), width)
         out.beginRun()
         out.beginUnit(true)
-        out.line(0, h, block.range.start - top, block.range.end - top, 0)
+        out.line(0, h, block.range.start - place.top, block.range.end - place.top, 0)
+        out.draw(LineKind.ATOMIC, place.x + (width - w) / 2, w)
         out.advance(h)
     }
 
     private companion object {
         const val WIDTH_BITS = 24
         const val PERCENT = 100
+
+        /** Longest callout label, only used to know the height of the title line. */
+        const val TITLE_SAMPLE = "Important"
 
         val HEADING_ROLES =
             arrayOf(

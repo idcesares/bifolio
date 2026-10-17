@@ -21,9 +21,10 @@ class AnchoredPaginationTest {
             text: String,
             role: TextRole,
             widthPx: Int,
+            styles: TextStyles,
         ): LineMetrics {
             textCalls++
-            return inner.measureLines(text, role, widthPx)
+            return inner.measureLines(text, role, widthPx, styles)
         }
 
         override fun measureAtomic(

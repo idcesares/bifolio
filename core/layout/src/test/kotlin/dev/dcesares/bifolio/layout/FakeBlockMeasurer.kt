@@ -16,6 +16,7 @@ internal class FakeBlockMeasurer(
         text: String,
         role: TextRole,
         widthPx: Int,
+        styles: TextStyles,
     ): LineMetrics {
         if (text.isEmpty()) return LineMetrics(0, IntArray(0), IntArray(0), IntArray(0), IntArray(0))
         val perLine = maxOf(1, widthPx / charWidth)
@@ -35,6 +36,7 @@ internal class FakeBlockMeasurer(
     override fun intrinsicWidth(
         text: String,
         role: TextRole,
+        styles: TextStyles,
     ): Int = (text.lineSequence().maxOfOrNull { it.length } ?: 0) * charWidth
 
     override fun measureAtomic(
