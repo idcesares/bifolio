@@ -22,8 +22,11 @@ import org.junit.jupiter.api.Assertions.assertTrue
  *
  * Feasibility condition, fixed before looking at any failure: PAG-03 is asserted for a heading only when the
  * heading, the gap and the lines it must carry fit one empty page. PAG-02 and the height bound are asserted
- * everywhere; the generators keep pages at 12 lines or more so that no fallback of
- * [PageComposer.next] is needed.
+ * everywhere, with exactly two exemptions, each tied to a [PageComposer.next] empty-page fallback. Both were
+ * found by running the property (table rows of 16 lines at narrow widths) and derived from the failures; they
+ * were not part of the first draft:
+ * - a page may exceed the column height only if it holds a single line, taller than an empty column;
+ * - a table header may be left alone only if its slice opens the page and header plus first row exceed a column.
  */
 internal class PaginationOracle(
     private val doc: Document,
@@ -102,6 +105,7 @@ internal class PaginationOracle(
     /** PAG-02, PAG-06, SYN-15: breaks inside a block. */
     private fun checkSplits(flow: PageFlow) {
         val all = flow.pages.flatMap { it.slices }
+        val opensPage = flow.pages.map { it.slices.first() }.toSet()
         for ((i, a) in all.withIndex()) {
             val l = layout(a.blockIndex)
             if (a.startLine > 0 && l.headerLines > 0) {
@@ -109,7 +113,7 @@ internal class PaginationOracle(
                 val body = l.height(a.startLine, a.endLine)
                 assertEquals(a.repeatedHeaderHeight + body, a.height, "$label header counted in height")
             }
-            if (a.endLine < l.lineCount) checkBreak(l, a, all[i + 1])
+            if (a.endLine < l.lineCount) checkBreak(l, a, all[i + 1], a in opensPage)
         }
     }
 
@@ -117,14 +121,16 @@ internal class PaginationOracle(
         l: BlockLayout,
         a: Slice,
         b: Slice,
+        opensPage: Boolean,
     ) {
         assertEquals(a.blockIndex, b.blockIndex, "$label $a must be continued by the next slice")
         assertEquals(a.endLine, b.startLine, "$label $a $b")
         val k = a.endLine
         if (l.headerLines > 0 && a.startLine == 0) {
-            // Infeasible only when the header and its first row cannot share an empty column.
-            val fits = l.height(0, l.headerLines + 1) <= geometry.columnHeight
-            assertTrue(k > l.headerLines || !fits, "$label table header left alone: $a")
+            // Exempt only through the empty-page fallback: the slice opens its page and the header with its
+            // first row cannot share an empty column. On a page with content the table must move instead.
+            val infeasible = opensPage && l.height(0, l.headerLines + 1) > geometry.columnHeight
+            assertTrue(k > l.headerLines || infeasible, "$label table header left alone: $a")
         }
         val u = l.units.of[k]
         val first = l.units.first[u]
