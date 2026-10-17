@@ -81,11 +81,13 @@ public fun ReaderRoute(
         is ReaderUiState.Ready ->
             // A new surface per document and mode; the anchor carries the place across (ANC-04).
             key(current.contentHash, mode) {
+                // Read once per surface: the surface owns the anchor while it is shown.
+                val start = remember { viewModel.anchor.value }
                 if (mode == ReadingMode.PAGED) {
                     val paged by viewModel.paged.collectAsStateWithLifecycle()
                     PagedSurface(
                         layout = paged,
-                        initialAnchor = viewModel.anchor.value,
+                        initialAnchor = start,
                         onRequest = viewModel::paginate,
                         onSettled = viewModel::onAnchorSettled,
                         onFirstDrawn = viewModel::onFirstSpreadDrawn,
@@ -98,7 +100,7 @@ public fun ReaderRoute(
                         ready = current,
                         onAnchorSettled = viewModel::onAnchorSettled,
                         modifier = modifier,
-                        startAnchor = viewModel.anchor.value,
+                        startAnchor = start,
                         onToggleMode = viewModel::toggleMode,
                     )
                 }

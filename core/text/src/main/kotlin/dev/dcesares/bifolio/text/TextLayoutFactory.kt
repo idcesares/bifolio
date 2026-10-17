@@ -149,7 +149,7 @@ public class TextLayoutFactory(
     ) {
         fun put(span: Any) = s.setSpan(span, from, to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         if (flags and StyleFlag.CODE != 0) {
-            put(TypefaceSpan(Typeface.MONOSPACE))
+            put(TypefaceSpan(MONOSPACE_FAMILY))
             put(RelativeSizeSpan(INLINE_CODE_SCALE))
             if (palette != null) put(BackgroundColorSpan(palette.codeSurface))
         }
@@ -227,6 +227,7 @@ public class TextLayoutFactory(
         private const val SEMI = 600
         private const val BOLD_WEIGHT = 700
         private const val INLINE_CODE_SCALE = 0.88f
+        private const val MONOSPACE_FAMILY = "monospace" // TypefaceSpan(Typeface) needs API 28; minSdk is 26.
         private const val SCRIPT_SCALE = 0.7f
         private const val LH_H1 = 1.2f
         private const val LH_H2 = 1.25f
