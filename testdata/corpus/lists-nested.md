@@ -16,6 +16,8 @@
       - Mixed bullet
 3. Third step
 
+A list that starts at five:
+
 5. Starts at five
 6. Six
 
