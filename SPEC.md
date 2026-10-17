@@ -68,7 +68,7 @@ Normative words: **MUST** is required for v1.0. **SHOULD** is expected unless an
 | Term | Meaning |
 |---|---|
 | **Document** | One decoded Markdown file plus its URI and metadata |
-| **Block** | One top-level renderable unit produced by the parser: heading, paragraph, list item, code block, table, image, display math, quote, callout, rule, front matter card, footnote definition |
+| **Block** | One top-level renderable unit produced by the parser: heading, paragraph, list (with its items as sub-units), code block, table, image, display math, quote, callout, rule, front matter card, footnote definition |
 | **Block index** | Zero-based position of a block in document order. Stable for a given document content |
 | **Measure** | Line length of a text column, expressed in characters of the body font |
 | **charW** | Average body-font character width: measured width of `abcdefghijklmnopqrstuvwxyz` divided by 26, at the current font and size |
@@ -77,7 +77,7 @@ Normative words: **MUST** is required for v1.0. **SHOULD** is expected unless an
 | **Spread** | The set of pages visible at once (1, 2 or more columns) |
 | **Slice** | The part of one block shown on one page: `(blockIndex, startLine, endLine)` for text blocks, or the whole block for atomic blocks |
 | **Geometry** | Everything that affects layout: window size in px, density, insets, folding features, column count, margins, gutter, font settings, theme metrics |
-| **Anchor** | Reading position independent of geometry: `(blockIndex, charOffset)` |
+| **Anchor** | Reading position independent of geometry: `(blockIndex, charOffset)`, where `charOffset` counts source characters from the start of the block |
 | **Separating fold** | A `FoldingFeature` that intersects the window and has `isSeparating == true`, or whose `occlusionType == FULL` |
 
 ---
@@ -92,7 +92,7 @@ Normative words: **MUST** is required for v1.0. **SHOULD** is expected unless an
 | DOC-02 | MUST open files through the Storage Access Framework (`ACTION_OPEN_DOCUMENT`) and take a persistable read permission when the provider allows it |
 | DOC-03 | MUST decode UTF-8 (with or without BOM). MUST detect UTF-16 by BOM. Other encodings: attempt Windows-1252 fallback and show a quiet notice that characters may be wrong |
 | DOC-04 | MUST normalize line endings for parsing (CRLF and CR become LF) without other changes |
-| DOC-05 | Files larger than 8 MB MUST open in scroll mode with a notice and no pagination; files larger than 32 MB MUST be refused with a clear message |
+| DOC-05 | Files larger than 8 MiB (8,388,608 bytes) MUST open in scroll mode with a notice and no pagination; files larger than 32 MiB MUST be refused with a clear message |
 
 ### 3.2 Parsing
 
