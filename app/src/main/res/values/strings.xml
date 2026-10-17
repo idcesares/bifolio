@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Bifolio</string>
+    <string name="open_failed_not_markdown">That file does not look like Markdown.</string>
+    <string name="open_failed_no_file">Nothing to open: the shared item has no file.</string>
 </resources>

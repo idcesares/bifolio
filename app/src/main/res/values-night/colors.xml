@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Night page color, DESIGN.md section 2. -->
+    <color name="page_background">#FF000000</color>
+</resources>
