@@ -39,3 +39,7 @@ public fun createRecentsRepository(context: Context): RecentsRepository {
     val app = context.applicationContext
     return RecentsRepository(app.bifolioDataStore, AndroidUriGrants(app.contentResolver))
 }
+
+/** The app-wide reading profile, on the same DataStore file as [createRecentsRepository]. */
+public fun createReadingPreferences(context: Context): ReadingPreferences =
+    ReadingPreferences(context.applicationContext.bifolioDataStore)
