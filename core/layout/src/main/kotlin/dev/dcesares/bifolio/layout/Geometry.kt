@@ -24,6 +24,8 @@ public data class FlowMetrics(
     val tableMinColumn: Int = 48,
     /** Maximum height of an atomic block as a percentage of the page height (PAG-07). */
     val atomicMaxHeightPercent: Int = 85,
+    /** Horizontal padding inside the code surface, per side. */
+    val codePadding: Int = 6,
 )
 
 /**

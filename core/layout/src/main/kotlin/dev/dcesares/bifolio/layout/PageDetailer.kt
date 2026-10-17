@@ -127,11 +127,12 @@ public class PageDetailer(
         val d = layout.draw
         val leaf = d.leaf[from]!!
         val kind = d.kind[from]
+        val pad = geometry.metrics.codePadding
         var to = from + 1
         while (to < end && d.leaf[to] === leaf && d.kind[to] == kind) to++
         val y = layout.tops[from] + offset
         val height = layout.bottoms[to - 1] + offset - y
-        if (kind == LineKind.CODE) items.add(DrawCodeSurface(d.x[from], d.width[from], y, height))
+        if (kind == LineKind.CODE) items.add(DrawCodeSurface(d.x[from] - pad, d.width[from] + 2 * pad, y, height))
         items.add(DrawText(leaf, d.x[from], y, height, d.leafTop[from], d.leafBottom[to - 1]))
         return to
     }

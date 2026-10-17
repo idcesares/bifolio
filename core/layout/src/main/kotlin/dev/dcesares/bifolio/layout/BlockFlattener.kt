@@ -198,7 +198,9 @@ internal class BlockFlattener(
                 block.range.start
             }
         val map = CodeSourceMap.build(text, document.source, from, block.range.end)
-        leaf(Rendered(text, map), TextRole.CODE, place, out, keep = false, free = true)
+        val pad = metrics.codePadding
+        val inner = Place(maxOf(place.width - 2 * pad, 1), place.x + pad, place.top)
+        leaf(Rendered(text, map), TextRole.CODE, inner, out, keep = false, free = true)
     }
 
     private fun leaf(
