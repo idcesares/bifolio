@@ -1,7 +1,9 @@
 package dev.dcesares.bifolio.text
 
 import dev.dcesares.bifolio.layout.LineMetrics
+import dev.dcesares.bifolio.layout.StyleFlag
 import dev.dcesares.bifolio.layout.TextRole
+import dev.dcesares.bifolio.layout.TextStyles
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -136,5 +138,28 @@ class StaticLayoutMeasurerTest {
         assertTrue(StaticLayoutBlockMeasurer.balanced(c, TextRole.BODY, 449))
         assertTrue(!StaticLayoutBlockMeasurer.balanced(c, TextRole.BODY, 450))
         assertTrue(StaticLayoutBlockMeasurer.balanced(c, TextRole.HEADING_2, 2000))
+    }
+
+    @Test
+    fun `the factory draws the same lines the measurer counted, with and without colors`() {
+        val config = TextStyleConfig()
+        val styles = TextStyles(intArrayOf(4, 20), intArrayOf(15, 30), intArrayOf(StyleFlag.BOLD, StyleFlag.CODE))
+        val counted = StaticLayoutBlockMeasurer(config).measureLines(prose, TextRole.BODY, 400, styles)
+        val palette = TextPalette(1, 2, 3, 4, 5, 6)
+        val drawn = TextLayoutFactory(config).layout(prose, TextRole.BODY, 400, styles, palette)
+        assertEquals(counted.count, drawn.lineCount)
+        for (i in 0 until counted.count) assertEquals(counted.ends[i], drawn.getLineEnd(i))
+    }
+
+    @Test
+    fun `bold and code runs change the measured width`() {
+        val plain = measurer.intrinsicWidth("Hello world", TextRole.BODY)
+        val bold =
+            measurer.intrinsicWidth(
+                "Hello world",
+                TextRole.BODY,
+                TextStyles(intArrayOf(0), intArrayOf(11), intArrayOf(StyleFlag.BOLD)),
+            )
+        assertTrue("bold $bold vs plain $plain", bold > plain)
     }
 }

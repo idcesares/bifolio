@@ -48,8 +48,21 @@ Rules:
 7. `BlockMeasurer` has no locale, `charW` or justify parameters, so they come through the constructor. A
    change of any of them needs a new instance and invalidates the layout cache (ADR-0004).
 
-Fonts are system fonts until M4 (ADR-0009); roles scale the body size (H1 2.0 down to H6 1.0, code 0.9,
-table cell 0.95). These factors are provisional and belong to the design tokens later.
+Fonts are system fonts until M4 (ADR-0009): serif body, monospace code. Roles scale the body size per
+TYP-07 (H1 1.75, H2 1.45, H3 1.22, H4 1.08, H5 1.0, H6 0.92, code 0.88, table 0.9) and line height is a
+factor of the font size (body from settings, headings 1.2 to 1.4, code 1.45), applied with
+`setLineSpacing(extra, 1f)`.
+
+### Amendment (M2): the reader draws what was measured
+
+8. `measureLines` and `intrinsicWidth` receive the `TextStyles` of the text (bold, italic, code, scripts,
+   links), because styles change widths. The reader never lets Compose break text in paged mode.
+9. `TextLayoutFactory` in `:core:text` is the single recipe for a layout. The measurer calls it to count
+   lines; the reader calls it with the same text, role, width and styles, plus a palette (colors never change
+   metrics), and draws the line range of each `TextLeaf` with a clip and a translate. Substrings are never
+   drawn on their own, which would lose hyphens and styles.
+10. `PageDetailer` in `:core:layout` converts a `Page` into drawing instructions (`PageDraw`) off the main
+    thread, so a page turn measures nothing.
 
 ## Consequences
 
