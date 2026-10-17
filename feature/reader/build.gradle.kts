@@ -15,4 +15,9 @@ dependencies {
     implementation(project(":core:highlight"))
     implementation(project(":core:math"))
     implementation(libs.androidx.window)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.kotlinx.coroutines.test)
 }
