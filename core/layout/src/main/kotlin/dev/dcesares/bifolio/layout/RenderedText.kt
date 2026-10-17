@@ -52,16 +52,17 @@ internal object RenderedText {
                     is Inline.Strikethrough -> walk(inline.children)
                     is Inline.Link -> walk(inline.children)
                     is Inline.Styled -> walk(inline.children)
-                    Inline.SoftBreak, Inline.HardBreak -> breakChar()
+                    Inline.SoftBreak -> breakChar(' ')
+                    Inline.HardBreak -> breakChar('\n')
                     is Inline.FootnoteReference -> Unit
                 }
             }
         }
 
-        private fun breakChar() {
+        private fun breakChar(rendered: Char) {
             reserve(1)
             map[sb.length] = cursor
-            sb.append('\n')
+            sb.append(rendered)
         }
 
         private fun leaf(

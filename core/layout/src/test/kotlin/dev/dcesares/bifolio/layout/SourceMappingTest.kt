@@ -83,7 +83,7 @@ class SourceMappingTest {
     @Test
     fun `soft and hard breaks sit between the neighbouring ranges`() {
         val (text, map) = mapOf("one\ntwo  \nthree\n")
-        assertEquals("one\ntwo\nthree", text)
+        assertEquals("one two\nthree", text)
         assertEquals(listOf(0, 1, 2, 3, 4, 5, 6, 9, 10), map.take(9))
         assertEquals(15, map[text.length])
     }
@@ -149,6 +149,14 @@ class SourceMappingTest {
         val m2 = CodeSourceMap.build(code.code, fenced.source, 4, code.range.end)
         assertEquals("x\n\ny", code.code)
         assertEquals(listOf(4, 5, 6, 7, 8), m2.take(5))
+    }
+
+    @Test
+    fun `a soft break renders as a space like the reader and does not end the line`() {
+        val doc = MarkdownParser.parse(markdown("aaa\nbbb", "ccc  \nddd"))
+        val layout = BlockFlattener(doc, FakeBlockMeasurer(), testGeometry()).layout(0, 200)
+        assertEquals(1, layout.lineCount, "soft break must not be a hard line break")
+        assertEquals(2, BlockFlattener(doc, FakeBlockMeasurer(), testGeometry()).layout(1, 200).lineCount)
     }
 
     // End to end: line -> source offset -> anchor -> same page (ANC-03, PAG-11)
