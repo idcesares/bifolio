@@ -9,6 +9,7 @@ android {
 dependencies {
     api(project(":core:layout"))
 
+    testImplementation(project(":core:parse"))
     testImplementation(libs.robolectric)
     testImplementation(libs.junit4)
     testRuntimeOnly(libs.junit.vintage.engine)
