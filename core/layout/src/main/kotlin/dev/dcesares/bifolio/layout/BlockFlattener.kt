@@ -16,7 +16,6 @@ import dev.dcesares.bifolio.model.MermaidFence
 import dev.dcesares.bifolio.model.Paragraph
 import dev.dcesares.bifolio.model.Table
 import dev.dcesares.bifolio.model.ThematicBreak
-import dev.dcesares.bifolio.model.plainText
 
 /**
  * Turns top-level blocks into [BlockLayout]s with a [BlockMeasurer], memoized per (block, width) so a page
@@ -59,8 +58,24 @@ internal class BlockFlattener(
         out: BlockLayoutBuilder,
     ) {
         when (block) {
-            is Heading -> leaf(plainText(block.content), headingRole(block.level), width, block, top, out, keep = true)
-            is Paragraph -> leaf(plainText(block.content), TextRole.BODY, width, block, top, out, keep = false)
+            is Heading ->
+                leaf(
+                    RenderedText.of(block.content, document.source, block.range.start, block.range.end),
+                    headingRole(block.level),
+                    width,
+                    top,
+                    out,
+                    keep = true,
+                )
+            is Paragraph ->
+                leaf(
+                    RenderedText.of(block.content, document.source, block.range.start, block.range.end),
+                    TextRole.BODY,
+                    width,
+                    top,
+                    out,
+                    keep = false,
+                )
             is CodeBlock -> code(block.code, block, width, top, out)
             is MermaidFence -> code(block.source, block, width, top, out)
             is ThematicBreak -> rule(block, top, out)
@@ -111,7 +126,14 @@ internal class BlockFlattener(
         top: Int,
         out: BlockLayoutBuilder,
     ) {
-        leaf(plainText(block.summary), TextRole.BODY, width, block, top, out, keep = false)
+        leaf(
+            RenderedText.of(block.summary, document.source, block.range.start, block.range.end),
+            TextRole.BODY,
+            width,
+            top,
+            out,
+            keep = false,
+        )
         if (block.open) children(block.blocks, width - metrics.quoteIndent, top, out)
     }
 
@@ -130,24 +152,23 @@ internal class BlockFlattener(
             } else {
                 block.range.start
             }
-        leaf(text, TextRole.CODE, width, block, top, out, keep = false, free = true, searchFrom = from)
+        val map = CodeSourceMap.build(text, document.source, from, block.range.end)
+        leaf(Rendered(text, map), TextRole.CODE, width, top, out, keep = false, free = true)
     }
 
     private fun leaf(
-        text: String,
+        rendered: Rendered,
         role: TextRole,
         width: Int,
-        block: Block,
         top: Int,
         out: BlockLayoutBuilder,
         keep: Boolean,
         free: Boolean = false,
-        searchFrom: Int = block.range.start,
     ) {
-        val m = measurer.measureLines(text, role, maxOf(width, 1))
+        val map = rendered.map
+        val m = measurer.measureLines(rendered.text, role, maxOf(width, 1))
         if (m.count == 0) return
         out.beginRun()
-        val map = OffsetMap.build(text, document.source, searchFrom, block.range.end)
         if (!free) out.beginUnit(keep)
         for (i in 0 until m.count) {
             if (free) out.beginUnit(false)
