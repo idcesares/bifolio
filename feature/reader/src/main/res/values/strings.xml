@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_notice_scroll_only">This file is large, so it opens as one continuous scroll without pages.</string>
+    <string name="reader_notice_windows_1252">This file is not valid UTF-8. It was read as Windows-1252, so some characters may look wrong.</string>
+    <string name="reader_notice_dismiss">Dismiss</string>
+    <string name="reader_failed_not_markdown">This file does not look like Markdown. Only files ending in .md, .markdown, .mdown or .mkd open from this source.</string>
+    <string name="reader_failed_too_large">This file is larger than 32 MiB, which is more than Bifolio opens.</string>
+    <string name="reader_failed_unreadable">Could not read this file. It may have moved, or access may have been revoked.</string>
+    <string name="reader_back_to_library">Back to library</string>
+    <string name="reader_image_placeholder">Image: %1$s</string>
+    <string name="reader_diagram_not_rendered">Diagram (not rendered)</string>
+    <string name="reader_callout_note">Note</string>
+    <string name="reader_callout_tip">Tip</string>
+    <string name="reader_callout_important">Important</string>
+    <string name="reader_callout_warning">Warning</string>
+    <string name="reader_callout_caution">Caution</string>
+    <string name="reader_details_expand">Expand</string>
+    <string name="reader_details_collapse">Collapse</string>
+    <string name="reader_task_checked">Done</string>
+    <string name="reader_task_unchecked">Not done</string>
+</resources>

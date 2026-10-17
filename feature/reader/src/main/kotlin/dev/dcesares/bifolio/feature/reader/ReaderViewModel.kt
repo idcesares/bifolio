@@ -66,10 +66,9 @@ public class ReaderViewModel(
             } catch (_: IOException) {
                 return ReaderUiState.Failed(FailureReason.Unreadable)
             }
-        if (request.mimeType == OCTET_STREAM && !isMarkdownName(raw.displayName)) {
-            return ReaderUiState.Failed(FailureReason.NotMarkdown)
-        }
-        val bytes = raw.bytes ?: return ReaderUiState.Failed(FailureReason.TooLarge)
+        val bytes = raw.bytes
+        val refusal = refusalFor(request, raw)
+        if (bytes == null || refusal != null) return ReaderUiState.Failed(refusal ?: FailureReason.TooLarge)
         val (result, hash) =
             withContext(computeDispatcher) { MarkdownLoader.load(bytes, raw.declaredSize) to ContentHash.of(bytes) }
         val loaded = result as? LoadResult.Loaded ?: return ReaderUiState.Failed(FailureReason.TooLarge)
@@ -112,6 +111,16 @@ public class ReaderViewModel(
             repository.updateProgress(uri, progress, at)
         }
     }
+
+    private fun refusalFor(
+        request: OpenRequest,
+        raw: RawDocument,
+    ): FailureReason? =
+        when {
+            request.mimeType == OCTET_STREAM && !isMarkdownName(raw.displayName) -> FailureReason.NotMarkdown
+            raw.bytes == null -> FailureReason.TooLarge
+            else -> null
+        }
 
     private fun isMarkdownName(name: String?): Boolean =
         name != null && MarkdownExtensions.any { name.endsWith(it, ignoreCase = true) }

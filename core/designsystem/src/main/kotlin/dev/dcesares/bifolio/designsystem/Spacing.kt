@@ -16,6 +16,9 @@ public object Spacing {
     /** Progress hairlines (UI-05 uses 2dp). */
     public val Hairline: Dp = 2.dp
 
+    /** Thin rules: table lines and thematic breaks. */
+    public val Rule: Dp = 1.dp
+
     /** Minimum touch target. */
     public val TouchTarget: Dp = 48.dp
 
