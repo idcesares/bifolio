@@ -30,3 +30,10 @@ signing/
 # Generated test data
 testdata/generated/
 .claude/*.bak-*
+
+# JVM crash dumps
+*.hprof
+hs_err_pid*.log
+
+# Serena
+.serena/

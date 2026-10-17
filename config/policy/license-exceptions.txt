@@ -1,0 +1,2 @@
+# group:name coordinates allowed despite the license check.
+# Each entry needs a reason and an ADR link (EPL-2.0) or a verified metadata gap.
