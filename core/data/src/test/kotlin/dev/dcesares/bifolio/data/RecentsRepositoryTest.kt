@@ -115,7 +115,7 @@ class RecentsRepositoryTest {
         }
 
     @Test
-    fun anchorRoundTripsByContentHash() =
+    fun anchorRoundTripsByUri() =
         runTest {
             val repo = RecentsRepository(store(), FakeGrants())
             assertNull(repo.anchorFor("h1"))
@@ -148,7 +148,7 @@ class RecentsRepositoryTest {
             val first = PreferenceDataStoreFactory.create(scope = scope) { file }
             RecentsRepository(first, FakeGrants()).apply {
                 upsert(doc(1))
-                saveAnchor("hash1", Anchor(4, 2))
+                saveAnchor("content://docs/1", Anchor(4, 2))
             }
             scope.coroutineContext[Job]!!.cancel()
             val second =
@@ -157,6 +157,6 @@ class RecentsRepositoryTest {
                 ) { file }
             val repo = RecentsRepository(second, FakeGrants())
             assertEquals(1, repo.recents.first().size)
-            assertEquals(Anchor(4, 2), repo.anchorFor("hash1"))
+            assertEquals(Anchor(4, 2), repo.anchorFor("content://docs/1"))
         }
 }

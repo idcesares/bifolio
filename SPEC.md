@@ -195,10 +195,10 @@ All values in px at the current density; `W` is the usable window width after in
 | ID | Requirement |
 |---|---|
 | ANC-01 | The current anchor is the first visible character of the leftmost visible column (paged) or of the topmost visible line (scroll) |
-| ANC-02 | The anchor MUST be written to `SavedStateHandle` on every settled page turn or scroll stop, and persisted per document URI at most once per second and on `onStop` |
+| ANC-02 | The anchor MUST be written to `SavedStateHandle` on every settled page turn or scroll stop, and persisted per document URI (not per content hash, so a position survives edits made in another app) at most once per second and on `onStop` |
 | ANC-03 | On any geometry change (fold, unfold, posture change, rotation, resize, font, margin, column setting, theme metric change): capture the anchor and its on-screen line rectangle, re-paginate around the anchor, show the spread containing it, then run the continuity motion (MOT-05) |
 | ANC-04 | Switching between paged and scroll modes MUST preserve the anchor |
-| ANC-05 | Reopening a document restores its last anchor. If the file changed since (content hash differs), restore by character offset clamped to the new length and show nothing alarming |
+| ANC-05 | Reopening a document restores its last anchor. If the file changed since (content hash differs), keep the stored anchor and clamp it to the new document: the block index to the last block, the character offset to the length of that block and show nothing alarming |
 | ANC-06 | A "return" chip appears after any jump (table of contents, link, search result, footnote) and returns to the pre-jump anchor. It survives geometry changes. It disappears after 8 seconds of reading or on tap |
 | ANC-07 | The Activity SHOULD handle `screenSize`, `smallestScreenSize`, `screenLayout` and `orientation` configuration changes itself so the reader recomposes in place; process death and recreation MUST still restore the anchor exactly |
 

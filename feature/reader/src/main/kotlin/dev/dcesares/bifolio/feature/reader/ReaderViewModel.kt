@@ -76,7 +76,7 @@ public class ReaderViewModel(
         if (request.persistGrant) repository.persistGrant(request.uri)
         val document = loaded.document
         val name = raw.displayName ?: request.uri.substringAfterLast('/')
-        val anchor = restoreAnchor(document, repository.anchorFor(hash))
+        val anchor = restoreAnchor(document, repository.anchorFor(request.uri))
         val title = document.title?.takeIf { it.isNotBlank() } ?: name.substringBeforeLast('.', name)
         repository.upsert(
             RecentDocument(request.uri, title, name, clock(), progressOf(document, anchor), hash),
@@ -107,7 +107,7 @@ public class ReaderViewModel(
         lastSavedAt = at
         val progress = progressOf(ready.document, anchor)
         viewModelScope.launch {
-            repository.saveAnchor(ready.contentHash, anchor)
+            repository.saveAnchor(uri, anchor)
             repository.updateProgress(uri, progress, at)
         }
     }

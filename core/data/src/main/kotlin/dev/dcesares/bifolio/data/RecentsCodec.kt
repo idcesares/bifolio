@@ -13,7 +13,7 @@ public data class RecentDocument(
     val lastOpenedMillis: Long,
     /** 0..1, derived from the anchor and never from a page number (ADR-0005). */
     val progress: Float,
-    /** [ContentHash] of the bytes, the key of the stored anchor. */
+    /** [ContentHash] of the bytes, kept to detect external edits (ANC-05); anchors are keyed by uri. */
     val contentHash: String,
 )
 
@@ -67,6 +67,6 @@ internal object RecentsCodec {
                 if (f.size != ANCHOR_FIELDS || f[0].isEmpty()) return@mapNotNull null
                 val block = f[1].toIntOrNull()?.takeIf { it >= 0 } ?: return@mapNotNull null
                 val offset = f[2].toIntOrNull()?.takeIf { it >= 0 } ?: return@mapNotNull null
-                f[0] to Anchor(block, offset)
+                dec(f[0]) to Anchor(block, offset)
             }.toList()
 }

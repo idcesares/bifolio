@@ -191,20 +191,19 @@ class ReaderViewModelTest {
         runTest {
             val v = vm("u" to raw("# A\n\none\n\ntwo\n\nthree"))
             v.open(OpenRequest("u", null, false))
-            val hash = v.ready().contentHash
 
             now = 10_000
             v.onAnchorSettled(Anchor(1, 0))
             now = 10_300
             v.onAnchorSettled(Anchor(2, 0))
-            assertEquals(Anchor(1, 0), repo.anchorFor(hash))
+            assertEquals(Anchor(1, 0), repo.anchorFor("u"))
 
             v.flush()
-            assertEquals(Anchor(2, 0), repo.anchorFor(hash))
+            assertEquals(Anchor(2, 0), repo.anchorFor("u"))
 
             now = 12_000
             v.onAnchorSettled(Anchor(3, 0))
-            assertEquals(Anchor(3, 0), repo.anchorFor(hash))
+            assertEquals(Anchor(3, 0), repo.anchorFor("u"))
         }
 
     @Test
@@ -212,7 +211,7 @@ class ReaderViewModelTest {
         runTest {
             val v = vm("u" to raw("# A\n\nonly two blocks"))
             v.open(OpenRequest("u", null, false))
-            repo.saveAnchor(v.ready().contentHash, Anchor(99, 5))
+            repo.saveAnchor("u", Anchor(99, 5))
             v.open(OpenRequest("u", null, false))
             assertEquals(Anchor(1, 0), v.ready().initialAnchor)
         }

@@ -79,17 +79,17 @@ public class RecentsRepository(
 
     public fun hasGrant(uri: String): Boolean = grants.isHeld(uri)
 
-    public suspend fun anchorFor(contentHash: String): Anchor? =
-        RecentsCodec.decodeAnchors(readAnchors()).firstOrNull { it.first == contentHash }?.second
+    public suspend fun anchorFor(uri: String): Anchor? =
+        RecentsCodec.decodeAnchors(readAnchors()).firstOrNull { it.first == uri }?.second
 
-    /** Stores the anchor for [contentHash]. The oldest saved anchors are dropped beyond the cap. */
+    /** Stores the anchor for the document [uri] (ANC-02). The oldest saved anchors are dropped beyond the cap. */
     public suspend fun saveAnchor(
-        contentHash: String,
+        uri: String,
         anchor: Anchor,
     ) {
         store.edit { prefs ->
             val current = RecentsCodec.decodeAnchors(prefs[anchorsKey].orEmpty())
-            val next = current.filter { it.first != contentHash } + (contentHash to anchor)
+            val next = current.filter { it.first != uri } + (uri to anchor)
             prefs[anchorsKey] = RecentsCodec.encodeAnchors(next.takeLast(maxAnchors))
         }
     }
