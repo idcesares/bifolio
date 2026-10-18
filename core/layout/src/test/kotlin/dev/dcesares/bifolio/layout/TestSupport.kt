@@ -24,23 +24,33 @@ internal fun testGeometry(
     columnWidth: Int = 200,
     metrics: FlowMetrics = TEST_METRICS,
     typographyKey: Int = 0,
+    /** Explicit per-column widths (a fold geometry, LAY-12); overrides [columns] and [columnWidth]. */
+    widths: List<Int>? = null,
 ): Geometry {
     val gap = 40
+    val columnWidths = widths ?: List(columns) { columnWidth }
+    val count = columnWidths.size
+    val lefts = ArrayList<Int>(count)
+    var x = 50
+    for (w in columnWidths) {
+        lefts.add(x)
+        x += w + gap
+    }
     return Geometry(
-        windowWidth = columns * columnWidth + (columns - 1) * gap + 100,
+        windowWidth = x - gap + 50,
         windowHeight = lines * 20 + 100,
-        minMeasure = columnWidth,
-        targetMeasure = columnWidth,
-        maxMeasure = columnWidth,
-        floorMeasure = columnWidth,
+        minMeasure = columnWidths.min(),
+        targetMeasure = columnWidths.min(),
+        maxMeasure = columnWidths.max(),
+        floorMeasure = columnWidths.min(),
         baseGap = gap,
         outerMargin = 50,
         leftMargin = 50,
         rightMargin = 50,
         verticalMargin = 50,
-        columnCount = columns,
-        columnLefts = List(columns) { 50 + it * (columnWidth + gap) },
-        columnWidths = List(columns) { columnWidth },
+        columnCount = count,
+        columnLefts = lefts,
+        columnWidths = columnWidths,
         columnHeight = lines * 20,
         metrics = metrics,
         typographyKey = typographyKey,

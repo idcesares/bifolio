@@ -37,9 +37,15 @@ internal class PageComposer(
 
     private fun widthOf(index: Int): Int = geometry.columnWidths[index % columnCount]
 
+    private val narrowest = geometry.narrowestColumn
+    private val mixed = geometry.hasUnequalColumns
+
     private fun skipEmptyBlocks() {
         val width = widthOf(pageIndex)
-        while (block < flattener.blockCount && line >= flattener.layout(block, width).lineCount) {
+        // A line index above 0 belongs to the layout a block crossing columns is broken at (see next).
+        while (block < flattener.blockCount &&
+            line >= flattener.layout(block, if (mixed && line > 0) narrowest else width).lineCount
+        ) {
             block++
             line = 0
         }
@@ -52,6 +58,11 @@ internal class PageComposer(
      * always terminates: a heading plus its required lines taller than a page is placed without keep-with-next;
      * a unit taller than a page splits at the last line that fits, ignoring widow and orphan limits; a line
      * taller than a page is placed alone and overflows.
+     *
+     * Columns of unequal width (LAY-12): a block that fits whole in its column is laid out at that column's
+     * width. A block that must split is laid out once at the narrowest column and every slice of it uses that
+     * layout, so a break always lands on a line boundary of the layout that follows (nothing lost, nothing
+     * repeated, widows and orphans exact). [PageDetailer] applies the same rule through [Geometry.sliceWidth].
      */
     fun next(): Page? {
         if (!hasMore()) return null
@@ -61,8 +72,8 @@ internal class PageComposer(
         var anchor: Anchor? = null
         var open = true
         while (open && hasMore()) {
-            val layout = flattener.layout(block, width)
             val s = line
+            val layout = layoutFor(width, s, used)
             val end = endFor(layout, s, used, width)
             if (end <= s) {
                 open = false
@@ -85,6 +96,20 @@ internal class PageComposer(
         pageIndex++
         produced++
         return page
+    }
+
+    /** The layout the block at the cursor is placed with: see [next]. */
+    private fun layoutFor(
+        width: Int,
+        s: Int,
+        used: Int,
+    ): BlockLayout {
+        val own = flattener.layout(block, width)
+        if (!mixed || width == narrowest) return own
+        if (s > 0) return flattener.layout(block, narrowest)
+        val gap = if (used > 0) blockGap else 0
+        if (own.lineCount == 1 || own.height(0, own.lineCount) <= pageHeight - used - gap) return own
+        return flattener.layout(block, narrowest)
     }
 
     /** End line (exclusive) of the slice that starts at [s] on a page already holding [used] px; [s] if none fits. */
@@ -157,7 +182,13 @@ internal class PageComposer(
             }
             val gap = if (i == start) 0 else blockGap
             if (!l.keepWithNext) {
-                return total + gap + l.height(0, l.leadLines())
+                var lead = l.height(0, l.leadLines())
+                if (mixed && width != narrowest) {
+                    // The lines that follow a heading may cross columns, which breaks them at the narrowest.
+                    val n = flattener.layout(i, narrowest)
+                    lead = maxOf(lead, n.height(0, n.leadLines()))
+                }
+                return total + gap + lead
             }
             total += gap + l.height(0, l.lineCount)
             i++

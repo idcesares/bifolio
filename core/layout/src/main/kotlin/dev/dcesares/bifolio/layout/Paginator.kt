@@ -89,7 +89,9 @@ public class Paginator(
     /** Block and line that hold [anchor]; an anchor past the document clamps to its last line (ANC-05). */
     private fun locate(anchor: Anchor): Pair<Int, Int> {
         val blockIndex = anchor.blockIndex.coerceAtMost(document.blocks.size - 1)
-        val layout = flattener.layout(blockIndex, geometry.columnWidths[0])
+        // Line numbers above 0 are those of the layout a block crossing columns uses (see PageComposer.next).
+        val width = if (geometry.hasUnequalColumns) geometry.narrowestColumn else geometry.columnWidths[0]
+        val layout = flattener.layout(blockIndex, width)
         if (layout.lineCount == 0) return blockIndex to 0
         val line =
             if (anchor.blockIndex >=

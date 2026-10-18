@@ -29,7 +29,7 @@ public class PageDetailer(
         val items = ArrayList<DrawItem>()
         var used = 0
         for (slice in page.slices) {
-            val layout = flattener.layout(slice.blockIndex, width)
+            val layout = flattener.layout(slice.blockIndex, geometry.sliceWidth(column, slice))
             val s = slice.startLine
             if (used > 0 && s == 0) used += geometry.metrics.blockGap
             var base = used

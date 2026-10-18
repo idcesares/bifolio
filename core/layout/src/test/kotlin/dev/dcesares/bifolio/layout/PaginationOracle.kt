@@ -35,7 +35,9 @@ internal class PaginationOracle(
     private val label: String,
 ) {
     private val flattener = BlockFlattener(doc, measurer, geometry)
-    private val width = geometry.columnWidths[0]
+    private val widths = geometry.columnWidths
+    private val minWidth = widths.min()
+    private val mixed = widths.any { it != minWidth }
     var headingsChecked = 0
         private set
     var headingsSkipped = 0
@@ -43,7 +45,27 @@ internal class PaginationOracle(
     var overflows = 0
         private set
 
-    private fun layout(block: Int) = flattener.layout(block, width)
+    private fun layout(
+        block: Int,
+        width: Int,
+    ) = flattener.layout(block, width)
+
+    /** Width of column [page] (pages alternate over the columns from the first one). */
+    private fun columnWidth(page: Int) = widths[page % widths.size]
+
+    /**
+     * Width a slice is laid out at: its column's width, except that a block crossing columns is laid out once, at
+     * the narrowest column of the spread (proposed wording of PAG-13), so it breaks identically wherever it lands.
+     */
+    private fun sliceWidth(
+        page: Int,
+        slice: Slice,
+    ) = if (mixed && (slice.startLine > 0 || slice.continuesOnNextPage)) minWidth else columnWidth(page)
+
+    private fun layout(
+        page: Int,
+        slice: Slice,
+    ) = layout(slice.blockIndex, sliceWidth(page, slice))
 
     fun check(flow: PageFlow) {
         checkCoverage(flow)
@@ -57,28 +79,37 @@ internal class PaginationOracle(
     private fun checkCoverage(flow: PageFlow) {
         var block = 0
         var line = 0
+        var open = false
         var chars = 0L
         for ((p, page) in flow.pages.withIndex()) {
             assertTrue(page.slices.isNotEmpty(), "$label page $p is empty")
             for (slice in page.slices) {
-                while (block < doc.blocks.size && line >= layout(block).lineCount) {
+                if (!open) block = skipEmpty(block)
+                assertEquals(block, slice.blockIndex, "$label page $p slice $slice: expected block $block line $line")
+                assertEquals(line, slice.startLine, "$label page $p slice $slice: expected line $line")
+                val l = layout(p, slice)
+                assertTrue(slice.endLine <= l.lineCount, "$label slice $slice past ${l.lineCount} lines")
+                assertEquals(slice.endLine < l.lineCount, slice.continuesOnNextPage, "$label $slice continuation flag")
+                for (i in slice.startLine until slice.endLine) chars += l.chars[i]
+                open = slice.continuesOnNextPage
+                if (open) {
+                    line = slice.endLine
+                } else {
                     block++
                     line = 0
                 }
-                assertEquals(block, slice.blockIndex, "$label page $p slice $slice: expected block $block line $line")
-                assertEquals(line, slice.startLine, "$label page $p slice $slice: expected line $line")
-                val l = layout(block)
-                assertTrue(slice.endLine <= l.lineCount, "$label slice $slice past ${l.lineCount} lines")
-                for (i in slice.startLine until slice.endLine) chars += l.chars[i]
-                line = slice.endLine
             }
         }
-        while (block < doc.blocks.size && line >= layout(block).lineCount) {
-            block++
-            line = 0
-        }
-        assertEquals(doc.blocks.size, block, "$label: lines lost at the end of the document")
+        assertTrue(!open, "$label: the last slice continues past the end")
+        assertEquals(doc.blocks.size, skipEmpty(block), "$label: lines lost at the end of the document")
         assertEquals(doc.blocks.sumOf { renderedLength(it) }.toLong(), chars, "$label: characters lost or duplicated")
+    }
+
+    /** First block at or after [from] that has lines. */
+    private fun skipEmpty(from: Int): Int {
+        var b = from
+        while (b < doc.blocks.size && layout(b, widths[0]).lineCount == 0) b++
+        return b
     }
 
     private fun checkPages(flow: PageFlow) {
@@ -105,9 +136,10 @@ internal class PaginationOracle(
     /** PAG-02, PAG-06, SYN-15: breaks inside a block. */
     private fun checkSplits(flow: PageFlow) {
         val all = flow.pages.flatMap { it.slices }
+        val pageOf = flow.pages.flatMapIndexed { p, page -> page.slices.map { p } }
         val opensPage = flow.pages.map { it.slices.first() }.toSet()
         for ((i, a) in all.withIndex()) {
-            val l = layout(a.blockIndex)
+            val l = layout(pageOf[i], a)
             if (a.startLine > 0 && l.headerLines > 0) {
                 assertEquals(l.headerHeight, a.repeatedHeaderHeight, "$label table continuation repeats the header")
                 val body = l.height(a.startLine, a.endLine)
@@ -143,21 +175,22 @@ internal class PaginationOracle(
 
     /** PAG-03. */
     private fun checkKeepWithNext(flow: PageFlow) {
-        for (page in flow.pages) {
+        for ((p, page) in flow.pages.withIndex()) {
             for ((i, s) in page.slices.withIndex()) {
                 val next = if (doc.blocks[s.blockIndex] is Heading) nextBlockWithLines(s.blockIndex) else -1
-                if (next >= 0) checkHeading(page, i, next)
+                if (next >= 0) checkHeading(page, p, i, next)
             }
         }
     }
 
     private fun checkHeading(
         page: Page,
+        pageIndex: Int,
         index: Int,
         next: Int,
     ) {
         val heading = page.slices[index].blockIndex
-        if (!feasible(heading)) {
+        if (!feasible(heading, columnWidth(pageIndex))) {
             headingsSkipped++
             return
         }
@@ -166,30 +199,40 @@ internal class PaginationOracle(
         assertTrue(following != null, "$label heading $heading ends a page with block $next still to come")
         assertEquals(next, following!!.blockIndex, "$label heading $heading is followed by block $next")
         if (doc.blocks[next] !is Heading) {
-            val need = minOf(MIN_SIDE, layout(next).lineCount)
+            val need = minOf(MIN_SIDE, layout(next, columnWidth(pageIndex)).lineCount)
             assertTrue(following.lineCount >= need, "$label heading $heading has ${following.lineCount} lines after it")
         }
     }
 
-    /** Heading chain, gaps and the lines that must follow fit an empty page. */
-    private fun feasible(heading: Int): Boolean {
+    /**
+     * Heading chain, gaps and the lines that must follow fit an empty page. The lines that follow count at the
+     * taller of the column width and the narrowest column, because they may cross columns (see [sliceWidth]).
+     */
+    private fun feasible(
+        heading: Int,
+        width: Int,
+    ): Boolean {
         var total = 0
         var i = heading
         var first = true
+        var lead = 0
         while (i >= 0) {
-            val l = layout(i)
-            total += (if (first) 0 else geometry.metrics.blockGap) + l.height(0, l.lineCount)
+            val l = layout(i, width)
+            total += (if (first) 0 else geometry.metrics.blockGap)
             first = false
             if (doc.blocks[i] !is Heading) {
-                // Replace the whole block by the lines it must contribute.
-                total -= l.height(0, l.lineCount)
-                total += l.height(0, minOf(MIN_SIDE, l.lineCount).let { e -> leadOf(l, e) })
+                // The whole block is replaced by the lines it must contribute.
+                lead = leadHeight(layout(i, width))
+                if (mixed) lead = maxOf(lead, leadHeight(layout(i, minWidth)))
                 break
             }
+            total += l.height(0, l.lineCount)
             i = nextBlockWithLines(i)
         }
-        return total <= geometry.columnHeight
+        return total + lead <= geometry.columnHeight
     }
+
+    private fun leadHeight(l: BlockLayout): Int = l.height(0, leadOf(l, minOf(MIN_SIDE, l.lineCount)))
 
     private fun leadOf(
         l: BlockLayout,
@@ -207,7 +250,7 @@ internal class PaginationOracle(
 
     private fun nextBlockWithLines(from: Int): Int {
         var i = from + 1
-        while (i < doc.blocks.size && layout(i).lineCount == 0) i++
+        while (i < doc.blocks.size && layout(i, widths[0]).lineCount == 0) i++
         return if (i < doc.blocks.size) i else -1
     }
 

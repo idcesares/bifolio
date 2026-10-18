@@ -35,19 +35,21 @@ class PaginationPropertyTest {
         random: Random,
         label: String,
         rounds: Int,
+        geometryOf: (Random) -> Geometry = ::randomGeometry,
+        anchors: Boolean = true,
     ): Pair<Int, Int> {
         var checked = 0
         var skipped = 0
         repeat(rounds) { round ->
-            val geometry = randomGeometry(random)
+            val geometry = geometryOf(random)
             val measurer = measurerFor(random)
-            val shape = "lines=${geometry.columnHeight / 20} cols=${geometry.columnCount} w=${geometry.columnWidths[0]}"
+            val shape = "lines=${geometry.columnHeight / 20} cols=${geometry.columnCount} w=${geometry.columnWidths}"
             val tag = "$label seed=$SEED round=$round $shape"
             val flow = Paginator(doc, measurer, geometry).paginateAll()!!
             val oracle = PaginationOracle(doc, measurer, geometry, tag)
             oracle.check(flow)
             checkRules(doc, flow, tag)
-            checkAnchors(doc, measurer, geometry, flow, random, tag)
+            if (anchors) checkAnchors(doc, measurer, geometry, flow, random, tag)
             checked += oracle.headingsChecked
             skipped += oracle.headingsSkipped
         }
@@ -147,6 +149,23 @@ class PaginationPropertyTest {
         }
         println("random: PAG-03 checked $checked headings, skipped $skipped infeasible")
         assertTrue(checked > 0, "no heading was checked, the property would be vacuous")
+    }
+
+    @Test
+    fun `LAY-12 columns of unequal width keep every character once and obey the pagination rules`() {
+        val random = Random(SEED + 3)
+        val source = RandomMarkdown(SEED + 3)
+        var unequal = 0
+        repeat(RANDOM_DOCUMENTS) { n ->
+            val seen = ArrayList<Geometry>()
+            val generate = { r: Random -> RandomGeometries.mixed(r).also { seen.add(it) } }
+            checkDocument(source.document(RANDOM_BLOCKS), random, "mixed#$n", RANDOM_ROUNDS, generate, anchors = false)
+            unequal += seen.count { it.columnWidths.distinct().size > 1 }
+        }
+        for (name in CorpusFiles.names()) {
+            checkDocument(CorpusFiles.load(name), random, name, CORPUS_ROUNDS, RandomGeometries::mixed, anchors = false)
+        }
+        assertTrue(unequal > RANDOM_DOCUMENTS, "too few unequal geometries ($unequal), the property would be vacuous")
     }
 
     @Test
