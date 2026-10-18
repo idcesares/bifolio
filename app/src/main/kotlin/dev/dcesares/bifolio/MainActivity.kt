@@ -8,7 +8,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -30,6 +29,7 @@ import dev.dcesares.bifolio.feature.reader.ContentResolverDocumentReader
 import dev.dcesares.bifolio.feature.reader.FailureReason
 import dev.dcesares.bifolio.feature.reader.OpenRequest
 import dev.dcesares.bifolio.feature.reader.PerfLog
+import dev.dcesares.bifolio.feature.reader.ReaderBackTransition
 import dev.dcesares.bifolio.feature.reader.ReaderRoute
 import dev.dcesares.bifolio.feature.reader.ReaderUiState
 import dev.dcesares.bifolio.feature.reader.ReaderViewModel
@@ -149,8 +149,9 @@ class MainActivity : ComponentActivity() {
                     },
                 )
             } else {
-                BackHandler { closeDocument() }
-                ReaderRoute(viewModel = reader, onBack = ::closeDocument)
+                ReaderBackTransition(onBack = ::closeDocument) {
+                    ReaderRoute(viewModel = reader, onBack = ::closeDocument)
+                }
             }
         }
     }

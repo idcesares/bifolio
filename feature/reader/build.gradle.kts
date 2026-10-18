@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":core:text"))
     implementation(project(":core:highlight"))
     implementation(project(":core:math"))
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.window)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
