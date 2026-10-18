@@ -21,6 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +58,7 @@ public fun LibraryScreen(
     onRemoveRecent: (RecentDocument) -> Unit,
     onDismissNotice: () -> Unit,
     modifier: Modifier = Modifier,
+    onRecentBounds: (Rect) -> Unit = {},
 ) {
     val palette = BifolioTheme.palette
     val type = BifolioTheme.typography
@@ -100,7 +104,10 @@ public fun LibraryScreen(
                     RecentRow(
                         recent,
                         nowMillis,
-                        onOpen = { onOpenRecent(recent) },
+                        onOpen = { bounds ->
+                            onRecentBounds(bounds)
+                            onOpenRecent(recent)
+                        },
                         onRemove = { onRemoveRecent(recent) },
                     )
                 }
@@ -168,7 +175,7 @@ private fun NoticeCard(
 private fun RecentRow(
     recent: RecentDocument,
     nowMillis: Long,
-    onOpen: () -> Unit,
+    onOpen: (Rect) -> Unit,
     onRemove: () -> Unit,
 ) {
     val palette = BifolioTheme.palette
@@ -181,6 +188,7 @@ private fun RecentRow(
                 DateUtils.MINUTE_IN_MILLIS,
                 DateUtils.FORMAT_ABBREV_RELATIVE,
             ).toString()
+    var bounds = Rect.Zero
     val unavailable = recent.unavailable
     val status =
         if (unavailable) {
@@ -205,7 +213,8 @@ private fun RecentRow(
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(Spacing.CodeRadius))
-                    .clickable(role = Role.Button, onClick = onOpen)
+                    .onGloballyPositioned { bounds = it.boundsInRoot() }
+                    .clickable(role = Role.Button) { onOpen(bounds) }
                     .padding(vertical = Spacing.M),
         ) {
             BasicText(

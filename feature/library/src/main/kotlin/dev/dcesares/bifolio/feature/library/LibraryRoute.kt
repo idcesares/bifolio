@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.dcesares.bifolio.data.RecentDocument
 
@@ -23,6 +24,7 @@ public fun LibraryRoute(
     onDocumentPicked: (Uri) -> Unit,
     onOpenRecent: (RecentDocument) -> Unit,
     modifier: Modifier = Modifier,
+    onRecentBounds: (Rect) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val launcher =
@@ -38,5 +40,6 @@ public fun LibraryRoute(
         onRemoveRecent = viewModel::remove,
         onDismissNotice = viewModel::dismissNotice,
         modifier = modifier,
+        onRecentBounds = onRecentBounds,
     )
 }

@@ -23,6 +23,7 @@ public object BifolioMotion {
     private const val FADE_MILLIS = 180
     private const val CONTINUITY_MILLIS = 250
     private const val ANCHOR_GLOW_MILLIS = 600
+    private const val CONTAINER_MILLIS = 320
 
     /** Duration of the Fade page turn and of every reduced-motion fallback (MOT-03, MOT-07). */
     public const val FADE_DURATION_MILLIS: Int = FADE_MILLIS
@@ -49,6 +50,9 @@ public object BifolioMotion {
 
     /** Chrome exit: shorter than the entrance and without overshoot (MOT-06). */
     public fun <T> chromeExit(): FiniteAnimationSpec<T> = tween(CHROME_EXIT_MILLIS, easing = EMPHASIZED)
+
+    /** Library to reader container transform and its reversal (MOT-04). */
+    public fun <T> container(): FiniteAnimationSpec<T> = tween(CONTAINER_MILLIS, easing = EMPHASIZED)
 
     /** Fade page turn and reduced motion: 180 ms, emphasized easing. */
     public fun <T> fade(): FiniteAnimationSpec<T> = tween(FADE_MILLIS, easing = EMPHASIZED)
