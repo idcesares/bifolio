@@ -28,6 +28,7 @@ import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.LocalReducedMotionOverride
 import dev.dcesares.bifolio.designsystem.ReadingThemeId
 import dev.dcesares.bifolio.designsystem.defaultThemeId
+import dev.dcesares.bifolio.designsystem.rememberDynamicPalette
 import dev.dcesares.bifolio.feature.library.LibraryNotice
 import dev.dcesares.bifolio.feature.library.LibraryRoute
 import dev.dcesares.bifolio.feature.library.LibraryViewModel
@@ -126,7 +127,7 @@ class MainActivity : ComponentActivity() {
         val state by reader.state.collectAsStateWithLifecycle()
         val chromeVisible by reader.chromeVisible.collectAsStateWithLifecycle()
         val profile by reader.appearance.collectAsStateWithLifecycle()
-        ProfiledTheme(profile) {
+        ProfiledTheme(profile, library = state is ReaderUiState.Idle) {
             // UI-04: immersive reading hides the system bars; they come back with the chrome and in the library.
             LaunchedEffect(state is ReaderUiState.Idle, chromeVisible) {
                 val bars = WindowCompat.getInsetsController(window, window.decorView)
@@ -250,10 +251,20 @@ private fun ThemeChoice.toReadingTheme(): ReadingThemeId =
 @Composable
 private fun ProfiledTheme(
     profile: AppearanceProfile,
+    library: Boolean,
     content: @Composable () -> Unit,
 ) {
     val theme = profile.theme?.toReadingTheme() ?: defaultThemeId()
+    // TYP-09: dynamic color only for the library, only when the user turned it on.
+    val dynamic = if (library && profile.dynamicColor) rememberDynamicPalette() else null
     CompositionLocalProvider(LocalReducedMotionOverride provides profile.reduceMotion.takeIf { it }) {
-        BifolioTheme(theme, profile.bodySp.toFloat(), profile.lineHeight, profile.font.toReadingFont(), content)
+        BifolioTheme(
+            theme,
+            profile.bodySp.toFloat(),
+            profile.lineHeight,
+            profile.font.toReadingFont(),
+            dynamic,
+            content,
+        )
     }
 }

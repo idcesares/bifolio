@@ -34,6 +34,8 @@ public data class AppearanceProfile(
     val font: FontChoice = FontChoice.LITERATA,
     val hairline: Boolean = true,
     val reduceMotion: Boolean = false,
+    /** Dynamic color for library and settings chrome only, never the reading surface (TYP-09). Off by default. */
+    val dynamicColor: Boolean = false,
 ) {
     /** Clamps the size to 14..28sp, snaps line height and margins to their options and drops invalid columns. */
     public fun normalized(): AppearanceProfile =

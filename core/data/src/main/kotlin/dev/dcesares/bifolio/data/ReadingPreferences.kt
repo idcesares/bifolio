@@ -54,6 +54,7 @@ public class ReadingPreferences(
     private val fontKey = stringPreferencesKey("appearance_font")
     private val hairlineKey = booleanPreferencesKey("appearance_hairline")
     private val reduceMotionKey = booleanPreferencesKey("appearance_reduce_motion")
+    private val dynamicColorKey = booleanPreferencesKey("appearance_dynamic_color")
 
     /** The global appearance profile (UI-10), always [AppearanceProfile.normalized]. */
     public val appearance: Flow<AppearanceProfile> =
@@ -74,6 +75,7 @@ public class ReadingPreferences(
             prefs[fontKey] = next.font.name
             prefs[hairlineKey] = next.hairline
             prefs[reduceMotionKey] = next.reduceMotion
+            prefs[dynamicColorKey] = next.dynamicColor
         }
     }
 
@@ -91,6 +93,7 @@ public class ReadingPreferences(
             font = FontChoice.entries.firstOrNull { it.name == this[fontKey] } ?: base.font,
             hairline = this[hairlineKey] ?: base.hairline,
             reduceMotion = this[reduceMotionKey] ?: base.reduceMotion,
+            dynamicColor = this[dynamicColorKey] ?: base.dynamicColor,
         ).normalized()
     }
 

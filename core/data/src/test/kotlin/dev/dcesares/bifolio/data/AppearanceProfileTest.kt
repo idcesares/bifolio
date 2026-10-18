@@ -25,6 +25,7 @@ class AppearanceProfileTest {
             assertEquals(FontChoice.LITERATA, p.font)
             assertEquals(true, p.hairline)
             assertEquals(false, p.reduceMotion)
+            assertEquals(false, p.dynamicColor)
         }
 
     @Test
@@ -39,6 +40,7 @@ class AppearanceProfileTest {
                     turn = TurnChoice.FADE,
                     justify = true,
                     font = FontChoice.ATKINSON,
+                    dynamicColor = true,
                 )
             }
             val p = ReadingPreferences(store).appearance.first()
@@ -48,6 +50,7 @@ class AppearanceProfileTest {
             assertEquals(TurnChoice.FADE, p.turn)
             assertEquals(FontChoice.ATKINSON, p.font)
             assertEquals(true, p.justify)
+            assertEquals(true, p.dynamicColor)
         }
 
     @Test

@@ -37,6 +37,7 @@ import dev.dcesares.bifolio.data.TurnChoice
 import dev.dcesares.bifolio.designsystem.BifolioIconButton
 import dev.dcesares.bifolio.designsystem.BifolioIcons
 import dev.dcesares.bifolio.designsystem.BifolioTheme
+import dev.dcesares.bifolio.designsystem.DynamicPalette
 import dev.dcesares.bifolio.designsystem.Spacing
 
 private val SheetRadius = 12.dp
@@ -155,6 +156,12 @@ private fun AppearanceSections(
     ToggleRow(stringResource(R.string.appearance_volume_keys), state.volumeKeysTurn, actions.onVolumeKeys)
     ToggleRow(stringResource(R.string.appearance_reduce_motion), p.reduceMotion) { on ->
         change { it.copy(reduceMotion = on) }
+    }
+    // TYP-09: moves to the settings screen with M6; the reading surface never uses it.
+    if (DynamicPalette.isAvailable) {
+        ToggleRow(stringResource(R.string.appearance_dynamic_color), p.dynamicColor) { on ->
+            change { it.copy(dynamicColor = on) }
+        }
     }
 }
 

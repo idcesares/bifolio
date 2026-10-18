@@ -30,16 +30,20 @@ public object BifolioTheme {
 @ReadOnlyComposable
 public fun defaultThemeId(): ReadingThemeId = if (isSystemInDarkTheme()) ReadingThemeId.Night else ReadingThemeId.Paper
 
-/** Provides palette and typography for [theme]. Library and reader both use the fixed reading palettes. */
+/**
+ * Provides palette and typography for [theme]. Library and reader use the fixed reading palettes unless the
+ * library passes a [paletteOverride] from [DynamicPalette] (TYP-09).
+ */
 @Composable
 public fun BifolioTheme(
     theme: ReadingThemeId = defaultThemeId(),
     bodySp: Float = DEFAULT_BODY_SP,
     lineHeight: Float = DEFAULT_LINE_HEIGHT,
     font: ReadingFont = ReadingFont.Literata,
+    paletteOverride: ReadingPalette? = null,
     content: @Composable () -> Unit,
 ) {
-    val palette = ReadingPalettes.of(theme)
+    val palette = paletteOverride ?: ReadingPalettes.of(theme)
     val assets = LocalContext.current.assets
     val typography =
         remember(palette, bodySp, lineHeight, font) {

@@ -39,6 +39,7 @@
     <string name="appearance_hairline">Progress line</string>
     <string name="appearance_volume_keys">Volume keys turn pages</string>
     <string name="appearance_reduce_motion">Reduce motion</string>
+    <string name="appearance_dynamic_color">System colors in the library (Android 12+)</string>
     <string name="appearance_on">On</string>
     <string name="appearance_off">Off</string>
 </resources>
