@@ -67,4 +67,20 @@ class PageTurnControllerTest {
             advanceUntilIdle()
             assertEquals(emptyList<Int>(), turns)
         }
+
+    @Test
+    fun `a turn against the end of the document reports the edge once`() =
+        runTest {
+            val turns = mutableListOf<Int>()
+            val edges = mutableListOf<Int>()
+            val c = controller(this, turns)
+            c.canTurn = { false }
+            c.onEdge = { edges += it }
+            c.turn(-1)
+            c.drag(-400f)
+            c.release(velocity = -100f, totalDx = -400f)
+            advanceUntilIdle()
+            assertEquals(listOf(-1, -1), edges)
+            assertEquals(emptyList<Int>(), turns)
+        }
 }

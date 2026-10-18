@@ -18,6 +18,7 @@ internal enum class PageTurnStyle { SLIDE, FADE, NONE }
 /** Fraction of the page a drag must cover to turn, and the flick speed in page widths per second. */
 private const val COMMIT_FRACTION = 0.35f
 private const val FLING_PAGES_PER_SECOND = 1.2f
+private const val EDGE_PUSH_FRACTION = 0.1f
 
 /**
  * Page turn state machine. [progress] runs from -1 (the next spread fully in) to +1 (the previous one), 0 at rest.
@@ -37,6 +38,9 @@ internal class PageTurnController(
     var style: PageTurnStyle = PageTurnStyle.SLIDE
     var canTurn: (Int) -> Boolean = { false }
     var commit: (Int) -> Unit = {}
+
+    /** A deliberate turn toward [dir] hit the start or the end of the document (MOT-08). */
+    var onEdge: (Int) -> Unit = {}
 
     private var job: Job? = null
     private var heading = 0
@@ -64,7 +68,11 @@ internal class PageTurnController(
         totalDx: Float,
     ) {
         val dir = if (followsFinger) sign(progress).toInt() else sign(totalDx).toInt()
-        if (dir == 0) return
+        if (dir == 0) {
+            val pushed = sign(totalDx).toInt()
+            if (pushed != 0 && abs(totalDx) / width > EDGE_PUSH_FRACTION && !canTurn(pushed)) onEdge(pushed)
+            return
+        }
         val flick = abs(velocity) / width > FLING_PAGES_PER_SECOND && sign(velocity).toInt() == dir
         val against = abs(velocity) / width > FLING_PAGES_PER_SECOND && sign(velocity).toInt() == -dir
         val far = if (followsFinger) abs(progress) > COMMIT_FRACTION else abs(totalDx) / width > COMMIT_FRACTION / 2
@@ -74,7 +82,7 @@ internal class PageTurnController(
 
     /** A tap or key asked for a turn. */
     fun turn(dir: Int) {
-        if (canTurn(dir)) settle(dir, 0f)
+        if (canTurn(dir)) settle(dir, 0f) else onEdge(dir)
     }
 
     /** Finishes the turn that was heading to [dir] at once. Used when a new input arrives during it. */

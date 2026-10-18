@@ -39,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerInputChange
@@ -49,6 +50,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntOffset
@@ -155,6 +157,8 @@ internal fun PagedSurface(
     val reduced = rememberReducedMotion()
     val scope = rememberCoroutineScope()
     val turn = remember { PageTurnController(scope) }
+    val haptics = LocalHapticFeedback.current
+    turn.onEdge = { haptics.performHapticFeedback(HapticFeedbackType.ContextClick) }
     val continuity = remember { ContinuityMotion(scope) }
     val tableScroll = remember { mutableStateMapOf<Int, Int>() }
     var shown by remember { mutableStateOf(initialAnchor) }
