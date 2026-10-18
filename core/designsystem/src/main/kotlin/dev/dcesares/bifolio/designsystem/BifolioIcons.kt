@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 public object BifolioIcons {
     private const val VIEWPORT = 24f
     private const val STROKE = 1.5f
-    private val parser = PathParser()
 
     private fun icon(
         name: String,
@@ -30,8 +29,9 @@ public object BifolioIcons {
             .Builder(name, 24.dp, 24.dp, VIEWPORT, VIEWPORT)
             .apply {
                 paths.forEach { d ->
+                    // A fresh parser per path: toNodes() returns the parser's own list, which the next parse clears.
                     addPath(
-                        pathData = parser.parsePathString(d).toNodes(),
+                        pathData = PathParser().parsePathString(d).toNodes(),
                         stroke = SolidColor(Color.Black),
                         strokeLineWidth = STROKE,
                         strokeLineCap = StrokeCap.Round,

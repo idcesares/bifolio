@@ -118,7 +118,10 @@ public class ReaderViewModel(
         combine(mutableAnchor, mutableState) { anchor, current ->
             (current as? ReaderUiState.Ready)?.let { ready ->
                 val left = wordIndexOf(ready.document).remaining(anchor)
-                TimeLeft(pace.minutesFor(left.inSection), pace.minutesFor(left.inDocument))
+                TimeLeft(
+                    percent = (progressOf(ready.document, anchor) * PERCENT).toInt(),
+                    documentMinutes = pace.minutesFor(left.inDocument),
+                )
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -436,3 +439,5 @@ public class ReaderViewModel(
             (document.sourceOffsetOf(anchor).toFloat() / document.source.length).coerceIn(0f, 1f)
         }
 }
+
+private const val PERCENT = 100

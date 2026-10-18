@@ -23,8 +23,18 @@ import dev.dcesares.bifolio.designsystem.BifolioMotion
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
 
+private const val MINUTES_PER_HOUR = 60
+
+@Composable
+private fun duration(minutes: Int): String =
+    if (minutes < MINUTES_PER_HOUR) {
+        stringResource(R.string.reader_duration_minutes, minutes)
+    } else {
+        stringResource(R.string.reader_duration_hours, minutes / MINUTES_PER_HOUR, minutes % MINUTES_PER_HOUR)
+    }
+
 /**
- * Bottom strip of the chrome (UI-03): the time left in the section and in the document (UI-06). It shows and
+ * Bottom strip of the chrome (UI-03): the percent read and the time left in the document (UI-06). It shows and
  * hides with the top bar. The scrubber and the page label join it with M5.
  */
 @Composable
@@ -52,7 +62,7 @@ internal fun ReaderFooter(
             Box(Modifier.fillMaxWidth().height(Spacing.Rule).background(palette.rule))
             timeLeft?.let {
                 BasicText(
-                    text = stringResource(R.string.reader_time_left, it.sectionMinutes, it.documentMinutes),
+                    text = stringResource(R.string.reader_time_left, it.percent, duration(it.documentMinutes)),
                     modifier =
                         Modifier.padding(
                             start = insets.calculateStartPadding(direction) + Spacing.L,
