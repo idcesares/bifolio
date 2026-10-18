@@ -94,8 +94,8 @@ class FoldGeometryTest {
     }
 
     @Test
-    fun `LAY-10 three columns round down to two`() {
-        val g = GeometryCalculator.compute(spec(1700, forced = 3, fold = vFold(850, 0, 2000)))
+    fun `LAY-10 a forced two and a very wide window stay at two beside a fold`() {
+        val g = GeometryCalculator.compute(spec(1700, forced = 2, fold = vFold(850, 0, 2000)))
         assertEquals(2, g.columnCount)
         val auto = GeometryCalculator.compute(spec(6000, fold = vFold(3000, 0, 2000)))
         assertEquals(2, auto.columnCount)
@@ -309,7 +309,7 @@ class FoldGeometryTest {
             val h = Arb.int(300..4000).next(rs)
             val density = Arb.float(1f..4f).next(rs)
             val charW = Arb.float(6f..30f).next(rs)
-            val forced = listOf(null, 1, 2, 3)[Arb.int(0..3).next(rs)]
+            val forced = listOf(null, 1, 2)[Arb.int(0..2).next(rs)]
             val full = Arb.int(0..1).next(rs) == 1
             val foldW = Arb.int(0..120).next(rs)
             val foldLeft = Arb.int(0..(w - foldW).coerceAtLeast(0)).next(rs)

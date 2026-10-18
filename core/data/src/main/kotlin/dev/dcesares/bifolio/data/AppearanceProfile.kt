@@ -47,9 +47,9 @@ public data class AppearanceProfile(
         )
 }
 
-private const val MAX_COLUMN_CHOICE = 3
+private const val MAX_COLUMN_CHOICE = 2
 
-/** Quick toggle of the reader chrome: Auto, 1, 2, 3, then Auto again. */
+/** Quick toggle of the reader chrome: Auto, 1, 2, then Auto again. */
 public fun AppearanceProfile.withNextColumns(): AppearanceProfile =
     copy(
         columns =

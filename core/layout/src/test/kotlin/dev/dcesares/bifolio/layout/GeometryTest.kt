@@ -62,16 +62,16 @@ class GeometryTest {
         assertEquals(2, GeometryCalculator.compute(spec(1100)).columnCount)
         // W 1400: outer 84, (1400 - 168 + 32) / 432 = 2.93 -> 2
         assertEquals(2, GeometryCalculator.compute(spec(1400)).columnCount)
-        // W 1500: outer 90, (1500 - 180 + 32) / 432 = 3.13 -> 3
-        assertEquals(3, GeometryCalculator.compute(spec(1500)).columnCount)
-        // never more than 3
-        assertEquals(3, GeometryCalculator.compute(spec(6000)).columnCount)
+        // W 1500: outer 90, (1500 - 180 + 32) / 432 = 3.13 -> capped at 2
+        assertEquals(2, GeometryCalculator.compute(spec(1500)).columnCount)
+        // never more than 2
+        assertEquals(2, GeometryCalculator.compute(spec(6000)).columnCount)
     }
 
     @Test
-    fun `POS-06 a very wide window reaches 3 columns and never more`() {
-        assertEquals(3, GeometryCalculator.compute(spec(2400)).columnCount)
-        assertEquals(3, GeometryCalculator.compute(spec(6000)).columnCount)
+    fun `POS-06 a very wide window reaches 2 columns and never more`() {
+        assertEquals(2, GeometryCalculator.compute(spec(2400)).columnCount)
+        assertEquals(2, GeometryCalculator.compute(spec(6000)).columnCount)
     }
 
     @Test
@@ -85,13 +85,11 @@ class GeometryTest {
     @Test
     fun `LAY-08 forced columns are a maximum with a 28 character floor`() {
         // charW 10, gap 32, floor 280. W 1000: outer 60, (1000 - 120 + 32) / 312 = 2.92 -> 2.
-        assertEquals(2, GeometryCalculator.compute(spec(1000, forced = 3)).columnCount)
-        // W 1300: outer 78, auto 2, floor (1300 - 156 + 32) / 312 = 3.77 -> 3.
-        assertEquals(3, GeometryCalculator.compute(spec(1300, forced = 3)).columnCount)
+        assertEquals(2, GeometryCalculator.compute(spec(1000, forced = 2)).columnCount)
         assertEquals(2, GeometryCalculator.compute(spec(1300, forced = 2)).columnCount)
         assertEquals(1, GeometryCalculator.compute(spec(1300, forced = 1)).columnCount)
-        // A forced count that cannot fit drops silently.
-        assertEquals(1, GeometryCalculator.compute(spec(500, forced = 3)).columnCount)
+        // A forced count that cannot fit drops silently. W 500: outer 30, (500 - 60 + 32) / 312 = 1.5 -> 1.
+        assertEquals(1, GeometryCalculator.compute(spec(500, forced = 2)).columnCount)
     }
 
     @Test
@@ -107,7 +105,7 @@ class GeometryTest {
     @Test
     fun `LAY-11 columns without a fold are equal and separated by the base gap`() {
         val g = GeometryCalculator.compute(spec(1700))
-        assertEquals(3, g.columnCount)
+        assertEquals(2, g.columnCount)
         assertEquals(1, g.columnWidths.toSet().size)
         for (i in 1 until g.columnCount) {
             assertEquals(g.baseGap, g.columnLefts[i] - g.columnLefts[i - 1] - g.columnWidths[i - 1])
@@ -125,11 +123,9 @@ class GeometryTest {
         // charW 10, gap 32, floor 280. W 800: outer 48, auto (800 - 96 + 32) / 432 = 1, floor (736) / 312 = 2.
         assertEquals(1, GeometryCalculator.compute(spec(800)).columnCount)
         assertEquals(2, GeometryCalculator.compute(spec(800, forced = 2)).columnCount)
-        // 3 does not fit at 800, so it drops to the most that does.
-        assertEquals(2, GeometryCalculator.compute(spec(800, forced = 3)).columnCount)
-        // W 1100: outer 66, auto 2, floor (1100 - 132 + 32) / 312 = 3.2 -> 3.
+        // W 1100: outer 66, auto 2 already.
         assertEquals(2, GeometryCalculator.compute(spec(1100)).columnCount)
-        assertEquals(3, GeometryCalculator.compute(spec(1100, forced = 3)).columnCount)
+        assertEquals(2, GeometryCalculator.compute(spec(1100, forced = 2)).columnCount)
         // A forced 1 is always honored.
         assertEquals(1, GeometryCalculator.compute(spec(1700, forced = 1)).columnCount)
     }
@@ -143,12 +139,12 @@ class GeometryTest {
             val density = Arb.float(1f..4f).next(rs)
             val charW = Arb.float(6f..30f).next(rs)
             val scale = listOf(0.75f, 1f, 1.35f)[Arb.int(0..2).next(rs)]
-            val forced = listOf(null, 1, 2, 3)[Arb.int(0..3).next(rs)]
+            val forced = listOf(null, 1, 2)[Arb.int(0..2).next(rs)]
             val s = WindowSpec(w, h, density, charW, scale, forced)
             val label = "seed=$SEED w=$w h=$h density=$density charW=$charW scale=$scale forced=$forced"
             val g = GeometryCalculator.compute(s)
 
-            assertTrue(g.columnCount in 1..3, "$label cols=${g.columnCount}")
+            assertTrue(g.columnCount in 1..2, "$label cols=${g.columnCount}")
             if (forced != null) assertTrue(g.columnCount <= forced, "$label forced is a maximum")
             val used = g.columnWidths.sum() + (g.columnCount - 1) * g.baseGap
             assertEquals(w, g.leftMargin + used + g.rightMargin, "$label widths must add up to W")

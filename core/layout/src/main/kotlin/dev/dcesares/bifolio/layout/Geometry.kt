@@ -60,7 +60,7 @@ public data class WindowSpec(
     init {
         require(widthPx > 0 && heightPx > 0) { "window must be positive: ${widthPx}x$heightPx" }
         require(density > 0f && charWidthPx > 0f) { "density and charWidthPx must be positive" }
-        require(forcedColumns == null || forcedColumns in 1..MAX_COLUMNS) { "forcedColumns must be 1..3" }
+        require(forcedColumns == null || forcedColumns in 1..MAX_COLUMNS) { "forcedColumns must be 1..2" }
     }
 }
 
@@ -177,7 +177,7 @@ internal fun FoldSpec.intersects(
 private const val MIN_INNER_MARGIN_DP = 16f
 private const val INNER_MARGIN_CHARS = 1.5f
 private const val BOOK_EXTRA_DP = 12f
-private const val MAX_COLUMNS = 3
+private const val MAX_COLUMNS = 2
 private const val MIN_TABLETOP_LINES = 4f
 private const val MIN_DECK_DP = 96f
 private const val MAX_VERTICAL_MARGIN_DIVISOR = 8

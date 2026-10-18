@@ -11,9 +11,9 @@ import org.junit.jupiter.api.Test
 /** UI-10, TYP-02, TYP-03, TYP-05, TYP-06, LAY-05: the global appearance profile and its limits. */
 class AppearanceProfileTest {
     @Test
-    fun `quick columns cycle Auto, 1, 2, 3 and back`() {
+    fun `quick columns cycle Auto, 1, 2 and back`() {
         val seen = generateSequence(AppearanceProfile()) { it.withNextColumns() }.take(5).map { it.columns }.toList()
-        assertEquals(listOf(null, 1, 2, 3, null), seen)
+        assertEquals(listOf(null, 1, 2, null, 1), seen)
     }
 
     @Test
@@ -81,7 +81,7 @@ class AppearanceProfileTest {
             assertEquals(28, p.bodySp)
             assertEquals(1.65f, p.lineHeight)
             assertEquals(1.35f, p.marginScale)
-            assertEquals(3, p.columns)
+            assertEquals(2, p.columns)
             prefs.updateAppearance { it.copy(bodySp = 3, lineHeight = 1.0f, marginScale = 0.1f, columns = 0) }
             val low = prefs.appearance.first()
             assertEquals(14, low.bodySp)

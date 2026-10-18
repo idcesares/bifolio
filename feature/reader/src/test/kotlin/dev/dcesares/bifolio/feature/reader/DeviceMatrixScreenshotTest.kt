@@ -112,7 +112,6 @@ private fun MatrixHarness(
         if (fold != null && overlay()) FoldOverlay(fold)
         ReaderChrome(
             visible = chrome,
-            title = "Chrome title",
             onOpenAppearance = {},
             modifier = Modifier.align(Alignment.TopCenter),
         )

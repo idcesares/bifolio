@@ -273,4 +273,4 @@ private fun TurnSection(
     Choice(stringResource(R.string.appearance_turn), options, turn, onSelect)
 }
 
-private const val MAX_COLUMNS = 3
+private const val MAX_COLUMNS = 2

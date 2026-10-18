@@ -2,6 +2,7 @@ package dev.dcesares.bifolio.feature.reader
 
 import android.graphics.Canvas
 import android.graphics.Paint
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -307,6 +308,17 @@ internal fun PagedSurface(
         env.tableScroll = tableScroll
 
         val drawn = remember(layout?.request) { BooleanArray(1) }
+        // The last spread that was fully drawn stays on screen while the next layout, or the next colors, get ready,
+        // then fades into it: changing columns, theme, size or posture never flashes an empty page.
+        val held = remember { arrayOfNulls<SpreadFrame>(1) }
+        val settle = remember { Animatable(1f) }
+        LaunchedEffect(store) {
+            if (layout == null || store == null) return@LaunchedEffect
+            settle.snapTo(0f)
+            val pages = layout.flow.pagesOfSpread(layout.flow.spreadIndexOf(shown).coerceAtLeast(0))
+            snapshotFlow { pages.all { store.columns.containsKey(it) } }.first { it }
+            if (reduced) settle.snapTo(1f) else settle.animateTo(1f, BifolioMotion.fade())
+        }
         val pagePaint = remember(palette) { Paint().apply { color = palette.page.toArgb() } }
         val glowPaint = remember(palette) { Paint().apply { color = palette.accent.toArgb() } }
         val deckRegion = layout?.geometry?.deckRegion
@@ -323,7 +335,7 @@ internal fun PagedSurface(
                 .pointerInput(Unit) { awaitEachGesture { readGesture(env) } }
                 .drawBehind {
                     drawIntoCanvas { c ->
-                        val spreads =
+                        val live =
                             SpreadFrame(
                                 layout,
                                 store,
@@ -335,7 +347,19 @@ internal fun PagedSurface(
                                 size.height,
                                 FramePaints(pagePaint, glowPaint, continuity),
                             )
-                        val painted = spreads.paint(c.nativeCanvas) { block -> tableScroll[block] ?: 0 }
+                        val scroll = { block: Int -> tableScroll[block] ?: 0 }
+                        val painted = live.complete()
+                        val previous = held[0]
+                        val mix = settle.value
+                        if (painted && previous != null && mix < 1f) {
+                            previous.paint(c.nativeCanvas, scroll)
+                            live.paint(c.nativeCanvas, scroll, (mix * OPAQUE).toInt())
+                        } else if (!painted && previous != null) {
+                            previous.paint(c.nativeCanvas, scroll)
+                        } else {
+                            live.paint(c.nativeCanvas, scroll)
+                            if (painted) held[0] = live
+                        }
                         if (painted && !drawn[0]) {
                             drawn[0] = true
                             onFirstDrawn()
@@ -408,8 +432,11 @@ private class SpreadFrame(
     fun paint(
         canvas: Canvas,
         tableScroll: (Int) -> Int,
+        alpha: Int = OPAQUE,
     ): Boolean {
         if (layout == null || store == null || index < 0) return false
+        val faded = alpha < OPAQUE
+        if (faded) canvas.saveLayerAlpha(0f, 0f, width, height, alpha)
         val p = turn.progress
         val dir =
             if (p < 0f) {
@@ -437,8 +464,16 @@ private class SpreadFrame(
             spread(canvas, index, 0f, OPAQUE, tableScroll)
             canvas.restore()
         }
-        return layout.flow.pagesOfSpread(index).all { store.columns.containsKey(it) }
+        if (faded) canvas.restore()
+        return complete()
     }
+
+    /** True when the shown spread has every column prepared. */
+    fun complete(): Boolean =
+        layout != null &&
+            store != null &&
+            index >= 0 &&
+            layout.flow.pagesOfSpread(index).all { store.columns.containsKey(it) }
 
     /** MOT-05: the soft highlight on the anchor line, under the text so the words stay legible. */
     private fun anchorGlow(canvas: Canvas) {

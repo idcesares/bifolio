@@ -47,7 +47,7 @@ private const val SAVE_INTERVAL_MILLIS = 1_000L
 internal const val RETURN_CHIP_MILLIS = 8_000L
 
 /** The chrome leaves after this long without interaction (UI-03). */
-internal const val CHROME_AUTO_HIDE_MILLIS = 4_000L
+internal const val CHROME_AUTO_HIDE_MILLIS = 8_000L
 private const val NANOS_PER_MILLI = 1_000_000L
 private const val PREVIEW_MAX = 140
 private const val ELLIPSIS = "…"
@@ -155,6 +155,7 @@ public class ReaderViewModel(
         preferences.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, AppearanceProfile())
 
     public fun updateAppearance(change: (AppearanceProfile) -> AppearanceProfile) {
+        keepChrome()
         viewModelScope.launch { preferences.updateAppearance(change) }
     }
 
@@ -336,7 +337,7 @@ public class ReaderViewModel(
         if (ready.scrollOnly || request == lastRequest) return
         lastRequest = request
         paginating?.cancel()
-        mutablePaged.value = null
+        // The previous layout stays up until the new one has its first stage, so a change never blanks the page.
         firstDrawReported = false
         val started = nanoClock()
         requestedAt = started

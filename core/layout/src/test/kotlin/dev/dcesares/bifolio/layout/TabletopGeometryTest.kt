@@ -166,7 +166,7 @@ class TabletopGeometryTest {
             val foldTop = random.nextInt(-20, h + 20)
             val foldHeight = if (random.nextBoolean()) 0 else random.nextInt(0, 120)
             val fold = hFold(foldTop, foldHeight, w, separating = random.nextBoolean())
-            val s = spec(w, h, charW, density, lineHeight, forced = random.nextInt(0, 4).takeIf { it > 0 }, fold = fold)
+            val s = spec(w, h, charW, density, lineHeight, forced = random.nextInt(0, 3).takeIf { it > 0 }, fold = fold)
             val g = GeometryCalculator.compute(s)
             val tag = "seed=$SEED round=$round $s"
             val flat = GeometryCalculator.compute(s.copy(fold = null))

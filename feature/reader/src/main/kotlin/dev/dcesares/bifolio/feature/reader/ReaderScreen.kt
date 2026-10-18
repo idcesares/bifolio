@@ -143,8 +143,10 @@ public fun ReaderRoute(
                 // Outside the key: switching mode swaps the page surface, never the chrome.
                 ReaderChrome(
                     visible = chromeVisible,
-                    title = current.title,
-                    onOpenAppearance = { sheetOpen = true },
+                    onOpenAppearance = {
+                        viewModel.keepChrome()
+                        sheetOpen = true
+                    },
                     appearance = appearance,
                     onAppearance = viewModel::updateAppearance,
                     modifier = Modifier.align(Alignment.TopCenter),
