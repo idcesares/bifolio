@@ -104,7 +104,6 @@ private fun PagedHarness(
         if (fold != null) FoldOverlay(fold)
         ReaderChrome(
             visible = chrome,
-            onOpenAppearance = {},
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }

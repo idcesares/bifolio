@@ -14,18 +14,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -43,7 +43,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.dcesares.bifolio.data.AppearanceProfile
+import dev.dcesares.bifolio.data.ReadingMode
 import dev.dcesares.bifolio.data.ThemeChoice
 import dev.dcesares.bifolio.data.withBodySpStep
 import dev.dcesares.bifolio.data.withNextColumns
@@ -73,12 +75,21 @@ internal val ChromeInsets: WindowInsets
     @Composable
     get() = WindowInsets.systemBarsIgnoringVisibility.union(WindowInsets.displayCutout)
 
+/** What the panel can do. Every action defaults to nothing so a preview or a screenshot test can omit them. */
+internal data class ChromeActions(
+    val onBack: () -> Unit = {},
+    val onOpenAppearance: () -> Unit = {},
+    val onMode: (ReadingMode) -> Unit = {},
+    val onAppearance: ((AppearanceProfile) -> AppearanceProfile) -> Unit = {},
+)
+
 /**
  * Reader chrome (UI-03), shown by a center tap and hidden by another or after 8 s without use. A floating panel
- * over the page, without the title: quick columns, theme and text size, and a labeled control that opens the full
- * appearance sheet (UI-10). Any use of a control restarts the countdown.
+ * over the page, without the title: back to the library, quick columns, theme and text size, the pages or scroll
+ * switch, and the full appearance sheet (UI-10). Any use of a control restarts the countdown.
  *
- * The table of contents, search, scrubber, page label and time remaining arrive with M5.
+ * The panel is built from equal, fixed slots with a fixed text size, so nothing moves when a value or the
+ * reading size changes. The table of contents, search, scrubber, page label and time remaining arrive with M5.
  *
  * Motion (MOT-06): the panel fades and slides in on an expressive spring with slight overshoot, and leaves faster
  * without overshoot. Reduced motion is a plain fade (MOT-07). Both can be interrupted at any point (MOT-09).
@@ -86,10 +97,10 @@ internal val ChromeInsets: WindowInsets
 @Composable
 internal fun ReaderChrome(
     visible: Boolean,
-    onOpenAppearance: () -> Unit,
     modifier: Modifier = Modifier,
     appearance: AppearanceProfile = AppearanceProfile(),
-    onAppearance: ((AppearanceProfile) -> AppearanceProfile) -> Unit = {},
+    mode: ReadingMode = ReadingMode.PAGED,
+    actions: ChromeActions = ChromeActions(),
 ) {
     val reduced = rememberReducedMotion()
     val insets = ChromeInsets.asPaddingValues()
@@ -122,7 +133,7 @@ internal fun ReaderChrome(
                 ),
             contentAlignment = Alignment.TopCenter,
         ) {
-            ToolbarPanel(appearance, onAppearance, onOpenAppearance)
+            ToolbarPanel(appearance, mode, actions)
         }
     }
 }
@@ -131,8 +142,14 @@ private const val CHROME_TRAVEL = 3
 private val PanelRadius = 28.dp
 private val PanelElevation = 8.dp
 private val PanelMaxWidth = 520.dp
-private val ItemRadius = 20.dp
-private val DividerHeight = 24.dp
+private val SlotHeight = 56.dp
+private val SlotRadius = 20.dp
+private val IconSlot = 24.dp
+
+/** Fixed size, whatever the reading size is: the chrome never follows the text. */
+private val GlyphSize = 16.sp
+private val CaptionSize = 11.sp
+private val CaptionLine = 14.sp
 
 /**
  * The few settings that change often, one tap each on the same global profile as the appearance sheet. The panel
@@ -142,8 +159,8 @@ private val DividerHeight = 24.dp
 @Composable
 private fun ToolbarPanel(
     appearance: AppearanceProfile,
-    onAppearance: ((AppearanceProfile) -> AppearanceProfile) -> Unit,
-    onOpenAppearance: () -> Unit,
+    mode: ReadingMode,
+    actions: ChromeActions,
 ) {
     val palette = BifolioTheme.palette
     val shape = RoundedCornerShape(PanelRadius)
@@ -158,6 +175,8 @@ private fun ToolbarPanel(
                 ThemeChoice.NIGHT -> R.string.reader_quick_theme_night
             },
         )
+    val pages = mode == ReadingMode.PAGED
+    val modeName = stringResource(if (pages) R.string.reader_quick_mode_pages else R.string.reader_quick_mode_scroll)
     Row(
         modifier =
             Modifier
@@ -168,71 +187,88 @@ private fun ToolbarPanel(
                 .border(Spacing.Rule, palette.rule, shape)
                 // The panel sits over the page: its taps must not turn pages or hide the chrome.
                 .pointerInput(Unit) { detectTapGestures { } }
-                .padding(horizontal = Spacing.S, vertical = Spacing.Xs),
+                .padding(horizontal = Spacing.Xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         ToolbarItem(
+            description = stringResource(R.string.reader_chrome_back),
+            onClick = actions.onBack,
+            icon = BifolioIcons.ChevronLeft,
+        )
+        ToolbarItem(
             description = stringResource(R.string.reader_quick_columns, columns),
-            onClick = { onAppearance { it.withNextColumns() } },
+            onClick = { actions.onAppearance { it.withNextColumns() } },
             icon = BifolioIcons.Columns2,
-            label = columns,
+            caption = columns,
         )
         ToolbarItem(
             description = stringResource(R.string.reader_quick_theme, theme),
-            onClick = { onAppearance { it.withNextTheme() } },
+            onClick = { actions.onAppearance { it.withNextTheme() } },
             icon = BifolioIcons.Contrast,
+            caption = theme,
         )
         ToolbarItem(
             description = stringResource(R.string.reader_quick_smaller),
-            onClick = { onAppearance { it.withBodySpStep(-1) } },
-            label = stringResource(R.string.reader_quick_smaller_label),
+            onClick = { actions.onAppearance { it.withBodySpStep(-1) } },
+            glyph = stringResource(R.string.reader_quick_smaller_label),
         )
         ToolbarItem(
             description = stringResource(R.string.reader_quick_larger),
-            onClick = { onAppearance { it.withBodySpStep(1) } },
-            label = stringResource(R.string.reader_quick_larger_label),
+            onClick = { actions.onAppearance { it.withBodySpStep(1) } },
+            glyph = stringResource(R.string.reader_quick_larger_label),
         )
-        Box(Modifier.width(Spacing.Rule).height(DividerHeight).background(palette.rule))
+        ToolbarItem(
+            description = stringResource(R.string.reader_quick_mode, modeName),
+            onClick = { actions.onMode(if (pages) ReadingMode.SCROLL else ReadingMode.PAGED) },
+            icon = if (pages) BifolioIcons.BookOpen else BifolioIcons.ScrollText,
+            caption = modeName,
+        )
         ToolbarItem(
             description = stringResource(R.string.reader_chrome_appearance),
-            onClick = onOpenAppearance,
-            icon = BifolioIcons.Type,
-            label = stringResource(R.string.reader_chrome_appearance),
+            onClick = actions.onOpenAppearance,
+            icon = BifolioIcons.SlidersHorizontal,
             accent = true,
         )
     }
 }
 
-/** One control of the panel: an icon, a short label or both. The label cross-fades when its value changes. */
+/**
+ * One control of the panel in a slot of equal width and fixed height: an icon or a short glyph, and optionally the
+ * current value under it. The value cross-fades when it changes and never changes the size of the slot.
+ */
 @Composable
-private fun ToolbarItem(
+private fun RowScope.ToolbarItem(
     description: String,
     onClick: () -> Unit,
     icon: ImageVector? = null,
-    label: String? = null,
+    glyph: String? = null,
+    caption: String? = null,
     accent: Boolean = false,
 ) {
     val palette = BifolioTheme.palette
     val tint = if (accent) palette.accent else palette.ink
-    Row(
+    val text = BifolioTheme.typography.caption.copy(color = tint, fontWeight = FontWeight.SemiBold)
+    Column(
         modifier =
             Modifier
-                .defaultMinSize(Spacing.TouchTarget, Spacing.TouchTarget)
-                .clip(RoundedCornerShape(ItemRadius))
+                .weight(1f)
+                .height(SlotHeight)
+                .clip(RoundedCornerShape(SlotRadius))
                 .clickable(role = Role.Button, onClick = onClick)
-                .semantics(mergeDescendants = true) { contentDescription = description }
-                .padding(horizontal = Spacing.S),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.Xs, Alignment.CenterHorizontally),
+                .semantics(mergeDescendants = true) { contentDescription = description },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        if (icon != null) BifolioIcon(icon, contentDescription = null, tint = tint)
-        if (label != null) {
-            Crossfade(targetState = label, animationSpec = BifolioMotion.fade(), label = "toolbarLabel") { text ->
+        if (icon != null) BifolioIcon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(IconSlot))
+        if (glyph != null) {
+            BasicText(text = glyph, maxLines = 1, style = text.copy(fontSize = GlyphSize, lineHeight = GlyphSize))
+        }
+        if (caption != null) {
+            Crossfade(targetState = caption, animationSpec = BifolioMotion.fade(), label = "toolbarCaption") { value ->
                 BasicText(
-                    text = text,
+                    text = value,
                     maxLines = 1,
-                    style = BifolioTheme.typography.caption.copy(color = tint, fontWeight = FontWeight.SemiBold),
+                    style = text.copy(fontSize = CaptionSize, lineHeight = CaptionLine),
                 )
             }
         }

@@ -118,6 +118,30 @@ public object BifolioIcons {
             "M9 20h6",
         )
 
+    public val SlidersHorizontal: ImageVector =
+        icon(
+            "sliders-horizontal",
+            "M21 4h-7",
+            "M10 4H3",
+            "M21 12h-9",
+            "M8 12H3",
+            "M21 20h-5",
+            "M12 20H3",
+            "M14 2v4",
+            "M8 10v4",
+            "M16 18v4",
+        )
+
+    public val ScrollText: ImageVector =
+        icon(
+            "scroll-text",
+            "M15 12h-5",
+            "M15 8h-5",
+            "M19 17V5a2 2 0 0 0-2-2H4",
+            "M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5",
+            "M6 5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3",
+        )
+
     public val Columns2: ImageVector =
         icon(
             "columns-2",

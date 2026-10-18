@@ -19,6 +19,10 @@
     <string name="reader_task_checked">Done</string>
     <string name="reader_task_unchecked">Not done</string>
     <string name="reader_chrome_appearance">Appearance</string>
+    <string name="reader_chrome_back">Back to the library</string>
+    <string name="reader_quick_mode">Reading mode: %1$s</string>
+    <string name="reader_quick_mode_pages">Pages</string>
+    <string name="reader_quick_mode_scroll">Scroll</string>
     <string name="reader_quick_columns">Columns: %1$s</string>
     <string name="reader_quick_columns_auto">Auto</string>
     <string name="reader_quick_theme">Theme: %1$s</string>
