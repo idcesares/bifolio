@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_close">Close</string>
+    <string name="appearance_theme">Theme</string>
+    <string name="appearance_theme_auto">Auto</string>
+    <string name="appearance_theme_paper">Paper</string>
+    <string name="appearance_theme_sepia">Sepia</string>
+    <string name="appearance_theme_dusk">Dusk</string>
+    <string name="appearance_theme_night">Night</string>
+    <string name="appearance_size">Text size</string>
+    <string name="appearance_size_value">%1$d sp</string>
+    <string name="appearance_size_smaller">Smaller text</string>
+    <string name="appearance_size_larger">Larger text</string>
+    <string name="appearance_line_height">Line height</string>
+    <string name="appearance_line_tight">Tight</string>
+    <string name="appearance_line_normal">Normal</string>
+    <string name="appearance_line_loose">Loose</string>
+    <string name="appearance_margins">Margins</string>
+    <string name="appearance_margins_narrow">Narrow</string>
+    <string name="appearance_margins_normal">Normal</string>
+    <string name="appearance_margins_wide">Wide</string>
+    <string name="appearance_columns">Columns</string>
+    <string name="appearance_columns_auto">Auto</string>
+    <string name="appearance_columns_note">This window fits %1$d. A higher choice uses fewer columns here.</string>
+    <string name="appearance_justify">Justify text</string>
+    <string name="appearance_hyphenate">Hyphenate</string>
+    <string name="appearance_mode">Reading mode</string>
+    <string name="appearance_mode_pages">Pages</string>
+    <string name="appearance_mode_scroll">Scroll</string>
+    <string name="appearance_turn">Page turn</string>
+    <string name="appearance_turn_slide">Slide</string>
+    <string name="appearance_turn_fade">Fade</string>
+    <string name="appearance_turn_none">None</string>
+    <string name="appearance_hairline">Progress line</string>
+    <string name="appearance_volume_keys">Volume keys turn pages</string>
+    <string name="appearance_reduce_motion">Reduce motion</string>
+    <string name="appearance_on">On</string>
+    <string name="appearance_off">Off</string>
+</resources>

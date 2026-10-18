@@ -1,5 +1,6 @@
 package dev.dcesares.bifolio.feature.reader
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -84,6 +85,7 @@ private const val BIG_HEADING_MAX_LEVEL = 2
 public fun ReaderRoute(
     viewModel: ReaderViewModel,
     onBack: () -> Unit,
+    appearanceSheet: @Composable (onDismiss: () -> Unit) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -92,6 +94,7 @@ public fun ReaderRoute(
     val volumeKeysTurn by viewModel.volumeKeysTurn.collectAsStateWithLifecycle()
     val returnAnchor by viewModel.returnAnchor.collectAsStateWithLifecycle()
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
+    var sheetOpen by rememberSaveable { mutableStateOf(false) }
     when (val current = state) {
         is ReaderUiState.Ready ->
             Box(modifier.fillMaxSize()) {
@@ -136,11 +139,13 @@ public fun ReaderRoute(
                 ReaderChrome(
                     visible = chromeVisible,
                     title = current.title,
-                    mode = mode,
-                    canSwitchMode = !current.scrollOnly,
-                    onSwitchMode = viewModel::toggleMode,
+                    onOpenAppearance = { sheetOpen = true },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
+                if (sheetOpen) {
+                    BackHandler { sheetOpen = false }
+                    appearanceSheet { sheetOpen = false }
+                }
             }
         is ReaderUiState.Failed -> ReaderFailure(current.reason, onBack, modifier)
         ReaderUiState.Idle, ReaderUiState.Loading ->

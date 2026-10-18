@@ -28,7 +28,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import dev.dcesares.bifolio.data.ReadingMode
 import dev.dcesares.bifolio.designsystem.BifolioIconButton
 import dev.dcesares.bifolio.designsystem.BifolioIcons
 import dev.dcesares.bifolio.designsystem.BifolioMotion
@@ -55,10 +54,9 @@ internal val ChromeInsets: WindowInsets
 
 /**
  * Reader chrome (UI-03), shown by a center tap and hidden by another or after 4 s. Only the top bar exists
- * until M4: the title, and one control for the reading mode.
+ * until M5: the title, and the control that opens the appearance sheet (UI-10).
  *
- * TEMPORARY: the mode control stands in for the appearance sheet (UI-10, M4) and goes away with it. The table of
- * contents, search, appearance, scrubber, page label and time remaining arrive with M4 and M5.
+ * The table of contents, search, scrubber, page label and time remaining arrive with M4 and M5.
  *
  * Motion is a plain fade (`motion.fade`, also the reduced-motion path); the expressive chrome springs of
  * DESIGN section 6 join with Material 3 in M4. Fading in and out can be interrupted at any point.
@@ -67,9 +65,7 @@ internal val ChromeInsets: WindowInsets
 internal fun ReaderChrome(
     visible: Boolean,
     title: String,
-    mode: ReadingMode,
-    canSwitchMode: Boolean,
-    onSwitchMode: () -> Unit,
+    onOpenAppearance: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val palette = BifolioTheme.palette
@@ -107,18 +103,13 @@ internal fun ReaderChrome(
                     overflow = TextOverflow.Ellipsis,
                     style = BifolioTheme.typography.caption.copy(color = palette.ink),
                 )
-                if (canSwitchMode) {
-                    val paged = mode == ReadingMode.PAGED
-                    val label =
-                        if (paged) R.string.reader_chrome_switch_to_scroll else R.string.reader_chrome_switch_to_pages
-                    BifolioIconButton(
-                        icon = if (paged) BifolioIcons.ChevronsUpDown else BifolioIcons.BookOpen,
-                        description = stringResource(label),
-                        onClick = onSwitchMode,
-                    )
-                }
+                BifolioIconButton(
+                    icon = BifolioIcons.Type,
+                    description = stringResource(R.string.reader_chrome_appearance),
+                    onClick = onOpenAppearance,
+                )
+                Box(Modifier.fillMaxWidth().height(Spacing.Rule).background(palette.rule))
             }
-            Box(Modifier.fillMaxWidth().height(Spacing.Rule).background(palette.rule))
         }
     }
 }

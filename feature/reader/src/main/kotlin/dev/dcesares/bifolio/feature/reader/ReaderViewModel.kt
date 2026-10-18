@@ -282,6 +282,16 @@ public class ReaderViewModel(
         viewModelScope.launch { preferences.setMode(next) }
     }
 
+    /** Sets the reading mode from the appearance sheet (SCO-03). Files too large for pages stay in scroll. */
+    public fun setMode(next: ReadingMode) {
+        keepChrome()
+        viewModelScope.launch { preferences.setMode(next) }
+    }
+
+    public fun setVolumeKeysTurn(enabled: Boolean) {
+        viewModelScope.launch { preferences.setVolumeKeysTurn(enabled) }
+    }
+
     /**
      * Starts (or restarts) the anchored pagination for [request] (PAG-09, PAG-10). An identical request is
      * ignored; a different one cancels the running pagination, so a window that keeps resizing never queues work.

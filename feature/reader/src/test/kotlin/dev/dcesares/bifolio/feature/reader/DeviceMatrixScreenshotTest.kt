@@ -17,7 +17,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
-import dev.dcesares.bifolio.data.ReadingMode
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.LocalReducedMotionOverride
 import dev.dcesares.bifolio.designsystem.ReadingThemeId
@@ -114,9 +113,7 @@ private fun MatrixHarness(
         ReaderChrome(
             visible = chrome,
             title = "Chrome title",
-            mode = ReadingMode.PAGED,
-            canSwitchMode = true,
-            onSwitchMode = {},
+            onOpenAppearance = {},
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }

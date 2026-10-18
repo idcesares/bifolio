@@ -152,6 +152,21 @@ public object BifolioIcons {
             lineTo(3.01f, 18f)
         }
 
+    /** Lucide type: a capital T, the appearance sheet. */
+    public val Type: ImageVector =
+        icon("type") {
+            moveTo(12f, 4f)
+            lineTo(12f, 20f)
+            moveTo(4f, 7f)
+            lineTo(4f, 5f)
+            quadTo(4f, 4f, 5f, 4f)
+            lineTo(19f, 4f)
+            quadTo(20f, 4f, 20f, 5f)
+            lineTo(20f, 7f)
+            moveTo(9f, 20f)
+            lineTo(15f, 20f)
+        }
+
     public val ChevronLeft: ImageVector =
         icon("chevron-left") {
             moveTo(15f, 5f)

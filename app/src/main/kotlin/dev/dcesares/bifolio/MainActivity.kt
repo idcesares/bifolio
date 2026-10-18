@@ -39,6 +39,9 @@ import dev.dcesares.bifolio.feature.reader.ReaderBackTransition
 import dev.dcesares.bifolio.feature.reader.ReaderRoute
 import dev.dcesares.bifolio.feature.reader.ReaderUiState
 import dev.dcesares.bifolio.feature.reader.ReaderViewModel
+import dev.dcesares.bifolio.feature.settings.AppearanceSheet
+import dev.dcesares.bifolio.feature.settings.SheetActions
+import dev.dcesares.bifolio.feature.settings.SheetState
 
 private const val KEY_URI = "open.uri"
 private const val KEY_MIME = "open.mime"
@@ -162,10 +165,31 @@ class MainActivity : ComponentActivity() {
                 )
             } else {
                 ReaderBackTransition(onBack = ::closeDocument) {
-                    ReaderRoute(viewModel = reader, onBack = ::closeDocument)
+                    ReaderRoute(
+                        viewModel = reader,
+                        onBack = ::closeDocument,
+                        appearanceSheet = { onDismiss -> AppearanceSheetHost(onDismiss) },
+                    )
                 }
             }
         }
+    }
+
+    @Composable
+    private fun AppearanceSheetHost(onDismiss: () -> Unit) {
+        val profile by reader.appearance.collectAsStateWithLifecycle()
+        val mode by reader.mode.collectAsStateWithLifecycle()
+        val volumeKeys by reader.volumeKeysTurn.collectAsStateWithLifecycle()
+        AppearanceSheet(
+            state = SheetState(profile, mode, volumeKeys),
+            actions =
+                SheetActions(
+                    onProfile = reader::updateAppearance,
+                    onMode = reader::setMode,
+                    onVolumeKeys = reader::setVolumeKeysTurn,
+                    onDismiss = onDismiss,
+                ),
+        )
     }
 
     private fun handleIntent(intent: Intent) {
