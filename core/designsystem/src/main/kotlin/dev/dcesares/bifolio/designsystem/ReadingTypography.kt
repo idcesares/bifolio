@@ -25,7 +25,7 @@ public class ReadingTypography internal constructor(
     public fun heading(level: Int): TextStyle = headings[(level - 1).coerceIn(0, headings.lastIndex)]
 }
 
-private const val BODY_LINE_HEIGHT = 1.5f
+private const val DEFAULT_BODY_LINE_HEIGHT = 1.5f
 private const val CODE_SCALE = 0.88f
 private const val CODE_LINE_HEIGHT = 1.45f
 private const val CAPTION_SCALE = 0.8f
@@ -55,6 +55,7 @@ private val headingSpecs =
 public fun readingTypography(
     palette: ReadingPalette,
     bodySize: TextUnit = 18.sp,
+    lineHeight: Float = DEFAULT_BODY_LINE_HEIGHT,
     bodyFamily: FontFamily = FontFamily.Serif,
     codeFamily: FontFamily = FontFamily.Monospace,
 ): ReadingTypography {
@@ -63,7 +64,7 @@ public fun readingTypography(
         TextStyle(
             fontFamily = bodyFamily,
             fontSize = bodySize,
-            lineHeight = (size * BODY_LINE_HEIGHT).sp,
+            lineHeight = (size * lineHeight).sp,
             color = palette.ink,
         )
     val headings =
@@ -93,6 +94,6 @@ public fun readingTypography(
                 lineHeight = (size * CAPTION_SCALE * CAPTION_LINE_HEIGHT).sp,
                 color = palette.inkMuted,
             ),
-        paragraphGapEm = PARAGRAPH_GAP_LINES * BODY_LINE_HEIGHT,
+        paragraphGapEm = PARAGRAPH_GAP_LINES * lineHeight,
     )
 }

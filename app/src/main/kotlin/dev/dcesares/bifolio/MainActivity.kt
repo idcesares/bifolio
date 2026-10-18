@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.content.IntentCompat
@@ -21,7 +22,12 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.dcesares.bifolio.data.AppearanceProfile
+import dev.dcesares.bifolio.data.ThemeChoice
 import dev.dcesares.bifolio.designsystem.BifolioTheme
+import dev.dcesares.bifolio.designsystem.LocalReducedMotionOverride
+import dev.dcesares.bifolio.designsystem.ReadingThemeId
+import dev.dcesares.bifolio.designsystem.defaultThemeId
 import dev.dcesares.bifolio.feature.library.LibraryNotice
 import dev.dcesares.bifolio.feature.library.LibraryRoute
 import dev.dcesares.bifolio.feature.library.LibraryViewModel
@@ -115,7 +121,8 @@ class MainActivity : ComponentActivity() {
     private fun Content() {
         val state by reader.state.collectAsStateWithLifecycle()
         val chromeVisible by reader.chromeVisible.collectAsStateWithLifecycle()
-        BifolioTheme {
+        val profile by reader.appearance.collectAsStateWithLifecycle()
+        ProfiledTheme(profile) {
             // UI-04: immersive reading hides the system bars; they come back with the chrome and in the library.
             LaunchedEffect(state is ReaderUiState.Idle, chromeVisible) {
                 val bars = WindowCompat.getInsetsController(window, window.decorView)
@@ -130,7 +137,12 @@ class MainActivity : ComponentActivity() {
                 val failed = state as? ReaderUiState.Failed ?: return@LaunchedEffect
                 when {
                     failed.reason == FailureReason.NotMarkdown && openedExternally -> {
-                        Toast.makeText(this@MainActivity, R.string.open_failed_not_markdown, Toast.LENGTH_LONG).show()
+                        Toast
+                            .makeText(
+                                this@MainActivity,
+                                R.string.open_failed_not_markdown,
+                                Toast.LENGTH_LONG,
+                            ).show()
                         finish()
                     }
                     failed.reason == FailureReason.Unreadable && !openedExternally -> {
@@ -197,5 +209,25 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val TRANSPARENT = 0x00000000
+    }
+}
+
+private fun ThemeChoice.toReadingTheme(): ReadingThemeId =
+    when (this) {
+        ThemeChoice.PAPER -> ReadingThemeId.Paper
+        ThemeChoice.SEPIA -> ReadingThemeId.Sepia
+        ThemeChoice.DUSK -> ReadingThemeId.Dusk
+        ThemeChoice.NIGHT -> ReadingThemeId.Night
+    }
+
+/** Applies the user's appearance profile (UI-10) to the theme tokens and the reduce-motion switch. */
+@Composable
+private fun ProfiledTheme(
+    profile: AppearanceProfile,
+    content: @Composable () -> Unit,
+) {
+    val theme = profile.theme?.toReadingTheme() ?: defaultThemeId()
+    CompositionLocalProvider(LocalReducedMotionOverride provides profile.reduceMotion.takeIf { it }) {
+        BifolioTheme(theme, profile.bodySp.toFloat(), profile.lineHeight, content)
     }
 }

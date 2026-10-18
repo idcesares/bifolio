@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.dcesares.bifolio.data.AppearanceProfile
 import dev.dcesares.bifolio.designsystem.BifolioMotion
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
@@ -133,7 +134,6 @@ internal fun PagedSurface(
     onFirstDrawn: () -> Unit,
     onToggleChrome: () -> Unit,
     modifier: Modifier = Modifier,
-    turnStyle: PageTurnStyle = PageTurnStyle.SLIDE,
     notices: Set<ReaderNotice> = emptySet(),
     foldSource: FoldSource = FoldSource.None,
     requestDebounceMillis: Long = REQUEST_DEBOUNCE_MILLIS,
@@ -141,6 +141,7 @@ internal fun PagedSurface(
     onOpenToc: (() -> Unit)? = null,
     volumeKeysTurn: Boolean = false,
     jumps: Flow<Anchor> = emptyFlow(),
+    appearance: AppearanceProfile = AppearanceProfile(),
 ) {
     val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
     val palette = BifolioTheme.palette
@@ -177,6 +178,7 @@ internal fun PagedSurface(
             }
         }
 
+    val turnStyle = turnStyleOf(appearance.turn)
     turn.style = if (reduced && turnStyle == PageTurnStyle.SLIDE) PageTurnStyle.FADE else turnStyle
     SideEffect {
         turn.canTurn = { dir -> flow != null && (index - dir) in 0 until flow.spreadCount }
@@ -254,7 +256,20 @@ internal fun PagedSurface(
         val usableHeight = (constraints.maxHeight - topPx - bottomPx).toInt().coerceAtLeast(1)
         val usableFold = fold?.translatedBy(leftPx.toInt(), topPx.toInt())
         val request =
-            PageRequest(usableWidth, usableHeight, density.density, density.fontScale, bodySp, language, usableFold)
+            PageRequest(
+                usableWidth,
+                usableHeight,
+                density.density,
+                density.fontScale,
+                bodySp,
+                language,
+                usableFold,
+                lineHeight = appearance.lineHeight,
+                marginScale = appearance.marginScale,
+                forcedColumns = appearance.columns,
+                hyphenate = appearance.hyphenate,
+                justify = appearance.justify,
+            )
         val latestRequest by rememberUpdatedState(request)
         val latestOnRequest by rememberUpdatedState(onRequest)
         // The first request starts at once; a burst (window drag, hinge sweep) collapses to its last request.

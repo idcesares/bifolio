@@ -28,6 +28,12 @@ public data class PageRequest(
      * request so a hinge that moves without a window resize is a different layout (LAY-01, PAG-10).
      */
     val fold: FoldSpec? = null,
+    /** The user's typography and layout choices (UI-10). Part of the request, so a change repaginates (PAG-10). */
+    val lineHeight: Float = 1.5f,
+    val marginScale: Float = 1f,
+    val forcedColumns: Int? = null,
+    val hyphenate: Boolean = true,
+    val justify: Boolean = false,
 ) {
     /** Body size in px at this density and font scale (TYP-01). */
     public val bodyPx: Float get() = bodySp * density * fontScale
@@ -71,15 +77,15 @@ private const val TABLE_MIN_COLUMN_DP = 48f
 private const val CODE_PADDING_DP = 6f
 
 /** Production [TextEngine]: `StaticLayout` measuring with the body serif face (ADR-0013). */
-public class AndroidTextEngine(
-    private val marginScale: Float = 1f,
-    private val forcedColumns: Int? = null,
-) : TextEngine {
+public class AndroidTextEngine : TextEngine {
     override fun prepare(request: PageRequest): PreparedText {
         val config =
             TextStyleConfig(
                 bodySizePx = request.bodyPx,
+                lineHeight = request.lineHeight,
                 locale = Locale.forLanguageTag(request.languageTag),
+                hyphenate = request.hyphenate,
+                justify = request.justify,
             ).withMeasuredCharWidth()
         val spec =
             WindowSpec(
@@ -87,8 +93,8 @@ public class AndroidTextEngine(
                 heightPx = request.heightPx,
                 density = request.density,
                 charWidthPx = config.charWidthPx,
-                marginScale = marginScale,
-                forcedColumns = forcedColumns,
+                marginScale = request.marginScale,
+                forcedColumns = request.forcedColumns,
                 metrics = flowMetricsFor(request),
                 typographyKey = config.hashCode(),
                 fold = request.fold,

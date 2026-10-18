@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animate
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
+import dev.dcesares.bifolio.data.TurnChoice
 import dev.dcesares.bifolio.designsystem.BifolioMotion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -108,3 +109,10 @@ internal class PageTurnController(
             }
     }
 }
+
+internal fun turnStyleOf(choice: TurnChoice): PageTurnStyle =
+    when (choice) {
+        TurnChoice.SLIDE -> PageTurnStyle.SLIDE
+        TurnChoice.FADE -> PageTurnStyle.FADE
+        TurnChoice.NONE -> PageTurnStyle.NONE
+    }

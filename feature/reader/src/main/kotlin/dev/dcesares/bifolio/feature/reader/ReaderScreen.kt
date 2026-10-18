@@ -91,6 +91,7 @@ public fun ReaderRoute(
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val volumeKeysTurn by viewModel.volumeKeysTurn.collectAsStateWithLifecycle()
     val returnAnchor by viewModel.returnAnchor.collectAsStateWithLifecycle()
+    val appearance by viewModel.appearance.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
             Box(modifier.fillMaxSize()) {
@@ -111,6 +112,7 @@ public fun ReaderRoute(
                             foldSource = rememberFoldSource(),
                             document = current.document,
                             volumeKeysTurn = volumeKeysTurn,
+                            appearance = appearance,
                             jumps = viewModel.jumps,
                         )
                     } else {

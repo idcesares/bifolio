@@ -2,6 +2,7 @@ package dev.dcesares.bifolio.feature.reader
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.dcesares.bifolio.data.AppearanceProfile
 import dev.dcesares.bifolio.data.ContentHash
 import dev.dcesares.bifolio.data.ReadingMode
 import dev.dcesares.bifolio.data.ReadingPreferences
@@ -113,6 +114,14 @@ public class ReaderViewModel(
     /** Whether the volume keys turn pages (NAV-04). */
     public val volumeKeysTurn: StateFlow<Boolean> =
         preferences.volumeKeysTurn.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** The global appearance profile (UI-10). */
+    public val appearance: StateFlow<AppearanceProfile> =
+        preferences.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, AppearanceProfile())
+
+    public fun updateAppearance(change: (AppearanceProfile) -> AppearanceProfile) {
+        viewModelScope.launch { preferences.updateAppearance(change) }
+    }
 
     private val mutableChromeVisible = MutableStateFlow(false)
 
