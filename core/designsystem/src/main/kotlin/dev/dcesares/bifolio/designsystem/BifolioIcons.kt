@@ -10,169 +10,119 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathBuilder
-import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
 /**
- * Minimal outlined icons, 24dp viewport, 1.5 stroke (UI-12).
- * PENDING M4 (OPN-04): replace these hand-drawn vectors with the Lucide set once its license is recorded.
+ * Lucide icons (ISC, see docs/design/ICONS.md), 24dp viewport, 1.5 stroke (UI-12). Path data is the official
+ * Lucide geometry, unmodified; only the stroke width differs from Lucide's default of 2.
  */
 public object BifolioIcons {
     private const val VIEWPORT = 24f
     private const val STROKE = 1.5f
+    private val parser = PathParser()
 
     private fun icon(
         name: String,
-        block: PathBuilder.() -> Unit,
+        vararg paths: String,
     ): ImageVector =
         ImageVector
             .Builder(name, 24.dp, 24.dp, VIEWPORT, VIEWPORT)
-            .path(
-                stroke = SolidColor(Color.Black),
-                strokeLineWidth = STROKE,
-                strokeLineCap = StrokeCap.Round,
-                strokeLineJoin = StrokeJoin.Round,
-                pathBuilder = block,
-            ).build()
+            .apply {
+                paths.forEach { d ->
+                    addPath(
+                        pathData = parser.parsePathString(d).toNodes(),
+                        stroke = SolidColor(Color.Black),
+                        strokeLineWidth = STROKE,
+                        strokeLineCap = StrokeCap.Round,
+                        strokeLineJoin = StrokeJoin.Round,
+                    )
+                }
+            }.build()
 
-    /** Two leaves meeting at a spine. */
     public val BookOpen: ImageVector =
-        icon("book-open") {
-            moveTo(12f, 6.5f)
-            lineTo(12f, 19.5f)
-            moveTo(12f, 6.5f)
-            curveTo(10.5f, 5f, 7.5f, 4.5f, 3.5f, 5f)
-            lineTo(3.5f, 18f)
-            curveTo(7.5f, 17.5f, 10.5f, 18f, 12f, 19.5f)
-            curveTo(13.5f, 18f, 16.5f, 17.5f, 20.5f, 18f)
-            lineTo(20.5f, 5f)
-            curveTo(16.5f, 4.5f, 13.5f, 5f, 12f, 6.5f)
-        }
+        icon(
+            "book-open",
+            "M12 7v14",
+            "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1" +
+                "v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
+        )
 
     public val FolderOpen: ImageVector =
-        icon("folder-open") {
-            moveTo(3.5f, 18.5f)
-            lineTo(3.5f, 6f)
-            lineTo(9f, 6f)
-            lineTo(11f, 8f)
-            lineTo(18f, 8f)
-            lineTo(18f, 10.5f)
-            moveTo(3.5f, 18.5f)
-            lineTo(6f, 10.5f)
-            lineTo(21f, 10.5f)
-            lineTo(18.5f, 18.5f)
-            close()
-        }
+        icon(
+            "folder-open",
+            "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5" +
+                "a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2",
+        )
 
     public val Trash: ImageVector =
-        icon("trash-2") {
-            moveTo(4f, 6.5f)
-            lineTo(20f, 6.5f)
-            moveTo(6f, 6.5f)
-            lineTo(7f, 20f)
-            lineTo(17f, 20f)
-            lineTo(18f, 6.5f)
-            moveTo(9f, 6.5f)
-            lineTo(9f, 4f)
-            lineTo(15f, 4f)
-            lineTo(15f, 6.5f)
-            moveTo(10f, 10.5f)
-            lineTo(10f, 16f)
-            moveTo(14f, 10.5f)
-            lineTo(14f, 16f)
-        }
+        icon(
+            "trash",
+            "M10 11v6",
+            "M14 11v6",
+            "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6",
+            "M3 6h18",
+            "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
+        )
 
     public val Info: ImageVector =
-        icon("info") {
-            moveTo(21f, 12f)
-            curveTo(21f, 16.97f, 16.97f, 21f, 12f, 21f)
-            curveTo(7.03f, 21f, 3f, 16.97f, 3f, 12f)
-            curveTo(3f, 7.03f, 7.03f, 3f, 12f, 3f)
-            curveTo(16.97f, 3f, 21f, 7.03f, 21f, 12f)
-            close()
-            moveTo(12f, 11f)
-            lineTo(12f, 16.5f)
-            moveTo(12f, 7.75f)
-            lineTo(12f, 8f)
-        }
+        icon(
+            "info",
+            "M22 12A10 10 0 0 1 12 22A10 10 0 0 1 2 12A10 10 0 0 1 12 2A10 10 0 0 1 22 12z",
+            "M12 16v-4",
+            "M12 8h.01",
+        )
 
     public val ChevronRight: ImageVector =
-        icon("chevron-right") {
-            moveTo(9f, 5f)
-            lineTo(16f, 12f)
-            lineTo(9f, 19f)
-        }
+        icon(
+            "chevron-right",
+            "m9 18 6-6-6-6",
+        )
 
     public val ChevronDown: ImageVector =
-        icon("chevron-down") {
-            moveTo(5f, 9f)
-            lineTo(12f, 16f)
-            lineTo(19f, 9f)
-        }
+        icon(
+            "chevron-down",
+            "m6 9 6 6 6-6",
+        )
 
-    /** Lucide chevrons-up-down: the scroll direction, used to switch to continuous scroll. */
     public val ChevronsUpDown: ImageVector =
-        icon("chevrons-up-down") {
-            moveTo(7f, 15f)
-            lineTo(12f, 20f)
-            lineTo(17f, 15f)
-            moveTo(7f, 9f)
-            lineTo(12f, 4f)
-            lineTo(17f, 9f)
-        }
+        icon(
+            "chevrons-up-down",
+            "m7 15 5 5 5-5",
+            "m7 9 5-5 5 5",
+        )
 
-    /** Lucide undo-2: an arrow bending back, the return chip. */
     public val Undo2: ImageVector =
-        icon("undo-2") {
-            moveTo(9f, 14f)
-            lineTo(4f, 9f)
-            lineTo(9f, 4f)
-            moveTo(4f, 9f)
-            lineTo(14.5f, 9f)
-            curveTo(17.54f, 9f, 20f, 11.46f, 20f, 14.5f)
-            curveTo(20f, 17.54f, 17.54f, 20f, 14.5f, 20f)
-            lineTo(11f, 20f)
-        }
+        icon(
+            "undo-2",
+            "M9 14 4 9l5-5",
+            "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11",
+        )
 
-    /** Lucide list: three rows with bullets, the table of contents. */
     public val List: ImageVector =
-        icon("list") {
-            moveTo(8f, 6f)
-            lineTo(21f, 6f)
-            moveTo(8f, 12f)
-            lineTo(21f, 12f)
-            moveTo(8f, 18f)
-            lineTo(21f, 18f)
-            moveTo(3f, 6f)
-            lineTo(3.01f, 6f)
-            moveTo(3f, 12f)
-            lineTo(3.01f, 12f)
-            moveTo(3f, 18f)
-            lineTo(3.01f, 18f)
-        }
+        icon(
+            "list",
+            "M3 5h.01",
+            "M3 12h.01",
+            "M3 19h.01",
+            "M8 5h13",
+            "M8 12h13",
+            "M8 19h13",
+        )
 
-    /** Lucide type: a capital T, the appearance sheet. */
     public val Type: ImageVector =
-        icon("type") {
-            moveTo(12f, 4f)
-            lineTo(12f, 20f)
-            moveTo(4f, 7f)
-            lineTo(4f, 5f)
-            quadTo(4f, 4f, 5f, 4f)
-            lineTo(19f, 4f)
-            quadTo(20f, 4f, 20f, 5f)
-            lineTo(20f, 7f)
-            moveTo(9f, 20f)
-            lineTo(15f, 20f)
-        }
+        icon(
+            "type",
+            "M12 4v16",
+            "M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2",
+            "M9 20h6",
+        )
 
     public val ChevronLeft: ImageVector =
-        icon("chevron-left") {
-            moveTo(15f, 5f)
-            lineTo(8f, 12f)
-            lineTo(15f, 19f)
-        }
+        icon(
+            "chevron-left",
+            "m15 18-6-6 6-6",
+        )
 }
 
 /** Draws [icon] at 24dp in [tint]. Decorative when [contentDescription] is null. */
