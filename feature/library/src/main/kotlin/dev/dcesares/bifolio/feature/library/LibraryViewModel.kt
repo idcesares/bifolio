@@ -26,6 +26,11 @@ public class LibraryViewModel(
         viewModelScope.launch { repository.remove(recent.uri) }
     }
 
+    /** The recent for [uri] could not be opened: dim it and keep it until removed (UI-16). */
+    public fun markUnavailable(uri: String) {
+        viewModelScope.launch { repository.markUnavailable(uri) }
+    }
+
     public fun showNotice(value: LibraryNotice) {
         notice.value = value
     }

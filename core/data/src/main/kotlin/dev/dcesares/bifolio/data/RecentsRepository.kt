@@ -65,6 +65,16 @@ public class RecentsRepository(
         }
     }
 
+    /** Flags the recent as unavailable (UI-16). Unknown uris are ignored; a later [upsert] clears the flag. */
+    public suspend fun markUnavailable(uri: String) {
+        store.edit { prefs ->
+            val current = RecentsCodec.decodeRecents(prefs[recentsKey].orEmpty())
+            if (current.none { it.uri == uri }) return@edit
+            prefs[recentsKey] =
+                RecentsCodec.encodeRecents(current.map { if (it.uri == uri) it.copy(unavailable = true) else it })
+        }
+    }
+
     /** Removes the entry and releases its grant. The file itself is never touched. */
     public suspend fun remove(uri: String) {
         store.edit { prefs ->

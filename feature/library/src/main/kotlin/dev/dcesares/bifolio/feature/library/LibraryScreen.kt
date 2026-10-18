@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.dcesares.bifolio.data.RecentDocument
 import dev.dcesares.bifolio.designsystem.BifolioButton
@@ -180,12 +181,21 @@ private fun RecentRow(
                 DateUtils.MINUTE_IN_MILLIS,
                 DateUtils.FORMAT_ABBREV_RELATIVE,
             ).toString()
+    val unavailable = recent.unavailable
+    val status =
+        if (unavailable) {
+            stringResource(R.string.library_unavailable)
+        } else {
+            stringResource(R.string.library_progress, (recent.progress * PERCENT).toInt())
+        }
     val meta =
         stringResource(
             R.string.library_meta_separator,
             stringResource(R.string.library_last_read, whenRead),
-            stringResource(R.string.library_progress, (recent.progress * PERCENT).toInt()),
+            status,
         )
+    // Dimmed by moving ink to the muted tone, which keeps the contrast of the palette (UI-16).
+    val titleColor = if (unavailable) palette.inkMuted else palette.ink
     Row(
         modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = Spacing.TouchTarget),
         verticalAlignment = Alignment.CenterVertically,
@@ -200,10 +210,18 @@ private fun RecentRow(
         ) {
             BasicText(
                 text = recent.title,
-                style = type.body.copy(fontWeight = FontWeight.SemiBold),
+                style = type.body.copy(fontWeight = FontWeight.SemiBold, color = titleColor),
             )
             BasicText(recent.fileName, style = type.caption)
             BasicText(meta, style = type.caption)
+            if (recent.preview.isNotEmpty()) {
+                BasicText(
+                    text = recent.preview,
+                    style = type.caption.copy(color = if (unavailable) palette.inkMuted else palette.ink),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Box(
                 Modifier
                     .padding(top = Spacing.S)
@@ -211,12 +229,14 @@ private fun RecentRow(
                     .height(Spacing.Hairline)
                     .background(palette.rule),
             ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth(recent.progress.coerceIn(0f, 1f))
-                        .height(Spacing.Hairline)
-                        .background(palette.accent),
-                )
+                if (!unavailable) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(recent.progress.coerceIn(0f, 1f))
+                            .height(Spacing.Hairline)
+                            .background(palette.accent),
+                    )
+                }
             }
         }
         BifolioIconButton(

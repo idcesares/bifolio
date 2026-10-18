@@ -7,6 +7,7 @@
     <string name="library_remove_description">Remove %1$s from recents</string>
     <string name="library_last_read">Last read %1$s</string>
     <string name="library_progress">%1$d%% read</string>
+    <string name="library_unavailable">Unavailable</string>
     <string name="library_meta_separator">%1$s · %2$s</string>
     <string name="library_notice_unreadable">Could not open that file. If it moved or was deleted, remove it from recents.</string>
     <string name="library_notice_dismiss">Dismiss</string>

@@ -48,4 +48,30 @@ class CodecAndHashTest {
         )
         assertNotEquals(ContentHash.of("a".toByteArray()), ContentHash.of("b".toByteArray()))
     }
+
+    @Test
+    fun previewAndUnavailableRoundTrip() {
+        val list =
+            listOf(
+                RecentDocument(
+                    "u1",
+                    "t",
+                    "f",
+                    1,
+                    0.5f,
+                    "h",
+                    preview = "Tab\there, 100% \u00e9 & more\nline",
+                    unavailable = true,
+                ),
+                RecentDocument("u2", "t", "f", 2, 0f, "h"),
+            )
+        assertEquals(list, RecentsCodec.decodeRecents(RecentsCodec.encodeRecents(list)))
+    }
+
+    @Test
+    fun entriesStoredBeforePreviewExistedDecodeWithDefaults() {
+        val old = "u%3A1	Title	file.md	42	0.25	hash"
+        val r = RecentsCodec.decodeRecents(old).single()
+        assertEquals(RecentDocument("u:1", "Title", "file.md", 42, 0.25f, "hash", preview = "", unavailable = false), r)
+    }
 }

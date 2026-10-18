@@ -115,6 +115,57 @@ class RecentsRepositoryTest {
         }
 
     @Test
+    fun previewIsPersistedWithTheRecent() =
+        runTest {
+            val repo = RecentsRepository(store(), FakeGrants())
+            repo.upsert(doc(1).copy(preview = "First paragraph."))
+            assertEquals(
+                "First paragraph.",
+                repo.recents
+                    .first()
+                    .single()
+                    .preview,
+            )
+        }
+
+    @Test
+    fun markUnavailableFlagsOnlyThatRecentAndKeepsOrder() =
+        runTest {
+            val repo = RecentsRepository(store(), FakeGrants())
+            repo.upsert(doc(1, at = 10))
+            repo.upsert(doc(2, at = 20))
+            repo.markUnavailable("content://docs/1")
+            val list = repo.recents.first()
+            assertEquals(listOf("content://docs/2", "content://docs/1"), list.map { it.uri })
+            assertEquals(listOf(false, true), list.map { it.unavailable })
+            assertEquals(10L, list.last().lastOpenedMillis)
+        }
+
+    @Test
+    fun upsertAfterSuccessfulOpenClearsUnavailable() =
+        runTest {
+            val repo = RecentsRepository(store(), FakeGrants())
+            repo.upsert(doc(1, at = 10))
+            repo.markUnavailable("content://docs/1")
+            repo.upsert(doc(1, at = 20))
+            assertFalse(
+                repo.recents
+                    .first()
+                    .single()
+                    .unavailable,
+            )
+        }
+
+    @Test
+    fun markUnavailableOnUnknownUriIsANoOp() =
+        runTest {
+            val repo = RecentsRepository(store(), FakeGrants())
+            repo.upsert(doc(1))
+            repo.markUnavailable("content://docs/404")
+            assertEquals(listOf(doc(1)), repo.recents.first())
+        }
+
+    @Test
     fun anchorRoundTripsByUri() =
         runTest {
             val repo = RecentsRepository(store(), FakeGrants())
