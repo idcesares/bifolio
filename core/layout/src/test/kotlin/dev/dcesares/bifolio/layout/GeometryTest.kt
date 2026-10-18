@@ -68,6 +68,20 @@ class GeometryTest {
     }
 
     @Test
+    fun `POS-06 a very wide window reaches 3 columns and never more`() {
+        assertEquals(3, GeometryCalculator.compute(spec(2400)).columnCount)
+        assertEquals(3, GeometryCalculator.compute(spec(6000)).columnCount)
+    }
+
+    @Test
+    fun `POS-05 the smallest window still yields one usable column`() {
+        // 320dp x 360dp at density 2.75 with 16 px characters.
+        val g = GeometryCalculator.compute(spec(w = 880, h = 990, density = 2.75f, charW = 16f))
+        assertEquals(1, g.columnCount)
+        assertTrue(g.columnWidths.all { it > 0 })
+    }
+
+    @Test
     fun `LAY-08 forced columns are a maximum with a 34 character floor`() {
         // W 1100 auto = 2; forced 3 drops to the auto-with-floor count.
         val floor3 = GeometryCalculator.compute(spec(1100, forced = 3))
