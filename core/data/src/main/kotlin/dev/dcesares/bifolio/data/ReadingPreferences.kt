@@ -1,9 +1,12 @@
 package dev.dcesares.bifolio.data
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -38,5 +41,60 @@ public class ReadingPreferences(
 
     public suspend fun setVolumeKeysTurn(enabled: Boolean) {
         store.edit { it[volumeKey] = enabled }
+    }
+
+    private val themeKey = stringPreferencesKey("appearance_theme")
+    private val sizeKey = intPreferencesKey("appearance_size_sp")
+    private val lineHeightKey = floatPreferencesKey("appearance_line_height")
+    private val marginKey = floatPreferencesKey("appearance_margin_scale")
+    private val columnsKey = intPreferencesKey("appearance_columns")
+    private val justifyKey = booleanPreferencesKey("appearance_justify")
+    private val hyphenKey = booleanPreferencesKey("appearance_hyphenate")
+    private val turnKey = stringPreferencesKey("appearance_turn")
+    private val hairlineKey = booleanPreferencesKey("appearance_hairline")
+    private val reduceMotionKey = booleanPreferencesKey("appearance_reduce_motion")
+
+    /** The global appearance profile (UI-10), always [AppearanceProfile.normalized]. */
+    public val appearance: Flow<AppearanceProfile> =
+        store.data.map { it.toProfile() }.distinctUntilChanged()
+
+    /** Applies [change] to the stored profile and writes the normalized result. */
+    public suspend fun updateAppearance(change: (AppearanceProfile) -> AppearanceProfile) {
+        store.edit { prefs ->
+            val next = change(prefs.toProfile()).normalized()
+            prefs.putOrRemove(themeKey, next.theme?.name)
+            prefs[sizeKey] = next.bodySp
+            prefs[lineHeightKey] = next.lineHeight
+            prefs[marginKey] = next.marginScale
+            prefs.putOrRemove(columnsKey, next.columns)
+            prefs[justifyKey] = next.justify
+            prefs[hyphenKey] = next.hyphenate
+            prefs[turnKey] = next.turn.name
+            prefs[hairlineKey] = next.hairline
+            prefs[reduceMotionKey] = next.reduceMotion
+        }
+    }
+
+    private fun Preferences.toProfile(): AppearanceProfile {
+        val base = AppearanceProfile()
+        return AppearanceProfile(
+            theme = ThemeChoice.entries.firstOrNull { it.name == this[themeKey] },
+            bodySp = this[sizeKey] ?: base.bodySp,
+            lineHeight = this[lineHeightKey] ?: base.lineHeight,
+            marginScale = this[marginKey] ?: base.marginScale,
+            columns = this[columnsKey],
+            justify = this[justifyKey] ?: base.justify,
+            hyphenate = this[hyphenKey] ?: base.hyphenate,
+            turn = TurnChoice.entries.firstOrNull { it.name == this[turnKey] } ?: base.turn,
+            hairline = this[hairlineKey] ?: base.hairline,
+            reduceMotion = this[reduceMotionKey] ?: base.reduceMotion,
+        ).normalized()
+    }
+
+    private fun <T> MutablePreferences.putOrRemove(
+        key: Preferences.Key<T>,
+        value: T?,
+    ) {
+        if (value == null) remove(key) else this[key] = value
     }
 }
