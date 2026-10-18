@@ -1,5 +1,6 @@
 package dev.dcesares.bifolio.layout
 
+import dev.dcesares.bifolio.model.Anchor
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -75,5 +76,31 @@ class PageDetailerTest {
                 texts.sumOf { (it.clipBottom - it.clipTop) / 20 }
             }
         assertEquals(30, lines)
+    }
+
+    @Test
+    fun `the anchor line of a page anchor is a visible line at the top of its column (ANC-03)`() {
+        val geometry = testGeometry(lines = 12)
+        val (doc, flow) = paginate(mixed, geometry)
+        val detailer = PageDetailer(doc, FakeBlockMeasurer(), geometry)
+        for (page in flow.pages) {
+            val line = detailer.anchorLine(page, 0, page.anchor)
+            val header = page.slices.first().repeatedHeaderHeight
+            assertEquals(header, line.y, "first line of the page sits under the repeated header, if any")
+            assertTrue(line.height > 0 && line.y + line.height <= geometry.columnHeight, "outside the column")
+        }
+    }
+
+    @Test
+    fun `an anchor in the middle of a paragraph maps to a later line than the page start`() {
+        val geometry = testGeometry(lines = 40)
+        val (doc, flow) = paginate(markdown(para(12)), geometry)
+        val detailer = PageDetailer(doc, FakeBlockMeasurer(), geometry)
+        val page = flow.pages.first()
+        val length = doc.blocks[0].range.length
+        val start = detailer.anchorLine(page, 0, page.anchor)
+        val middle = detailer.anchorLine(page, 0, Anchor(0, length / 2))
+        assertTrue(middle.y > start.y, "mid-paragraph anchor must be below the first line")
+        assertTrue(middle.y + middle.height <= geometry.columnHeight)
     }
 }

@@ -61,6 +61,7 @@ import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.text.TextLayoutFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -144,6 +145,7 @@ internal fun PagedSurface(
     val reduced = rememberReducedMotion()
     val scope = rememberCoroutineScope()
     val turn = remember { PageTurnController(scope) }
+    val continuity = remember { ContinuityMotion(scope) }
     val tableScroll = remember { mutableStateMapOf<Int, Int>() }
     var shown by remember { mutableStateOf(initialAnchor) }
     var noticesDismissed by rememberSaveable { mutableStateOf(false) }
@@ -174,6 +176,7 @@ internal fun PagedSurface(
             // ANC-01: the settled anchor is the first visible character of the leading column of the spread.
             val settled = flow?.let { AnchorMapper.leftmostVisibleAnchor(it, index - dir) }
             if (settled != null) {
+                continuity.cancel()
                 shown = settled
                 onSettled(settled)
             }
@@ -209,10 +212,19 @@ internal fun PagedSurface(
                 .debounceAfterFirst(requestDebounceMillis)
                 .collect { latestOnRequest(it) }
         }
+        // MOT-05: once a layout for new geometry has its spread ready, the anchor line glides to its new place.
+        LaunchedEffect(layout, shown, store, startPx, topPx) {
+            if (layout == null || store == null) return@LaunchedEffect
+            continuity.track(layout, shown, startPx, topPx, reduced) {
+                val pages = layout.flow.pagesOfSpread(layout.flow.spreadIndexOf(shown).coerceAtLeast(0))
+                snapshotFlow { pages.all { store.columns.containsKey(it) } }.first { it }
+            }
+        }
         turn.width = constraints.maxWidth.toFloat()
 
         val env = remember { PagedGesture() }
         env.turn = turn
+        env.continuity = continuity
         env.width = constraints.maxWidth.toFloat()
         env.onToggleChrome = onToggleChrome
         env.tables = { position ->
@@ -222,6 +234,7 @@ internal fun PagedSurface(
 
         val drawn = remember(layout?.request) { BooleanArray(1) }
         val pagePaint = remember(palette) { Paint().apply { color = palette.page.toArgb() } }
+        val glowPaint = remember(palette) { Paint().apply { color = palette.accent.toArgb() } }
         val deckRegion = layout?.geometry?.deckRegion
         val pageBox =
             if (deckRegion == null) {
@@ -237,7 +250,17 @@ internal fun PagedSurface(
                 .drawBehind {
                     drawIntoCanvas { c ->
                         val spreads =
-                            SpreadFrame(layout, store, index, turn, startPx, topPx, size.width, size.height, pagePaint)
+                            SpreadFrame(
+                                layout,
+                                store,
+                                index,
+                                turn,
+                                startPx,
+                                topPx,
+                                size.width,
+                                size.height,
+                                FramePaints(pagePaint, glowPaint, continuity),
+                            )
                         val painted = spreads.paint(c.nativeCanvas) { block -> tableScroll[block] ?: 0 }
                         if (painted && !drawn[0]) {
                             drawn[0] = true
@@ -252,7 +275,10 @@ internal fun PagedSurface(
             seek.flow = layout.flow
             seek.turn = turn
             seek.shown = { shown }
-            seek.show = { shown = it }
+            seek.show = {
+                continuity.cancel()
+                shown = it
+            }
             seek.settled = onSettled
             val progress = seek.scrubbing ?: seek.progress()
             Box(
@@ -285,6 +311,13 @@ internal fun PagedSurface(
     }
 }
 
+/** Page background, anchor highlight paint and the continuity motion that drives it (MOT-05). */
+private class FramePaints(
+    val page: Paint,
+    val glow: Paint,
+    val continuity: ContinuityMotion,
+)
+
 /** What one frame needs to paint: the shown spread and, during a turn, the one coming in. */
 private class SpreadFrame(
     private val layout: PagedLayout?,
@@ -295,7 +328,7 @@ private class SpreadFrame(
     private val originY: Float,
     private val width: Float,
     private val height: Float,
-    private val pagePaint: Paint,
+    private val paints: FramePaints,
 ) {
     /** Returns true when the shown spread was complete. */
     fun paint(
@@ -325,9 +358,22 @@ private class SpreadFrame(
                 spread(canvas, incoming, 0f, (abs(p) * OPAQUE).toInt(), tableScroll)
             }
         } else {
+            canvas.save()
+            canvas.translate(paints.continuity.offsetX, paints.continuity.offsetY)
             spread(canvas, index, 0f, OPAQUE, tableScroll)
+            canvas.restore()
         }
         return layout.flow.pagesOfSpread(index).all { store.columns.containsKey(it) }
+    }
+
+    /** MOT-05: the soft highlight on the anchor line, under the text so the words stay legible. */
+    private fun anchorGlow(canvas: Canvas) {
+        val spot = paints.continuity.spot
+        val alpha = paints.continuity.glow
+        if (spot == null || alpha <= 0f || turn.progress != 0f) return
+        if (spot.request != layout?.request) return
+        paints.glow.alpha = (alpha * OPAQUE).roundToInt().coerceIn(0, OPAQUE)
+        canvas.drawRect(spot.x, spot.y, spot.x + spot.width, spot.y + spot.height, paints.glow)
     }
 
     private fun spread(
@@ -343,7 +389,8 @@ private class SpreadFrame(
         if (layer) canvas.saveLayerAlpha(0f, 0f, width, height, alpha)
         canvas.save()
         canvas.translate(dx, 0f)
-        canvas.drawRect(0f, 0f, width, height, pagePaint)
+        canvas.drawRect(0f, 0f, width, height, paints.page)
+        if (spread == index && dx == 0f) anchorGlow(canvas)
         for ((column, page) in flow.pagesOfSpread(spread).withIndex()) {
             val prepared = store!!.columns[page] ?: continue
             canvas.save()
@@ -440,6 +487,7 @@ private class DeckSeek {
 /** Mutable bridge between the composition and the pointer input coroutine, which outlives recompositions. */
 private class PagedGesture {
     lateinit var turn: PageTurnController
+    lateinit var continuity: ContinuityMotion
     var width: Float = 1f
     var onToggleChrome: () -> Unit = {}
     var tables: (Offset) -> TableTarget? = { null }
@@ -488,6 +536,7 @@ private class TouchProgress(
 
 private suspend fun AwaitPointerEventScope.readGesture(env: PagedGesture) {
     val down = awaitFirstDown(requireUnconsumed = false)
+    env.continuity.cancel()
     val touch = TouchProgress(down.position, env.turn.grab(), env.tables(down.position))
     val slop = viewConfiguration.touchSlop
     val tracker = VelocityTracker()

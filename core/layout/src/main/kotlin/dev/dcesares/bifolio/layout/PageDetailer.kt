@@ -1,5 +1,6 @@
 package dev.dcesares.bifolio.layout
 
+import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.CalloutKind
 import dev.dcesares.bifolio.model.Document
 
@@ -44,6 +45,37 @@ public class PageDetailer(
             used += header + layout.height(s, slice.endLine)
         }
         return PageDraw(items, width, used, page.endsDocument)
+    }
+
+    /**
+     * Vertical extent, in px from the top of the column, of the line of [page] placed in [column] that shows
+     * [anchor] (ANC-03, MOT-05). Follows the same vertical placement as [detail]. An anchor that is not inside
+     * the page falls back to the first line of the page, so the result is always a line that is visible on it.
+     */
+    @Synchronized
+    public fun anchorLine(
+        page: Page,
+        column: Int,
+        anchor: Anchor,
+    ): AnchorLine {
+        var used = 0
+        var fallback: AnchorLine? = null
+        for (slice in page.slices) {
+            val layout = flattener.layout(slice.blockIndex, geometry.sliceWidth(column, slice))
+            val s = slice.startLine
+            if (used > 0 && s == 0) used += geometry.metrics.blockGap
+            val base = used + slice.repeatedHeaderHeight
+            val offset = base - layout.tops[s]
+
+            fun lineAt(line: Int) = AnchorLine(layout.tops[line] + offset, layout.bottoms[line] - layout.tops[line])
+            if (fallback == null) fallback = lineAt(s)
+            if (slice.blockIndex == anchor.blockIndex) {
+                val line = maxOf(layout.lineAtOffset(anchor.charOffset), s)
+                if (line < slice.endLine) return lineAt(line)
+            }
+            used += slice.repeatedHeaderHeight + layout.height(s, slice.endLine)
+        }
+        return fallback ?: AnchorLine(0, 0)
     }
 
     private fun continuation(
@@ -160,3 +192,9 @@ public class PageDetailer(
         )
     }
 }
+
+/** Vertical extent of one line inside a page column, in px from the column top. */
+public class AnchorLine(
+    public val y: Int,
+    public val height: Int,
+)
