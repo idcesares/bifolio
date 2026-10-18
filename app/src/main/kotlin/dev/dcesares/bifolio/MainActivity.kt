@@ -181,8 +181,9 @@ class MainActivity : ComponentActivity() {
         val profile by reader.appearance.collectAsStateWithLifecycle()
         val mode by reader.mode.collectAsStateWithLifecycle()
         val volumeKeys by reader.volumeKeysTurn.collectAsStateWithLifecycle()
+        val fitting by reader.fittingColumns.collectAsStateWithLifecycle()
         AppearanceSheet(
-            state = SheetState(profile, mode, volumeKeys),
+            state = SheetState(profile, mode, volumeKeys, fitting),
             actions =
                 SheetActions(
                     onProfile = reader::updateAppearance,

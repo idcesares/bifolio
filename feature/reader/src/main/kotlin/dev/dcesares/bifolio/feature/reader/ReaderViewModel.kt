@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -110,6 +111,12 @@ public class ReaderViewModel(
 
     /** Latest pagination snapshot for the last [paginate] request, null until the first one arrives. */
     public val paged: StateFlow<PagedLayout?> = mutablePaged
+
+    /** Columns the current layout actually uses, for the note under the columns choice. Null before pagination. */
+    public val fittingColumns: StateFlow<Int?> =
+        mutablePaged
+            .map { it?.geometry?.columnCount }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** The mode shown: the global preference, except that files too large for pages always scroll (DOC-05). */
     public val mode: StateFlow<ReadingMode> =
