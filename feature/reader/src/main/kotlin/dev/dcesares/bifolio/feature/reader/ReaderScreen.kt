@@ -95,6 +95,7 @@ public fun ReaderRoute(
     val returnAnchor by viewModel.returnAnchor.collectAsStateWithLifecycle()
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
+    val progress by viewModel.progress.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
             Box(modifier.fillMaxSize()) {
@@ -129,6 +130,9 @@ public fun ReaderRoute(
                             jumps = viewModel.jumps,
                         )
                     }
+                }
+                if (appearance.hairline) {
+                    ProgressHairline(progress, Modifier.align(Alignment.BottomCenter))
                 }
                 ReturnChip(
                     visible = returnAnchor != null,

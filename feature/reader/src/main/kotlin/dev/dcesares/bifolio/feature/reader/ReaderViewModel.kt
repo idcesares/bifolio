@@ -100,6 +100,12 @@ public class ReaderViewModel(
     /** Where the reader is. Changes on open and when a turn or a scroll settles (ANC-02). */
     public val anchor: StateFlow<Anchor> = mutableAnchor
 
+    /** Document progress, 0 to 1, for the progress hairline (UI-05). Follows the settled anchor. */
+    public val progress: StateFlow<Float> =
+        combine(mutableAnchor, mutableState) { anchor, current ->
+            (current as? ReaderUiState.Ready)?.let { progressOf(it.document, anchor) } ?: 0f
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, 0f)
+
     private val mutablePaged = MutableStateFlow<PagedLayout?>(null)
 
     /** Latest pagination snapshot for the last [paginate] request, null until the first one arrives. */
