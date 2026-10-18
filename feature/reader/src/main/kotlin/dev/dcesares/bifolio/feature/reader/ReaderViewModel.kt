@@ -23,7 +23,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,6 +38,9 @@ import java.io.IOException
 private val MarkdownExtensions = listOf(".md", ".markdown", ".mdown", ".mkd")
 private const val OCTET_STREAM = "application/octet-stream"
 private const val SAVE_INTERVAL_MILLIS = 1_000L
+
+/** The return chip leaves after this long without a tap (ANC-06). */
+internal const val RETURN_CHIP_MILLIS = 8_000L
 
 /** The chrome leaves after this long without interaction (UI-03). */
 internal const val CHROME_AUTO_HIDE_MILLIS = 4_000L
@@ -119,6 +124,21 @@ public class ReaderViewModel(
 
     private var chromeHiding: Job? = null
 
+    private val mutableReturnAnchor = MutableStateFlow<Anchor?>(null)
+
+    /**
+     * Where the reader was before the last jump (table of contents, link, search result, footnote), or null when
+     * no return chip is due (ANC-06). It lives here, not in a surface, so folds and rotation keep it.
+     */
+    public val returnAnchor: StateFlow<Anchor?> = mutableReturnAnchor
+
+    private val mutableJumps = MutableSharedFlow<Anchor>(extraBufferCapacity = 1)
+
+    /** Asks the surface on screen to show an anchor. Today only the return chip sends it. */
+    public val jumps: SharedFlow<Anchor> = mutableJumps
+
+    private var returnExpiry: Job? = null
+
     private val pagination = PaginationService(LayoutCache())
     private var paginating: Job? = null
     private var lastRequest: PageRequest? = null
@@ -155,8 +175,32 @@ public class ReaderViewModel(
         mutableChromeVisible.value = false
     }
 
+    /** A jump is about to move the reader: remember where it is now and offer the way back (ANC-06). */
+    public fun onJump() {
+        mutableReturnAnchor.value = mutableAnchor.value
+        returnExpiry?.cancel()
+        returnExpiry =
+            viewModelScope.launch(chromeDispatcher) {
+                delay(RETURN_CHIP_MILLIS)
+                mutableReturnAnchor.value = null
+            }
+    }
+
+    /** The chip was tapped: go back to the pre-jump anchor. The chip is gone afterwards. */
+    public fun returnToJump() {
+        val target = mutableReturnAnchor.value ?: return
+        dismissReturn()
+        mutableJumps.tryEmit(target)
+    }
+
+    public fun dismissReturn() {
+        returnExpiry?.cancel()
+        mutableReturnAnchor.value = null
+    }
+
     public fun open(request: OpenRequest) {
         hideChrome()
+        dismissReturn()
         flush()
         loading?.cancel()
         mutableState.value = ReaderUiState.Loading
@@ -170,6 +214,7 @@ public class ReaderViewModel(
     /** Back to the library: forgets the loaded document. */
     public fun close() {
         hideChrome()
+        dismissReturn()
         flush()
         loading?.cancel()
         currentUri = null

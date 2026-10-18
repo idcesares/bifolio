@@ -8,6 +8,7 @@ import androidx.compose.ui.test.pressKey
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.parse.MarkdownParser
+import kotlinx.coroutines.flow.MutableSharedFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -122,5 +123,19 @@ class ReaderKeyNavigationTest {
         assertTrue("End reaches the tail: ${settled.lastOrNull()}", (settled.lastOrNull()?.blockIndex ?: 0) > 30)
         press(Key.MoveHome)
         assertEquals(0, settled.last().blockIndex)
+    }
+
+    @Test
+    fun scrollJumpRequestShowsTheAnchorAndReportsIt() {
+        val jumps = MutableSharedFlow<Anchor>(extraBufferCapacity = 1)
+        RuntimeEnvironment.setQualifiers("+$PHONE")
+        val ready = ReaderUiState.Ready(document, "T", "h", emptySet(), Anchor(0, 0))
+        compose.setContent { BifolioTheme { ReaderScreen(ready, { settled += it }, jumps = jumps) } }
+        compose.waitForIdle()
+        press(Key.MoveEnd)
+        jumps.tryEmit(Anchor(3, 0))
+        compose.waitForIdle()
+        // The list reports its first visible item, which can be the block just above the target under the top padding.
+        assertTrue("shown near block 3: ${settled.last()}", settled.last().blockIndex in 2..3)
     }
 }

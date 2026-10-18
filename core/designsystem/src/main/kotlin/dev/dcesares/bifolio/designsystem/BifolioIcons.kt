@@ -122,6 +122,19 @@ public object BifolioIcons {
             lineTo(17f, 9f)
         }
 
+    /** Lucide undo-2: an arrow bending back, the return chip. */
+    public val Undo2: ImageVector =
+        icon("undo-2") {
+            moveTo(9f, 14f)
+            lineTo(4f, 9f)
+            lineTo(9f, 4f)
+            moveTo(4f, 9f)
+            lineTo(14.5f, 9f)
+            curveTo(17.54f, 9f, 20f, 11.46f, 20f, 14.5f)
+            curveTo(20f, 17.54f, 17.54f, 20f, 14.5f, 20f)
+            lineTo(11f, 20f)
+        }
+
     /** Lucide list: three rows with bullets, the table of contents. */
     public val List: ImageVector =
         icon("list") {

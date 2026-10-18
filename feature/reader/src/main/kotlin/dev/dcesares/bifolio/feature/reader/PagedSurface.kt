@@ -65,6 +65,8 @@ import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.text.TextLayoutFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -138,6 +140,7 @@ internal fun PagedSurface(
     document: Document? = null,
     onOpenToc: (() -> Unit)? = null,
     volumeKeysTurn: Boolean = false,
+    jumps: Flow<Anchor> = emptyFlow(),
 ) {
     val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
     val palette = BifolioTheme.palette
@@ -189,6 +192,15 @@ internal fun PagedSurface(
     }
     LaunchedEffect(layout, index, store) {
         if (layout != null && store != null && index >= 0) store.prime(layout, index)
+    }
+    // ANC-06: the return chip asks for an anchor to be shown again, exactly, not rounded to a spread start.
+    LaunchedEffect(jumps) {
+        jumps.collect { target ->
+            turn.reset()
+            continuity.cancel()
+            shown = target
+            onSettled(target)
+        }
     }
 
     val insetStart = insets.calculateStartPadding(direction)

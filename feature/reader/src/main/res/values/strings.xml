@@ -20,6 +20,7 @@
     <string name="reader_task_unchecked">Not done</string>
     <string name="reader_chrome_switch_to_scroll">Switch to scroll</string>
     <string name="reader_chrome_switch_to_pages">Switch to pages</string>
+    <string name="reader_return">Return to previous position</string>
     <string name="reader_deck_previous">Previous page</string>
     <string name="reader_deck_next">Next page</string>
     <string name="reader_deck_progress">Reading progress</string>

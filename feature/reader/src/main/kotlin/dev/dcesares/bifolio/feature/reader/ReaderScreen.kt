@@ -62,8 +62,11 @@ import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
 import dev.dcesares.bifolio.designsystem.rememberReducedMotion
 import dev.dcesares.bifolio.model.Anchor
+import dev.dcesares.bifolio.model.Block
 import dev.dcesares.bifolio.model.Heading
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -87,6 +90,7 @@ public fun ReaderRoute(
     val mode by viewModel.mode.collectAsStateWithLifecycle()
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val volumeKeysTurn by viewModel.volumeKeysTurn.collectAsStateWithLifecycle()
+    val returnAnchor by viewModel.returnAnchor.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
             Box(modifier.fillMaxSize()) {
@@ -107,6 +111,7 @@ public fun ReaderRoute(
                             foldSource = rememberFoldSource(),
                             document = current.document,
                             volumeKeysTurn = volumeKeysTurn,
+                            jumps = viewModel.jumps,
                         )
                     } else {
                         ReaderScreen(
@@ -115,9 +120,16 @@ public fun ReaderRoute(
                             startAnchor = start,
                             onToggleChrome = viewModel::toggleChrome,
                             volumeKeysTurn = volumeKeysTurn,
+                            onJump = viewModel::onJump,
+                            jumps = viewModel.jumps,
                         )
                     }
                 }
+                ReturnChip(
+                    visible = returnAnchor != null,
+                    onReturn = viewModel::returnToJump,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
                 // Outside the key: switching mode swaps the page surface, never the chrome.
                 ReaderChrome(
                     visible = chromeVisible,
@@ -147,6 +159,8 @@ public fun ReaderScreen(
     onToggleChrome: (() -> Unit)? = null,
     onOpenToc: (() -> Unit)? = null,
     volumeKeysTurn: Boolean = false,
+    onJump: () -> Unit = {},
+    jumps: Flow<Anchor> = emptyFlow(),
 ) {
     val palette = BifolioTheme.palette
     val blocks = ready.document.blocks
@@ -157,10 +171,11 @@ public fun ReaderScreen(
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = start)
     val slugs = remember(blocks) { SlugIndex(blocks) }
     val onLink =
-        remember(slugs, reducedMotion, listState) {
+        remember(slugs, reducedMotion, listState, onJump) {
             { destination: String ->
                 val target = slugs.blockIndexOf(destination)
                 if (target != null) {
+                    onJump()
                     scope.launch {
                         if (reducedMotion) listState.scrollToItem(target) else listState.animateScrollToItem(target)
                     }
@@ -169,20 +184,11 @@ public fun ReaderScreen(
             }
         }
 
+    // ANC-06: the return chip asks for an anchor to be shown again.
+    LaunchedEffect(jumps) { jumps.collect { listState.scrollToAnchor(blocks, it) } }
+
     LaunchedEffect(ready.contentHash) {
-        val anchor = startAnchor
-        val blockLength = blocks.getOrNull(start)?.range?.length ?: 0
-        if (anchor.blockIndex == start && anchor.charOffset > 0 && blockLength > 0) {
-            val height =
-                snapshotFlow {
-                    listState.layoutInfo.visibleItemsInfo
-                        .firstOrNull { it.index == start }
-                        ?.size
-                }.filterNotNull()
-                    .first()
-            val fraction = anchor.charOffset.toFloat() / blockLength
-            listState.scrollToItem(start, (fraction * height).toInt())
-        }
+        listState.scrollToAnchor(blocks, startAnchor)
         // Only report once a scroll ends, so the restore above never overwrites the stored anchor. The position is
         // part of the key because a jump (Home, End, link) can start and end inside one snapshot (NAV-03).
         snapshotFlow {
@@ -384,3 +390,21 @@ private data class ScrollKey(
     val index: Int,
     val offset: Int,
 )
+
+/** Scrolls so that [anchor] is at the top: its block first, then the fraction of the block its offset stands for. */
+private suspend fun LazyListState.scrollToAnchor(
+    blocks: List<Block>,
+    anchor: Anchor,
+) {
+    val index = anchor.blockIndex.coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
+    val blockLength = blocks.getOrNull(index)?.range?.length ?: 0
+    scrollToItem(index)
+    if (anchor.blockIndex == index && anchor.charOffset > 0 && blockLength > 0) {
+        val height =
+            snapshotFlow { layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size }
+                .filterNotNull()
+                .first()
+        val fraction = anchor.charOffset.toFloat() / blockLength
+        scrollToItem(index, (fraction * height).toInt())
+    }
+}
