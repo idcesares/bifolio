@@ -6,6 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 
 private val LocalPalette = staticCompositionLocalOf { ReadingPalettes.Paper }
@@ -35,10 +36,15 @@ public fun BifolioTheme(
     theme: ReadingThemeId = defaultThemeId(),
     bodySp: Float = DEFAULT_BODY_SP,
     lineHeight: Float = DEFAULT_LINE_HEIGHT,
+    font: ReadingFont = ReadingFont.Literata,
     content: @Composable () -> Unit,
 ) {
     val palette = ReadingPalettes.of(theme)
-    val typography = remember(palette, bodySp, lineHeight) { readingTypography(palette, bodySp.sp, lineHeight) }
+    val assets = LocalContext.current.assets
+    val typography =
+        remember(palette, bodySp, lineHeight, font) {
+            readingTypography(palette, bodySp.sp, lineHeight, font.family(assets), monoFamily(assets))
+        }
     CompositionLocalProvider(LocalPalette provides palette, LocalTypography provides typography, content = content)
 }
 

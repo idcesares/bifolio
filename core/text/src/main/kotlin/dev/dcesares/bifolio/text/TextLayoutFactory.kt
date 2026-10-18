@@ -1,7 +1,5 @@
 package dev.dcesares.bifolio.text
 
-import android.graphics.Typeface
-import android.os.Build
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
@@ -11,10 +9,8 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
 import android.text.style.SubscriptSpan
 import android.text.style.SuperscriptSpan
-import android.text.style.TypefaceSpan
 import android.text.style.UnderlineSpan
 import dev.dcesares.bifolio.layout.StyleFlag
 import dev.dcesares.bifolio.layout.TextRole
@@ -130,11 +126,7 @@ public class TextLayoutFactory(
         fun put(span: Any) = s.setSpan(span, from, to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         val bold = flags and StyleFlag.BOLD != 0
         val italic = flags and StyleFlag.ITALIC != 0
-        when {
-            bold && italic -> put(StyleSpan(Typeface.BOLD_ITALIC))
-            bold -> put(StyleSpan(Typeface.BOLD))
-            italic -> put(StyleSpan(Typeface.ITALIC))
-        }
+        if (bold || italic) put(FontSetSpan(config.fonts.body(if (bold) BOLD_WEIGHT else REGULAR_WEIGHT, italic)))
         if (flags and StyleFlag.STRIKETHROUGH != 0) put(StrikethroughSpan())
         if (flags and StyleFlag.UNDERLINE != 0 || flags and StyleFlag.LINK != 0) put(UnderlineSpan())
         applyOther(s, from, to, flags, palette)
@@ -149,7 +141,7 @@ public class TextLayoutFactory(
     ) {
         fun put(span: Any) = s.setSpan(span, from, to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         if (flags and StyleFlag.CODE != 0) {
-            put(TypefaceSpan(MONOSPACE_FAMILY))
+            put(FontSetSpan(config.fonts.code()))
             put(RelativeSizeSpan(INLINE_CODE_SCALE))
             if (palette != null) put(BackgroundColorSpan(palette.codeSurface))
         }
@@ -198,24 +190,14 @@ public class TextLayoutFactory(
         paint.textLocale = config.locale
         paint.typeface =
             when {
-                role == TextRole.CODE -> Typeface.MONOSPACE
-                role == TextRole.TABLE_HEADER -> weighted(Typeface.SERIF, BOLD_WEIGHT)
-                isHeading(role) -> weighted(Typeface.SERIF, if (role <= TextRole.HEADING_3) SEMI else BOLD_WEIGHT)
-                else -> Typeface.SERIF
+                role == TextRole.CODE -> config.fonts.code()
+                role == TextRole.TABLE_HEADER -> config.fonts.body(BOLD_WEIGHT, false)
+                isHeading(role) -> config.fonts.body(if (role <= TextRole.HEADING_3) SEMI else BOLD_WEIGHT, false)
+                else -> config.fonts.body(REGULAR_WEIGHT, false)
             }
         if (palette != null) paint.color = if (role == TextRole.HEADING_6) palette.inkMuted else palette.ink
         return paint
     }
-
-    private fun weighted(
-        family: Typeface,
-        weight: Int,
-    ): Typeface =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            Typeface.create(family, weight, false)
-        } else {
-            Typeface.create(family, Typeface.BOLD)
-        }
 
     /** Width of one body character, `charW` of TYP-04 and TYP-06: the mean advance of the lowercase Latin alphabet. */
     public fun bodyCharWidth(): Float = paintOf(TextRole.BODY).measureText(ALPHABET) / ALPHABET.length
@@ -225,9 +207,9 @@ public class TextLayoutFactory(
         private const val UNBOUNDED = 1 shl 20
         private const val MEASURE_CHARS = 45
         private const val SEMI = 600
+        private const val REGULAR_WEIGHT = 400
         private const val BOLD_WEIGHT = 700
         private const val INLINE_CODE_SCALE = 0.88f
-        private const val MONOSPACE_FAMILY = "monospace" // TypefaceSpan(Typeface) needs API 28; minSdk is 26.
         private const val SCRIPT_SCALE = 0.7f
         private const val LH_H1 = 1.2f
         private const val LH_H2 = 1.25f

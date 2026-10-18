@@ -6,6 +6,9 @@ public enum class ThemeChoice { PAPER, SEPIA, DUSK, NIGHT }
 /** How a page turn looks (MOT-02, MOT-03). */
 public enum class TurnChoice { SLIDE, FADE, NONE }
 
+/** Body face of the reading surface (TYP-01). Literata is the default. */
+public enum class FontChoice { LITERATA, SOURCE_SERIF, ATKINSON }
+
 public const val MIN_BODY_SP: Int = 14
 public const val MAX_BODY_SP: Int = 28
 public const val DEFAULT_BODY_SP: Int = 18
@@ -28,6 +31,7 @@ public data class AppearanceProfile(
     val justify: Boolean = false,
     val hyphenate: Boolean = true,
     val turn: TurnChoice = TurnChoice.SLIDE,
+    val font: FontChoice = FontChoice.LITERATA,
     val hairline: Boolean = true,
     val reduceMotion: Boolean = false,
 ) {

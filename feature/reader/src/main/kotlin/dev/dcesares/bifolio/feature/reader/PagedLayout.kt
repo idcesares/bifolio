@@ -7,7 +7,9 @@ import dev.dcesares.bifolio.layout.Geometry
 import dev.dcesares.bifolio.layout.PageDetailer
 import dev.dcesares.bifolio.layout.PageFlow
 import dev.dcesares.bifolio.layout.WindowSpec
+import dev.dcesares.bifolio.text.FontSet
 import dev.dcesares.bifolio.text.StaticLayoutBlockMeasurer
+import dev.dcesares.bifolio.text.SystemFontSet
 import dev.dcesares.bifolio.text.TextStyleConfig
 import java.util.Locale
 
@@ -34,6 +36,8 @@ public data class PageRequest(
     val forcedColumns: Int? = null,
     val hyphenate: Boolean = true,
     val justify: Boolean = false,
+    /** Body and code faces. Equal font sets measure alike, so a change repaginates (PAG-10). */
+    val fonts: FontSet = SystemFontSet,
 ) {
     /** Body size in px at this density and font scale (TYP-01). */
     public val bodyPx: Float get() = bodySp * density * fontScale
@@ -86,6 +90,7 @@ public class AndroidTextEngine : TextEngine {
                 locale = Locale.forLanguageTag(request.languageTag),
                 hyphenate = request.hyphenate,
                 justify = request.justify,
+                fonts = request.fonts,
             ).withMeasuredCharWidth()
         val spec =
             WindowSpec(

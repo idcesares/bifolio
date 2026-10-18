@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Type scale of DESIGN.md section 3, every size a multiple of the body size.
- * Families are system placeholders until M4 bundles Literata and JetBrains Mono (OPN-03, ADR-0009).
+ * Families come from the theme: the bundled reading font and JetBrains Mono (ADR-0009).
  */
 @Immutable
 public class ReadingTypography internal constructor(

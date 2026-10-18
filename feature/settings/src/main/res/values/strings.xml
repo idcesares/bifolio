@@ -8,6 +8,10 @@
     <string name="appearance_theme_sepia">Sepia</string>
     <string name="appearance_theme_dusk">Dusk</string>
     <string name="appearance_theme_night">Night</string>
+    <string name="appearance_font">Font</string>
+    <string name="appearance_font_literata">Literata</string>
+    <string name="appearance_font_source_serif">Source Serif</string>
+    <string name="appearance_font_atkinson">Atkinson</string>
     <string name="appearance_size">Text size</string>
     <string name="appearance_size_value">%1$d sp</string>
     <string name="appearance_size_smaller">Smaller text</string>

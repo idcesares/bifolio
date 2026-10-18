@@ -47,6 +47,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -215,6 +216,8 @@ internal fun PagedSurface(
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
     val keys = rememberUpdatedState(volumeKeysTurn)
+    val assets = LocalContext.current.assets
+    val fonts = remember(appearance.font, assets) { fontSetOf(appearance.font, assets) }
     BoxWithConstraints(
         modifier
             .fillMaxSize()
@@ -269,6 +272,7 @@ internal fun PagedSurface(
                 forcedColumns = appearance.columns,
                 hyphenate = appearance.hyphenate,
                 justify = appearance.justify,
+                fonts = fonts,
             )
         val latestRequest by rememberUpdatedState(request)
         val latestOnRequest by rememberUpdatedState(onRequest)

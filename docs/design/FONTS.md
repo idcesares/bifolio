@@ -1,12 +1,28 @@
-# Fonts
+# Bundled fonts (OPN-03, TYP-01)
 
-Closes OPN-03. Fill one row per bundled font after checking the license file in its upstream repository. Do not bundle a font until its row is complete.
+Source: the `google/fonts` repository, `ofl/` directory, fetched 2026-10-18. Each family ships its own `OFL.txt`
+next to the font files in `core/designsystem/src/main/assets/fonts/`. License of all four: SIL Open Font License 1.1
+(allowed by ADR-0001, no attribution UI beyond the licenses screen, which lists them).
 
-| Family | Role | Upstream repository | License (verified) | Version | Subset | Reserved font name notes |
-|---|---|---|---|---|---|---|
-| Literata | Body default | | | | Latin Ext, Greek, Cyrillic | |
-| Source Serif 4 | Body | | | | Latin Ext, Greek, Cyrillic | |
-| Atkinson Hyperlegible Next | Body accessible | | | | Latin Ext | |
-| JetBrains Mono | Code | | | | Latin Ext, Greek, Cyrillic | |
+| Family | Role | Files | Copyright line (from the shipped OFL.txt) |
+|---|---|---|---|
+| Literata | Body default | `Literata.ttf`, `Literata-Italic.ttf` (variable `opsz`, `wght`) | 2017 The Literata Project Authors |
+| Source Serif 4 | Body alternative | `SourceSerif4.ttf`, `SourceSerif4-Italic.ttf` (variable `opsz`, `wght`) | see `OFL-sourceserif4.txt` |
+| Atkinson Hyperlegible Next | Body accessible | `Atkinson.ttf`, `Atkinson-Italic.ttf` (variable `wght`) | 2020-2024 The Atkinson Hyperlegible Next Project Authors |
+| JetBrains Mono | Code | `JetBrainsMono.ttf` (variable `wght`) | see `OFL-jetbrainsmono.txt` |
 
-Rules: OFL-1.1 only (ADR-0001). If a font declares a Reserved Font Name and we subset or modify it, rename the family in the font metadata as the license requires. Ship every license text in the app's licenses screen.
+## Subsetting
+
+Made with `pyftsubset` (fonttools), keeping the variable axes and the layout features `kern liga calt onum lnum smcp
+c2sc frac ccmp locl mark mkmk`. Code points: Basic Latin, Latin-1 Supplement, Latin Extended-A/B, Greek, Cyrillic,
+Latin Extended Additional, General Punctuation, euro sign, arrows up and down, minus, bullet, ellipsis.
+Raw size 3.4 MB; the APK compresses it. PRF-06 (under 8 MB per ABI) is checked in the release build.
+
+Note: the OFL reserved font names apply to modified versions. The subsets keep the original family names and are
+not redistributed outside the app, which the OFL allows for embedding.
+
+## Use
+
+- Paged mode: `AssetFontSet` (`core:text`) loads the files with `Typeface.Builder` and a `wght` variation.
+- Scroll mode and UI: `ReadingFont.family` (`core:designsystem`) builds the Compose `FontFamily`.
+- The user picks the body family in the appearance sheet; code is always JetBrains Mono.

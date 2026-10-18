@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.dcesares.bifolio.data.FontChoice
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
 
@@ -142,4 +143,18 @@ internal fun ToggleRow(
             modifier = Modifier.defaultMinSize(minWidth = ToggleMinWidth),
         ) { onChange(!checked) }
     }
+}
+
+@Composable
+internal fun FontSection(
+    selected: FontChoice,
+    onSelect: (FontChoice) -> Unit,
+) {
+    val options =
+        listOf(
+            FontChoice.LITERATA to stringResource(R.string.appearance_font_literata),
+            FontChoice.SOURCE_SERIF to stringResource(R.string.appearance_font_source_serif),
+            FontChoice.ATKINSON to stringResource(R.string.appearance_font_atkinson),
+        )
+    Choice(stringResource(R.string.appearance_font), options, selected, onSelect)
 }

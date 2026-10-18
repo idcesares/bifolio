@@ -51,6 +51,7 @@ public class ReadingPreferences(
     private val justifyKey = booleanPreferencesKey("appearance_justify")
     private val hyphenKey = booleanPreferencesKey("appearance_hyphenate")
     private val turnKey = stringPreferencesKey("appearance_turn")
+    private val fontKey = stringPreferencesKey("appearance_font")
     private val hairlineKey = booleanPreferencesKey("appearance_hairline")
     private val reduceMotionKey = booleanPreferencesKey("appearance_reduce_motion")
 
@@ -70,6 +71,7 @@ public class ReadingPreferences(
             prefs[justifyKey] = next.justify
             prefs[hyphenKey] = next.hyphenate
             prefs[turnKey] = next.turn.name
+            prefs[fontKey] = next.font.name
             prefs[hairlineKey] = next.hairline
             prefs[reduceMotionKey] = next.reduceMotion
         }
@@ -86,6 +88,7 @@ public class ReadingPreferences(
             justify = this[justifyKey] ?: base.justify,
             hyphenate = this[hyphenKey] ?: base.hyphenate,
             turn = TurnChoice.entries.firstOrNull { it.name == this[turnKey] } ?: base.turn,
+            font = FontChoice.entries.firstOrNull { it.name == this[fontKey] } ?: base.font,
             hairline = this[hairlineKey] ?: base.hairline,
             reduceMotion = this[reduceMotionKey] ?: base.reduceMotion,
         ).normalized()

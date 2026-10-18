@@ -121,6 +121,7 @@ private fun AppearanceSections(
     val p = state.profile
     val change = actions.onProfile
     ThemeSection(p.theme) { choice -> change { it.copy(theme = choice) } }
+    FontSection(p.font) { font -> change { it.copy(font = font) } }
     SizeSection(p.bodySp) { sp -> change { it.copy(bodySp = sp) } }
     LineHeightSection(p.lineHeight) { value -> change { it.copy(lineHeight = value) } }
     MarginSection(p.marginScale) { value -> change { it.copy(marginScale = value) } }

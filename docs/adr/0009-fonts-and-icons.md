@@ -1,6 +1,6 @@
 # ADR-0009: Bundled OFL fonts and Lucide icons
 
-Status: Accepted (license confirmation pending OPN-03 and OPN-04)
+Status: Accepted (fonts confirmed in docs/design/FONTS.md, OPN-03; icons pending OPN-04)
 Date: 2026-10-15
 Spec IDs: TYP-01, UI-12
 

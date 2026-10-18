@@ -4,8 +4,8 @@ import java.util.Locale
 
 /**
  * Typographic inputs of [TextLayoutFactory]. Sizes are in px, so the caller applies density and the user's
- * text scale before building it. The body is a serif system font and code is monospace until the bundled
- * fonts arrive in M4 (ADR-0009).
+ * text scale before building it. The body and code faces come from [fonts]: the platform serif and monospace by
+ * default, the bundled families when the reader supplies them (ADR-0009).
  *
  * [lineHeight] is a factor of the font size (TYP-03). [charWidthPx] is the width of one body character
  * (`charW` in TYP-04 and TYP-06); use [TextLayoutFactory.bodyCharWidth] to measure it. [locale] is the
@@ -18,6 +18,7 @@ public data class TextStyleConfig(
     val locale: Locale = Locale.getDefault(),
     val hyphenate: Boolean = true,
     val justify: Boolean = false,
+    val fonts: FontSet = SystemFontSet,
 ) {
     init {
         require(bodySizePx > 0f && charWidthPx > 0f && lineHeight > 0f) { "sizes must be positive" }

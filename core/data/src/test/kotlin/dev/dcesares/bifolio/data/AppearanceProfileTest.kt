@@ -22,6 +22,7 @@ class AppearanceProfileTest {
             assertEquals(false, p.justify)
             assertEquals(true, p.hyphenate)
             assertEquals(TurnChoice.SLIDE, p.turn)
+            assertEquals(FontChoice.LITERATA, p.font)
             assertEquals(true, p.hairline)
             assertEquals(false, p.reduceMotion)
         }
@@ -31,13 +32,21 @@ class AppearanceProfileTest {
         runTest {
             val store = InMemoryPreferences()
             ReadingPreferences(store).updateAppearance {
-                it.copy(theme = ThemeChoice.SEPIA, bodySp = 22, columns = 2, turn = TurnChoice.FADE, justify = true)
+                it.copy(
+                    theme = ThemeChoice.SEPIA,
+                    bodySp = 22,
+                    columns = 2,
+                    turn = TurnChoice.FADE,
+                    justify = true,
+                    font = FontChoice.ATKINSON,
+                )
             }
             val p = ReadingPreferences(store).appearance.first()
             assertEquals(ThemeChoice.SEPIA, p.theme)
             assertEquals(22, p.bodySp)
             assertEquals(2, p.columns)
             assertEquals(TurnChoice.FADE, p.turn)
+            assertEquals(FontChoice.ATKINSON, p.font)
             assertEquals(true, p.justify)
         }
 

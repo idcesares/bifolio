@@ -39,6 +39,7 @@ import dev.dcesares.bifolio.feature.reader.ReaderBackTransition
 import dev.dcesares.bifolio.feature.reader.ReaderRoute
 import dev.dcesares.bifolio.feature.reader.ReaderUiState
 import dev.dcesares.bifolio.feature.reader.ReaderViewModel
+import dev.dcesares.bifolio.feature.reader.toReadingFont
 import dev.dcesares.bifolio.feature.settings.AppearanceSheet
 import dev.dcesares.bifolio.feature.settings.SheetActions
 import dev.dcesares.bifolio.feature.settings.SheetState
@@ -252,6 +253,6 @@ private fun ProfiledTheme(
 ) {
     val theme = profile.theme?.toReadingTheme() ?: defaultThemeId()
     CompositionLocalProvider(LocalReducedMotionOverride provides profile.reduceMotion.takeIf { it }) {
-        BifolioTheme(theme, profile.bodySp.toFloat(), profile.lineHeight, content)
+        BifolioTheme(theme, profile.bodySp.toFloat(), profile.lineHeight, profile.font.toReadingFont(), content)
     }
 }
