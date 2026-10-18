@@ -33,6 +33,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +48,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -95,6 +98,7 @@ public fun ReaderRoute(
     val returnAnchor by viewModel.returnAnchor.collectAsStateWithLifecycle()
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
+    var footerHeight by remember { mutableIntStateOf(0) }
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val timeLeft by viewModel.timeLeft.collectAsStateWithLifecycle()
     when (val current = state) {
@@ -135,11 +139,6 @@ public fun ReaderRoute(
                 if (appearance.hairline) {
                     ProgressHairline(progress, Modifier.align(Alignment.BottomCenter))
                 }
-                ReturnChip(
-                    visible = returnAnchor != null,
-                    onReturn = viewModel::returnToJump,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
                 // Outside the key: switching mode swaps the page surface, never the chrome.
                 ReaderChrome(
                     visible = chromeVisible,
@@ -160,7 +159,16 @@ public fun ReaderRoute(
                 ReaderFooter(
                     visible = chromeVisible,
                     timeLeft = timeLeft,
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { footerHeight = it.height },
+                )
+                // After the footer, so it stays on top, and lifted by the footer's height while that is showing.
+                ReturnChip(
+                    visible = returnAnchor != null,
+                    onReturn = viewModel::returnToJump,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = with(LocalDensity.current) { footerHeight.toDp() }),
                 )
                 if (sheetOpen) {
                     BackHandler { sheetOpen = false }
