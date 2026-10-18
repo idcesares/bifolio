@@ -3,7 +3,7 @@ package dev.dcesares.bifolio.feature.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +41,8 @@ import dev.dcesares.bifolio.designsystem.Spacing
 
 private val SheetRadius = 12.dp
 private val SheetMaxWidth = 560.dp
+private val SidePaneMinWindow = 840.dp
+private val SidePaneWidth = 400.dp
 private val SizeValueMinWidth = 56.dp
 private const val SCRIM_ALPHA = 0.32f
 private const val SHEET_MAX_HEIGHT = 0.85f
@@ -71,19 +74,37 @@ public fun AppearanceSheet(
     actions: SheetActions,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    BoxWithConstraints(
         modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = SCRIM_ALPHA))
             .pointerInput(Unit) { detectTapGestures { actions.onDismiss() } },
-        contentAlignment = Alignment.BottomCenter,
     ) {
+        // UI-02: from 840dp the sheet becomes a side pane at the end edge instead of a bottom sheet.
+        val side = maxWidth >= SidePaneMinWindow
+        val shape =
+            if (side) {
+                RoundedCornerShape(topStart = SheetRadius, bottomStart = SheetRadius)
+            } else {
+                RoundedCornerShape(topStart = SheetRadius, topEnd = SheetRadius)
+            }
         Column(
             Modifier
-                .widthIn(max = SheetMaxWidth)
-                .fillMaxWidth()
-                .fillMaxHeight(SHEET_MAX_HEIGHT)
-                .clip(RoundedCornerShape(topStart = SheetRadius, topEnd = SheetRadius))
+                .align(if (side) Alignment.CenterEnd else Alignment.BottomCenter)
+                .then(
+                    if (side) {
+                        Modifier
+                            .width(
+                                SidePaneWidth,
+                            ).fillMaxHeight()
+                    } else {
+                        Modifier
+                            .widthIn(
+                                max = SheetMaxWidth,
+                            ).fillMaxWidth()
+                            .fillMaxHeight(SHEET_MAX_HEIGHT)
+                    },
+                ).clip(shape)
                 .background(BifolioTheme.palette.page)
                 // Taps inside the sheet must not reach the scrim.
                 .pointerInput(Unit) { detectTapGestures { } }
