@@ -16,6 +16,8 @@ import dev.dcesares.bifolio.layout.PaginationService
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.model.Paragraph
+import dev.dcesares.bifolio.model.ReadingPace
+import dev.dcesares.bifolio.model.WordIndex
 import dev.dcesares.bifolio.model.plainText
 import dev.dcesares.bifolio.parse.LoadResult
 import dev.dcesares.bifolio.parse.MarkdownLoader
@@ -106,6 +108,23 @@ public class ReaderViewModel(
         combine(mutableAnchor, mutableState) { anchor, current ->
             (current as? ReaderUiState.Ready)?.let { progressOf(it.document, anchor) } ?: 0f
         }.stateIn(viewModelScope, SharingStarted.Eagerly, 0f)
+
+    private val pace = ReadingPace()
+    private var wordIndex: Pair<Document, WordIndex>? = null
+    private var lastSettledAt: Long? = null
+
+    /** Minutes left in the section and the document at the reader's own pace (UI-06). Null until a document is open. */
+    public val timeLeft: StateFlow<TimeLeft?> =
+        combine(mutableAnchor, mutableState) { anchor, current ->
+            (current as? ReaderUiState.Ready)?.let { ready ->
+                val left = wordIndexOf(ready.document).remaining(anchor)
+                TimeLeft(pace.minutesFor(left.inSection), pace.minutesFor(left.inDocument))
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private fun wordIndexOf(document: Document): WordIndex =
+        wordIndex?.takeIf { it.first === document }?.second
+            ?: WordIndex(document).also { wordIndex = document to it }
 
     private val mutablePaged = MutableStateFlow<PagedLayout?>(null)
 
@@ -346,10 +365,26 @@ public class ReaderViewModel(
 
     /** Called when a turn or a scroll settles. Persists at most once per second; [flush] writes the rest (ANC-02). */
     public fun onAnchorSettled(anchor: Anchor) {
+        recordPace(mutableAnchor.value, anchor)
         mutableAnchor.value = anchor
         pending = anchor
         val last = lastSavedAt
         if (last == null || clock() - last >= SAVE_INTERVAL_MILLIS) flush()
+    }
+
+    /** Feeds the reading speed with the words a forward move covered and the time it took (UI-06). */
+    private fun recordPace(
+        from: Anchor,
+        to: Anchor,
+    ) {
+        val now = clock()
+        val since = lastSettledAt
+        lastSettledAt = now
+        val ready = mutableState.value as? ReaderUiState.Ready ?: return
+        if (since == null) return
+        val index = wordIndexOf(ready.document)
+        val words = index.wordsBetween(ready.document.sourceOffsetOf(from), ready.document.sourceOffsetOf(to))
+        pace.recordTurn(words, now - since)
     }
 
     /** Writes the latest unsaved anchor now. Call from `onStop`. */

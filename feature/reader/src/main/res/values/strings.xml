@@ -19,6 +19,7 @@
     <string name="reader_task_checked">Done</string>
     <string name="reader_task_unchecked">Not done</string>
     <string name="reader_chrome_appearance">Appearance</string>
+    <string name="reader_time_left">%1$d min left in this section, %2$d min in the document</string>
     <string name="reader_return">Return to previous position</string>
     <string name="reader_deck_previous">Previous page</string>
     <string name="reader_deck_next">Next page</string>

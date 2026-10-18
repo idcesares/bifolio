@@ -96,6 +96,7 @@ public fun ReaderRoute(
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     val progress by viewModel.progress.collectAsStateWithLifecycle()
+    val timeLeft by viewModel.timeLeft.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
             Box(modifier.fillMaxSize()) {
@@ -145,6 +146,11 @@ public fun ReaderRoute(
                     title = current.title,
                     onOpenAppearance = { sheetOpen = true },
                     modifier = Modifier.align(Alignment.TopCenter),
+                )
+                ReaderFooter(
+                    visible = chromeVisible,
+                    timeLeft = timeLeft,
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
                 if (sheetOpen) {
                     BackHandler { sheetOpen = false }
