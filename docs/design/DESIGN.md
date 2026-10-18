@@ -1,7 +1,7 @@
 # Bifolio Design System
 
 Status: v1 direction, tokens frozen at the end of M4
-Spec IDs: TYP-01 to TYP-10, UI-01 to UI-14, MOT-01 to MOT-09, A11Y-02 to A11Y-06
+Spec IDs: TYP-01 to TYP-10, UI-01 to UI-16, MOT-01 to MOT-09, A11Y-02 to A11Y-06
 
 ## 1. Identity
 

@@ -14,22 +14,22 @@ Implements ADR-0011. Spec IDs: QA-01 to QA-05.
 
 ## 2. Device matrix (screenshot and emulator tests)
 
-Sizes are window sizes in dp. Folds are injected with the WindowManager testing artifact.
+Sizes are window sizes in dp. The foldable inner screen is the owner's real device: 2256 x 2504 px at 480 dpi, about 752 x 835 dp (density 3). Folds are injected with the WindowManager testing artifact.
 
 | ID | Profile | Window (w x h dp) | Fold | Expected layout |
 |---|---|---|---|---|
 | DM-01 | Phone portrait | 412 x 915 | none | 1 column |
-| DM-02 | Phone landscape | 915 x 412 | none | Auto (likely 2) |
+| DM-02 | Phone landscape | 915 x 412 | none | Auto (1 column at default size) |
 | DM-03 | Foldable cover screen | 360 x 800 | none | 1 column |
-| DM-04 | Foldable inner, flat, no separating fold | 840 x 900 | vertical, FLAT, not separating | Auto (likely 2) |
-| DM-05 | Foldable inner, book posture | 840 x 900 | vertical, HALF_OPENED | 2 columns, gutter on fold |
-| DM-06 | Foldable inner, hinge occludes pixels | 840 x 900 | vertical, FLAT, occlusion FULL, 24dp wide | 2 columns, gutter covers hinge plus margins |
-| DM-07 | Foldable tabletop | 900 x 840 | horizontal, HALF_OPENED | Text top, control deck bottom |
-| DM-08 | Wide 4:3 foldable inner | 960 x 720 | vertical, FLAT | Auto 2 |
+| DM-04 | Foldable inner, flat, no separating fold | 752 x 835 | vertical, FLAT, not separating | Auto (1 column at default size), text may cross the fold (LAY-14 is for separating folds only) |
+| DM-05 | Foldable inner, book posture | 752 x 835 | vertical, HALF_OPENED | 2 columns, gutter on fold |
+| DM-06 | Foldable inner, hinge occludes pixels | 752 x 835 | vertical, FLAT, occlusion FULL, 24dp wide | 2 columns, gutter covers hinge plus margins |
+| DM-07 | Foldable tabletop | 752 x 835 | horizontal, HALF_OPENED | Text top, control deck bottom |
+| DM-08 | Wide 4:3 foldable inner | 960 x 720 | vertical, FLAT | Auto (1 column at default size), text may cross the fold (LAY-14 is for separating folds only) |
 | DM-09 | Tablet / tri-fold | 1280 x 900 | none | Auto 2 or 3 |
 | DM-10 | Narrow multi-window | 320 x 640 | none | 1 column, chrome usable |
 | DM-11 | Split screen on unfolded device, fold outside window | 420 x 900 | fold does not intersect | 1 column, fold ignored |
-| DM-12 | Font scale 2.0 on DM-05 | 840 x 900 | book | Columns reduce per LAY-08, nothing clips |
+| DM-12 | Font scale 2.0 on DM-05 | 752 x 835 | book | Columns reduce per LAY-10 (1 column on the wider side, centered in the window or slid clear of the band), nothing clips |
 
 Each matrix entry is rendered in Paper and Night themes at minimum, plus RTL for DM-01 and DM-05.
 

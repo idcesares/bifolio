@@ -145,27 +145,27 @@ All values in px at the current density; `W` is the usable window width after in
 | LAY-05 | `outerMargin = max(20dp, 0.06 × W)` per side, rounded to whole px. User margin setting scales this by 0.75, 1.0 or 1.35 |
 | LAY-06 | `baseGap = max(32dp, 2.5 × charW)` |
 | LAY-07 | **Auto columns:** `cols = clamp(floor((W − 2·outerMargin + baseGap) / (minMeasure + baseGap)), 1, 3)` |
-| LAY-08 | **Forced columns** (user chose 1, 2 or 3) act as a **maximum**: `cols = min(userChoice, autoColsWithFloor)` where `autoColsWithFloor` uses a floor of `34 × charW` instead of `minMeasure`. A forced count that cannot fit drops columns silently. `maxMeasure` bounds only the single-column layout: with 2 or 3 columns each column takes the available width divided evenly, never below the floor. Page height is the window height minus two vertical margins, each `min(outerMargin, H / 8)` |
+| LAY-08 | **Forced columns** (user chose 1, 2 or 3) act as a **maximum**: `cols = min(userChoice, autoColsWithFloor)` where `autoColsWithFloor` uses a floor of `34 × charW` instead of `minMeasure`. A forced count that cannot fit drops columns silently. `maxMeasure` bounds only the single-column layout: with 2 or 3 columns each column takes the available width divided evenly, never below the floor. Page height is the text region height minus two vertical margins, each `min(outerMargin, H / 8)`, where `H` is the height of the text region: the window height, except in tabletop (POS-04) |
 | LAY-09 | If `cols == 1` and the column would exceed `maxMeasure`, the column is centered and the extra width becomes margin |
-| LAY-10 | If a **separating vertical fold** intersects the window, `cols` MUST be even (round down to 2 if 3; force 2 if 1 and each side fits `34 × charW`) |
+| LAY-10 | If a **separating vertical fold** intersects the window, `cols` MUST be even (round down to 2 if 3; force 2 if 1 and each side fits `28 × charW`). Each side is measured after subtracting `outerMargin`, `innerMargin` and the gutter share on that side. The fold rule wins over a user-forced column count: a forced 1 becomes 2 in this case, because a single column would cross the hinge (LAY-14). In every fold case, two columns are used only if each side is at least `28 × charW` (the fold floor, lower than the `34 × charW` of LAY-08 because the gutter and the book-posture margin already take width from each side). If they cannot fit, fall back to 1 column on the wider side of the fold, of width `min(room of that side, maxMeasure)` (LAY-09). That column is centered in the **window**; when centering would put it inside the fold band (fold bounds plus `innerMargin`, as the gutter) it is shifted away from the fold by the smallest amount that clears the band, and never closer to the window edge than `outerMargin`. If neither side has at least 1 px, ignore the fold for column placement (the no-fold geometry applies; LAY-14 cannot hold). A fold touching the window edge with zero width counts as not intersecting |
 
 ### 4.3 Gutter and fold alignment
 
 | ID | Rule |
 |---|---|
 | LAY-11 | Without a separating fold, columns have equal width and are separated by `baseGap` |
-| LAY-12 | With a separating vertical fold, the gutter MUST be centered on the fold bounds: `gutter = max(baseGap, foldWidth + 2 × innerMargin)` where `innerMargin = max(16dp, 1.5 × charW)`. Columns on each side may differ in width so that the gutter tracks the hinge exactly |
-| LAY-13 | In book posture (`HALF_OPENED` + `VERTICAL`), add `12dp` per side to `innerMargin` to compensate for the tilted page edge |
-| LAY-14 | No glyph, image, rule or highlight MAY ever be drawn inside the fold bounds plus `innerMargin`, even when `occlusionType == NONE` |
+| LAY-12 | With a separating vertical fold, the gutter MUST be centered on the fold bounds: `gutter = max(baseGap, foldWidth + 2 × innerMargin)` where `innerMargin = max(16dp, 1.5 × charW)`. Columns on each side may differ in width so that the gutter tracks the hinge exactly. `foldWidth` is the width of the reported fold bounds whatever the `occlusionType`, so LAY-14 holds for every fold. Platforms usually report width 0 for `NONE`, in which case `gutter = max(baseGap, 2 × innerMargin)` and the gutter is still centered on the fold |
+| LAY-13 | In book posture (`HALF_OPENED` + `VERTICAL`), add `12dp` per side to `innerMargin` to compensate for the tilted page edge. The gutter therefore grows by 24dp in total. Example: charW 9dp, innerMargin 16dp, fold width 0: gutter 32dp in flat posture and 56dp in book posture |
+| LAY-14 | With a **separating** fold (`isSeparating == true`, which includes `OcclusionType.FULL`), no glyph, image, rule or highlight MAY ever be drawn inside the fold bounds plus `innerMargin`, even when `occlusionType == NONE`. With a non-separating fold (flat, or any fold reporting `isSeparating == false`) there is no constraint: text may cross the fold as in a flat open book, and the plain column math of LAY-07 to LAY-09 and LAY-11 applies |
 
 ### 4.4 Posture behavior
 
 | ID | Posture | Detection | Layout |
 |---|---|---|---|
 | POS-01 | Phone / cover screen / folded | No intersecting fold, narrow window | Auto columns (normally 1) |
-| POS-02 | Unfolded flat, no separating fold | No intersecting fold, or fold with `isSeparating == false` | Auto columns (normally 2 on book-style inner screens at default size) |
-| POS-03 | Book | `HALF_OPENED` + `VERTICAL`, or any separating vertical fold | Even columns, gutter on hinge (LAY-10 to LAY-13) |
-| POS-04 | Tabletop | `HALF_OPENED` + `HORIZONTAL` | Text occupies the top region (above the fold, 1 or 2 columns by LAY-07 applied to that region). Bottom region shows the control deck: large previous and next zones, progress scrubber, table of contents button |
+| POS-02 | Unfolded flat, no separating fold | No intersecting fold, or fold with `isSeparating == false` | Auto columns by LAY-07, with no fold constraint (LAY-14 does not apply to non-separating folds). Normally 1 or 2 depending on window width and font size |
+| POS-03 | Book | `HALF_OPENED` + `VERTICAL`, or any separating vertical fold | Even columns, gutter on hinge (LAY-10 to LAY-13). `OcclusionType.FULL` implies separating. Columns and gutter are reshaped only when the fold is separating; a non-separating half-opened vertical fold is posture Book with the plain column math |
+| POS-04 | Tabletop | `HALF_OPENED` + `HORIZONTAL` (separating or not) | Text occupies the **text region**: the part of the window from `y = 0` to the fold top edge, over the full window width. Columns are the plain LAY-04 to LAY-09 result for the full window width `W` (a horizontal fold adds no gutter and no fold column rules; LAY-10 to LAY-14 concern vertical folds), so 1 or 2 columns by LAY-07. Page height and the vertical margin use the region height as `H` (LAY-08), so no text is drawn below the fold top edge. If the region is shorter than 4 body lines (`4 × bodyPx × lineHeight`), or the deck would be shorter than `96dp` (2 × 48dp touch targets), the fold is ignored: posture is Standard, text uses the whole window and there is no deck. The **deck region** is the rest of the window, full width, from the fold bottom edge (the fold top edge when the hinge has zero height) to the window bottom. It shows the control deck: large previous and next zones, progress scrubber, table of contents button. Anchors (ANC-01 to ANC-07) come only from the text region; the deck holds controls only, never text. Both regions are exposed by the layout as `Geometry.textRegion` and `Geometry.deckRegion` in window px |
 | POS-05 | Multi-window, pop-up, desktop window | Window-based only | Same rules; a fold matters only if it intersects the window. Must remain usable down to 320dp wide and 360dp tall |
 | POS-06 | Tri-fold, tablet, large desktop window | Same rules | Auto columns may reach 3 |
 
@@ -186,6 +186,7 @@ All values in px at the current density; `W` is the usable window width after in
 | PAG-09 | Pagination MUST be **anchored and lazy**: lay out the spread containing the anchor first, then the neighbours (at least ±2 spreads), then the rest in the background. The total page count is estimated until the background pass finishes, and the estimate is visibly marked as approximate in progress UI only if it changes by more than 5%. The provisional window starts at the anchor line and may break pages differently from the canonical pagination; the invariant is that the anchor is on the first provisional page and on the spread returned for it in the canonical and complete runs |
 | PAG-10 | A layout cache MUST key on (document content hash, geometry hash). Returning to a previous geometry (fold then unfold) reuses it |
 | PAG-11 | Page identity is the anchor of its first slice, never an integer index alone |
+| PAG-13 | With columns of unequal width (LAY-12), a block that fits whole in the column where it starts is set at that column's width. A block that splits across columns is set at the width of the narrowest column of the spread, in every slice, so a break always falls on a line boundary of the layout that follows. Text of such a block may therefore be narrower than the wider column |
 | PAG-12 | A spread advances by `cols` pages. The first page of the document starts in the leftmost column (left-to-right documents). The final spread may contain empty columns; the last page ends with a small end ornament |
 
 ---
@@ -194,11 +195,11 @@ All values in px at the current density; `W` is the usable window width after in
 
 | ID | Requirement |
 |---|---|
-| ANC-01 | The current anchor is the first visible character of the leftmost visible column (paged) or of the topmost visible line (scroll) |
+| ANC-01 | The current anchor is the first visible character of the first column in reading order (paged: leftmost for left-to-right documents, rightmost for right-to-left documents) or of the topmost visible line (scroll) |
 | ANC-02 | The anchor MUST be written to `SavedStateHandle` on every settled page turn or scroll stop, and persisted per document URI (not per content hash, so a position survives edits made in another app) at most once per second and on `onStop` |
-| ANC-03 | On any geometry change (fold, unfold, posture change, rotation, resize, font, margin, column setting, theme metric change): capture the anchor and its on-screen line rectangle, re-paginate around the anchor, show the spread containing it, then run the continuity motion (MOT-05) |
+| ANC-03 | On any geometry change (fold, unfold, posture change, rotation, resize, font, margin, column setting, theme metric change): capture the anchor and its on-screen line rectangle, re-paginate around the anchor, show the spread containing it, then run the continuity motion (MOT-05). The anchor MUST be visible in some column of the new spread, not necessarily the same column it was in. After a geometry change the stored anchor is kept unchanged, so repeated fold and unfold cannot drift the reading position. ANC-01 applies again only when the reader next turns a page or the scroll settles |
 | ANC-04 | Switching between paged and scroll modes MUST preserve the anchor |
-| ANC-05 | Reopening a document restores its last anchor. If the file changed since (content hash differs), keep the stored anchor and clamp it to the new document: the block index to the last block, the character offset to the length of that block and show nothing alarming |
+| ANC-05 | Reopening a document restores its last anchor. If the file changed since (content hash differs), keep the stored anchor and clamp it to the new document: a stored block index past the last block becomes the last block with offset 0, a stored offset past the end of its block becomes the length of that block, and nothing alarming is shown |
 | ANC-06 | A "return" chip appears after any jump (table of contents, link, search result, footnote) and returns to the pre-jump anchor. It survives geometry changes. It disappears after 8 seconds of reading or on tap |
 | ANC-07 | The Activity SHOULD handle `screenSize`, `smallestScreenSize`, `screenLayout` and `orientation` configuration changes itself so the reader recomposes in place; process death and recreation MUST still restore the anchor exactly |
 
@@ -209,7 +210,7 @@ All values in px at the current density; `W` is the usable window width after in
 | ID | Requirement |
 |---|---|
 | NAV-01 | Paged mode: horizontal swipe turns spreads, following finger velocity |
-| NAV-02 | Tap zones on the reading surface: outer 30% left goes back, outer 30% right goes forward, center toggles chrome. Mirrored for RTL documents. In tabletop posture the zones move to the control deck |
+| NAV-02 | Tap zones on the reading surface: outer 30% left goes back, outer 30% right goes forward, center toggles chrome. Mirrored for RTL documents. In tabletop posture the zones stay active over the text region and the control deck repeats previous and next as large zones (POS-04) |
 | NAV-03 | Keyboard: Right, Page Down, Space, J go forward; Left, Page Up, Shift+Space, K go back; Home and End jump; Ctrl+F opens search; T opens table of contents; Escape closes overlays |
 | NAV-04 | Volume keys turn pages when enabled in settings (off by default) |
 | NAV-05 | Scroll mode: standard fling, plus the same keyboard shortcuts scrolling by 90% of the viewport |
@@ -255,6 +256,8 @@ All values in px at the current density; `W` is the usable window width after in
 | UI-12 | Icons: Lucide, outlined, 1.5dp stroke at 24dp (ADR-0009). No other icon set |
 | UI-13 | Every user-facing string MUST live in string resources (English in v1) |
 | UI-14 | Relative image folder grant: when a document references relative images and no grant exists, show one inline banner ("Show images from this folder") that opens the folder picker at the document's location when possible. Never prompt more than once per folder |
+| UI-15 | **Recent preview**: each recent shows a one-line preview (at most 140 characters) of the first paragraph of the document, taken from the parsed model when the document is opened and stored with the recent. The library never reads or parses a document to build the list. Documents without a paragraph show no preview line |
+| UI-16 | **Unavailable recent**: when opening a recent fails because the file moved, was deleted or access was revoked, the recent is marked unavailable, shown dimmed with the label "Unavailable" and a remove action, and is kept until the user removes it. A later successful open clears the mark. The library never checks files while listing |
 
 ---
 
