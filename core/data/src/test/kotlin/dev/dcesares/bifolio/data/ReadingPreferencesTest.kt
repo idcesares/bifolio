@@ -14,4 +14,13 @@ class ReadingPreferencesTest {
             ReadingPreferences(store).setMode(ReadingMode.SCROLL)
             assertEquals(ReadingMode.SCROLL, ReadingPreferences(store).mode.first())
         }
+
+    @Test
+    fun `volume keys are off until enabled and the choice survives a new instance (NAV-04)`() =
+        runTest {
+            val store = InMemoryPreferences()
+            assertEquals(false, ReadingPreferences(store).volumeKeysTurn.first())
+            ReadingPreferences(store).setVolumeKeysTurn(true)
+            assertEquals(true, ReadingPreferences(store).volumeKeysTurn.first())
+        }
 }

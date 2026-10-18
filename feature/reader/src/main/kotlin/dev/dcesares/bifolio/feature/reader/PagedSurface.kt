@@ -3,6 +3,7 @@ package dev.dcesares.bifolio.feature.reader
 import android.graphics.Canvas
 import android.graphics.Paint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -32,10 +33,13 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
@@ -133,6 +137,7 @@ internal fun PagedSurface(
     requestDebounceMillis: Long = REQUEST_DEBOUNCE_MILLIS,
     document: Document? = null,
     onOpenToc: (() -> Unit)? = null,
+    volumeKeysTurn: Boolean = false,
 ) {
     val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
     val palette = BifolioTheme.palette
@@ -192,7 +197,41 @@ internal fun PagedSurface(
     val insetTop = insets.calculateTopPadding()
     val insetBottom = insets.calculateBottomPadding()
 
-    BoxWithConstraints(modifier.fillMaxSize().background(palette.page)) {
+    // NAV-03, NAV-04: keys act on the surface, which asks for focus so they arrive without a tap first.
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val keys = rememberUpdatedState(volumeKeysTurn)
+    BoxWithConstraints(
+        modifier
+            .fillMaxSize()
+            .background(palette.page)
+            .focusRequester(focus)
+            .onPreviewKeyEvent { event ->
+                val command = event.readerCommand(keys.value)
+                if (command == null) {
+                    false
+                } else {
+                    val handled = flow != null && command.isHandledBySpreads(onOpenToc)
+                    if (handled && flow != null) {
+                        turn.grab().let { if (it != 0) turn.commitNow(it) }
+                        when (command) {
+                            ReaderCommand.NEXT -> turn.turn(-1)
+                            ReaderCommand.PREVIOUS -> turn.turn(1)
+                            ReaderCommand.TOC -> onOpenToc?.invoke()
+                            else -> {
+                                val target = if (command == ReaderCommand.FIRST) 0 else flow.spreadCount - 1
+                                AnchorMapper.leftmostVisibleAnchor(flow, target)?.let { settled ->
+                                    continuity.cancel()
+                                    shown = settled
+                                    onSettled(settled)
+                                }
+                            }
+                        }
+                    }
+                    handled
+                }
+            }.focusable(),
+    ) {
         val startPx = with(density) { insetStart.toPx() }
         // Platform fold bounds are physical, so the fold shifts by the left inset, not the start inset (RTL).
         val leftPx = with(density) { insetLeft.toPx() }
@@ -583,3 +622,11 @@ private fun PagedGesture.move(
     if (touch.scrollingTable && table != null) scroll(table, delta.x) else turn.drag(delta.x)
     return true
 }
+
+/** Spreads act on turns and jumps; the table of contents only when it exists; search and close are not ours yet. */
+private fun ReaderCommand.isHandledBySpreads(onOpenToc: (() -> Unit)?): Boolean =
+    when (this) {
+        ReaderCommand.NEXT, ReaderCommand.PREVIOUS, ReaderCommand.FIRST, ReaderCommand.LAST -> true
+        ReaderCommand.TOC -> onOpenToc != null
+        ReaderCommand.SEARCH, ReaderCommand.CLOSE -> false
+    }

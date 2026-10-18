@@ -105,6 +105,10 @@ public class ReaderViewModel(
             if ((current as? ReaderUiState.Ready)?.scrollOnly == true) ReadingMode.SCROLL else preferred
         }.stateIn(viewModelScope, SharingStarted.Eagerly, ReadingMode.PAGED)
 
+    /** Whether the volume keys turn pages (NAV-04). */
+    public val volumeKeysTurn: StateFlow<Boolean> =
+        preferences.volumeKeysTurn.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val mutableChromeVisible = MutableStateFlow(false)
 
     /**

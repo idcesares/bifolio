@@ -2,7 +2,10 @@ package dev.dcesares.bifolio.feature.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,12 +35,16 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -78,6 +86,7 @@ public fun ReaderRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val mode by viewModel.mode.collectAsStateWithLifecycle()
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
+    val volumeKeysTurn by viewModel.volumeKeysTurn.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
             Box(modifier.fillMaxSize()) {
@@ -97,6 +106,7 @@ public fun ReaderRoute(
                             notices = current.notices,
                             foldSource = rememberFoldSource(),
                             document = current.document,
+                            volumeKeysTurn = volumeKeysTurn,
                         )
                     } else {
                         ReaderScreen(
@@ -104,6 +114,7 @@ public fun ReaderRoute(
                             onAnchorSettled = viewModel::onAnchorSettled,
                             startAnchor = start,
                             onToggleChrome = viewModel::toggleChrome,
+                            volumeKeysTurn = volumeKeysTurn,
                         )
                     }
                 }
@@ -134,6 +145,8 @@ public fun ReaderScreen(
     modifier: Modifier = Modifier,
     startAnchor: Anchor = ready.initialAnchor,
     onToggleChrome: (() -> Unit)? = null,
+    onOpenToc: (() -> Unit)? = null,
+    volumeKeysTurn: Boolean = false,
 ) {
     val palette = BifolioTheme.palette
     val blocks = ready.document.blocks
@@ -170,8 +183,15 @@ public fun ReaderScreen(
             val fraction = anchor.charOffset.toFloat() / blockLength
             listState.scrollToItem(start, (fraction * height).toInt())
         }
-        // Only report once a scroll ends, so the restore above never overwrites the stored anchor.
-        snapshotFlow { listState.isScrollInProgress }.drop(1).filter { !it }.collect {
+        // Only report once a scroll ends, so the restore above never overwrites the stored anchor. The position is
+        // part of the key because a jump (Home, End, link) can start and end inside one snapshot (NAV-03).
+        snapshotFlow {
+            ScrollKey(
+                listState.isScrollInProgress,
+                listState.firstVisibleItemIndex,
+                listState.firstVisibleItemScrollOffset,
+            )
+        }.drop(1).filter { !it.scrolling }.collect {
             val first = listState.layoutInfo.visibleItemsInfo.firstOrNull() ?: return@collect
             val length = blocks.getOrNull(first.index)?.range?.length ?: 0
             val fraction = listState.firstVisibleItemScrollOffset.toFloat() / first.size.coerceAtLeast(1)
@@ -184,10 +204,40 @@ public fun ReaderScreen(
     val insets = ReaderInsets.asPaddingValues()
     val direction = LocalLayoutDirection.current
 
+    // NAV-05: the keyboard scrolls by 90% of the viewport; NAV-04 volume keys do the same when enabled.
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val keys = rememberUpdatedState(volumeKeysTurn)
     BoxWithConstraints(
         modifier
             .fillMaxSize()
             .background(palette.page)
+            .focusRequester(focus)
+            .onPreviewKeyEvent { event ->
+                val command = event.readerCommand(keys.value)
+                // Search and close belong to overlays that do not exist yet, and the TOC needs its opener.
+                val handled =
+                    when (command) {
+                        null, ReaderCommand.SEARCH, ReaderCommand.CLOSE -> false
+                        ReaderCommand.TOC -> onOpenToc != null
+                        else -> true
+                    }
+                if (handled) {
+                    scope.launch {
+                        val page = listState.layoutInfo.let { it.viewportEndOffset - it.viewportStartOffset }
+                        val step = page * KEY_SCROLL_FRACTION
+                        when (command) {
+                            ReaderCommand.NEXT -> listState.scrollKeys(step, reducedMotion)
+                            ReaderCommand.PREVIOUS -> listState.scrollKeys(-step, reducedMotion)
+                            ReaderCommand.FIRST -> listState.scrollToItem(0)
+                            ReaderCommand.LAST -> listState.scrollToItem((blocks.size - 1).coerceAtLeast(0))
+                            ReaderCommand.TOC -> onOpenToc?.invoke()
+                            else -> Unit
+                        }
+                    }
+                }
+                handled
+            }.focusable()
             // NAV-02: a center tap shows or hides the chrome. It never changes the reading mode.
             .pointerInput(onToggleChrome) {
                 if (onToggleChrome != null) {
@@ -321,3 +371,16 @@ internal fun ReaderFailure(
         )
     }
 }
+
+private suspend fun LazyListState.scrollKeys(
+    distance: Float,
+    reducedMotion: Boolean,
+) {
+    if (reducedMotion) scrollBy(distance) else animateScrollBy(distance)
+}
+
+private data class ScrollKey(
+    val scrolling: Boolean,
+    val index: Int,
+    val offset: Int,
+)
