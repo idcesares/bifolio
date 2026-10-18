@@ -29,9 +29,10 @@ class GeometryTest {
     )
 
     @Test
-    fun `LAY-04 measures are 45, 66 and 75 character widths`() {
+    fun `LAY-04 measures are 40, 66 and 75 character widths`() {
         val g = GeometryCalculator.compute(spec(1000, charW = 10f))
-        assertEquals(450, g.minMeasure)
+        assertEquals(400, g.minMeasure)
+        assertEquals(280, g.floorMeasure)
         assertEquals(660, g.targetMeasure)
         assertEquals(750, g.maxMeasure)
     }
@@ -55,14 +56,14 @@ class GeometryTest {
 
     @Test
     fun `LAY-07 auto columns follow the floor formula`() {
-        // charW 10: min 450, gap 32. Outer 6% of W.
+        // charW 10: min 400, gap 32. Outer 6% of W.
         assertEquals(1, GeometryCalculator.compute(spec(600)).columnCount)
-        // W 1100: outer 66, (1100 - 132 + 32) / 482 = 2.07 -> 2
+        // W 1100: outer 66, (1100 - 132 + 32) / 432 = 2.31 -> 2
         assertEquals(2, GeometryCalculator.compute(spec(1100)).columnCount)
-        // W 1600: outer 96, (1600 - 192 + 32) / 482 = 2.98 -> 2
-        assertEquals(2, GeometryCalculator.compute(spec(1600)).columnCount)
-        // W 1700: outer 102, (1700 - 204 + 32) / 482 = 3.17 -> 3
-        assertEquals(3, GeometryCalculator.compute(spec(1700)).columnCount)
+        // W 1400: outer 84, (1400 - 168 + 32) / 432 = 2.93 -> 2
+        assertEquals(2, GeometryCalculator.compute(spec(1400)).columnCount)
+        // W 1500: outer 90, (1500 - 180 + 32) / 432 = 3.13 -> 3
+        assertEquals(3, GeometryCalculator.compute(spec(1500)).columnCount)
         // never more than 3
         assertEquals(3, GeometryCalculator.compute(spec(6000)).columnCount)
     }
@@ -82,12 +83,10 @@ class GeometryTest {
     }
 
     @Test
-    fun `LAY-08 forced columns are a maximum with a 34 character floor`() {
-        // W 1100 auto = 2; forced 3 drops to the auto-with-floor count.
-        val floor3 = GeometryCalculator.compute(spec(1100, forced = 3))
-        // floor 340: (1100 - 132 + 32) / 372 = 2.68 -> 2
-        assertEquals(2, floor3.columnCount)
-        // W 1300 auto = 2 (outer 78: (1300-156+32)/482 = 2.4) but with the floor: (1176)/372 = 3.16 -> 3
+    fun `LAY-08 forced columns are a maximum with a 28 character floor`() {
+        // charW 10, gap 32, floor 280. W 1000: outer 60, (1000 - 120 + 32) / 312 = 2.92 -> 2.
+        assertEquals(2, GeometryCalculator.compute(spec(1000, forced = 3)).columnCount)
+        // W 1300: outer 78, auto 2, floor (1300 - 156 + 32) / 312 = 3.77 -> 3.
         assertEquals(3, GeometryCalculator.compute(spec(1300, forced = 3)).columnCount)
         assertEquals(2, GeometryCalculator.compute(spec(1300, forced = 2)).columnCount)
         assertEquals(1, GeometryCalculator.compute(spec(1300, forced = 1)).columnCount)
@@ -119,6 +118,20 @@ class GeometryTest {
     fun `page height is the window height minus the vertical margins`() {
         val g = GeometryCalculator.compute(spec(1000, h = 1500))
         assertEquals(1500 - 2 * g.verticalMargin, g.columnHeight)
+    }
+
+    @Test
+    fun `LAY-08 a forced count is honored down to the 28 character floor`() {
+        // charW 10, gap 32, floor 280. W 800: outer 48, auto (800 - 96 + 32) / 432 = 1, floor (736) / 312 = 2.
+        assertEquals(1, GeometryCalculator.compute(spec(800)).columnCount)
+        assertEquals(2, GeometryCalculator.compute(spec(800, forced = 2)).columnCount)
+        // 3 does not fit at 800, so it drops to the most that does.
+        assertEquals(2, GeometryCalculator.compute(spec(800, forced = 3)).columnCount)
+        // W 1100: outer 66, auto 2, floor (1100 - 132 + 32) / 312 = 3.2 -> 3.
+        assertEquals(2, GeometryCalculator.compute(spec(1100)).columnCount)
+        assertEquals(3, GeometryCalculator.compute(spec(1100, forced = 3)).columnCount)
+        // A forced 1 is always honored.
+        assertEquals(1, GeometryCalculator.compute(spec(1700, forced = 1)).columnCount)
     }
 
     @Test
