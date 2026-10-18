@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -29,7 +30,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
+import dev.dcesares.bifolio.data.AppearanceProfile
+import dev.dcesares.bifolio.data.ThemeChoice
+import dev.dcesares.bifolio.data.withBodySpStep
+import dev.dcesares.bifolio.data.withNextColumns
+import dev.dcesares.bifolio.data.withNextTheme
+import dev.dcesares.bifolio.designsystem.BifolioButton
 import dev.dcesares.bifolio.designsystem.BifolioIconButton
 import dev.dcesares.bifolio.designsystem.BifolioIcons
 import dev.dcesares.bifolio.designsystem.BifolioMotion
@@ -70,6 +80,8 @@ internal fun ReaderChrome(
     title: String,
     onOpenAppearance: () -> Unit,
     modifier: Modifier = Modifier,
+    appearance: AppearanceProfile = AppearanceProfile(),
+    onAppearance: ((AppearanceProfile) -> AppearanceProfile) -> Unit = {},
 ) {
     val reduced = rememberReducedMotion()
     val palette = BifolioTheme.palette
@@ -124,10 +136,73 @@ internal fun ReaderChrome(
                     description = stringResource(R.string.reader_chrome_appearance),
                     onClick = onOpenAppearance,
                 )
-                Box(Modifier.fillMaxWidth().height(Spacing.Rule).background(palette.rule))
             }
+            QuickControls(appearance, onAppearance, insets, direction)
+            Box(Modifier.fillMaxWidth().height(Spacing.Rule).background(palette.rule))
         }
     }
 }
 
 private const val CHROME_TRAVEL = 3
+
+/**
+ * The few settings that change often, one tap each on the same global profile as the appearance sheet: columns,
+ * theme and text size. Everything else stays in the sheet.
+ */
+@Composable
+private fun QuickControls(
+    appearance: AppearanceProfile,
+    onAppearance: ((AppearanceProfile) -> AppearanceProfile) -> Unit,
+    insets: PaddingValues,
+    direction: LayoutDirection,
+) {
+    val columns = appearance.columns?.toString() ?: stringResource(R.string.reader_quick_columns_auto)
+    val theme =
+        stringResource(
+            when (appearance.theme) {
+                null -> R.string.reader_quick_theme_auto
+                ThemeChoice.PAPER -> R.string.reader_quick_theme_paper
+                ThemeChoice.SEPIA -> R.string.reader_quick_theme_sepia
+                ThemeChoice.DUSK -> R.string.reader_quick_theme_dusk
+                ThemeChoice.NIGHT -> R.string.reader_quick_theme_night
+            },
+        )
+    val smaller = stringResource(R.string.reader_quick_smaller)
+    val larger = stringResource(R.string.reader_quick_larger)
+    val columnsLabel = stringResource(R.string.reader_quick_columns, columns)
+    val themeLabel = stringResource(R.string.reader_quick_theme, theme)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = insets.calculateStartPadding(direction) + Spacing.S,
+                    end = insets.calculateEndPadding(direction) + Spacing.S,
+                ),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BifolioButton(
+            text = columns,
+            onClick = { onAppearance { it.withNextColumns() } },
+            icon = BifolioIcons.Columns2,
+            modifier = Modifier.semantics { contentDescription = columnsLabel },
+        )
+        BifolioButton(
+            text = theme,
+            onClick = { onAppearance { it.withNextTheme() } },
+            icon = BifolioIcons.Contrast,
+            modifier = Modifier.semantics { contentDescription = themeLabel },
+        )
+        BifolioButton(
+            text = stringResource(R.string.reader_quick_smaller_label),
+            onClick = { onAppearance { it.withBodySpStep(-1) } },
+            modifier = Modifier.semantics { contentDescription = smaller },
+        )
+        BifolioButton(
+            text = stringResource(R.string.reader_quick_larger_label),
+            onClick = { onAppearance { it.withBodySpStep(1) } },
+            modifier = Modifier.semantics { contentDescription = larger },
+        )
+    }
+}

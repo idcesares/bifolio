@@ -118,6 +118,20 @@ public object BifolioIcons {
             "M9 20h6",
         )
 
+    public val Columns2: ImageVector =
+        icon(
+            "columns-2",
+            "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+            "M12 3v18",
+        )
+
+    public val Contrast: ImageVector =
+        icon(
+            "contrast",
+            "M22 12A10 10 0 0 1 12 22A10 10 0 0 1 2 12A10 10 0 0 1 12 2A10 10 0 0 1 22 12z",
+            "M12 18a6 6 0 0 0 0-12v12z",
+        )
+
     public val ChevronLeft: ImageVector =
         icon(
             "chevron-left",

@@ -145,6 +145,8 @@ public fun ReaderRoute(
                     visible = chromeVisible,
                     title = current.title,
                     onOpenAppearance = { sheetOpen = true },
+                    appearance = appearance,
+                    onAppearance = viewModel::updateAppearance,
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 ReaderFooter(

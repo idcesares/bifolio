@@ -11,6 +11,25 @@ import org.junit.jupiter.api.Test
 /** UI-10, TYP-02, TYP-03, TYP-05, TYP-06, LAY-05: the global appearance profile and its limits. */
 class AppearanceProfileTest {
     @Test
+    fun `quick columns cycle Auto, 1, 2, 3 and back`() {
+        val seen = generateSequence(AppearanceProfile()) { it.withNextColumns() }.take(5).map { it.columns }.toList()
+        assertEquals(listOf(null, 1, 2, 3, null), seen)
+    }
+
+    @Test
+    fun `quick theme cycles Auto and the four themes and back`() {
+        val seen = generateSequence(AppearanceProfile()) { it.withNextTheme() }.take(6).map { it.theme }.toList()
+        assertEquals(listOf(null) + ThemeChoice.entries + listOf(null), seen)
+    }
+
+    @Test
+    fun `quick size steps stay inside the limits`() {
+        assertEquals(MAX_BODY_SP, AppearanceProfile(bodySp = MAX_BODY_SP).withBodySpStep(1).bodySp)
+        assertEquals(MIN_BODY_SP, AppearanceProfile(bodySp = MIN_BODY_SP).withBodySpStep(-1).bodySp)
+        assertEquals(19, AppearanceProfile().withBodySpStep(1).bodySp)
+    }
+
+    @Test
     fun `defaults match the spec`() =
         runTest {
             val p = ReadingPreferences(InMemoryPreferences()).appearance.first()

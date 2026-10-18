@@ -49,6 +49,29 @@ public data class AppearanceProfile(
 
 private const val MAX_COLUMN_CHOICE = 3
 
+/** Quick toggle of the reader chrome: Auto, 1, 2, 3, then Auto again. */
+public fun AppearanceProfile.withNextColumns(): AppearanceProfile =
+    copy(
+        columns =
+            if (columns == null) {
+                1
+            } else if (columns >= MAX_COLUMN_CHOICE) {
+                null
+            } else {
+                columns + 1
+            },
+    )
+
+/** Quick toggle of the reader chrome: Auto, Paper, Sepia, Dusk, Night, then Auto again. */
+public fun AppearanceProfile.withNextTheme(): AppearanceProfile {
+    val all = ThemeChoice.entries
+    return copy(theme = if (theme == null) all.first() else all.getOrNull(theme.ordinal + 1))
+}
+
+/** Quick text size step of the reader chrome, kept inside 14..28sp. */
+public fun AppearanceProfile.withBodySpStep(delta: Int): AppearanceProfile =
+    copy(bodySp = (bodySp + delta).coerceIn(MIN_BODY_SP, MAX_BODY_SP))
+
 private fun nearest(
     options: List<Float>,
     value: Float,
