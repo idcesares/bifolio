@@ -111,6 +111,34 @@ public object BifolioIcons {
             lineTo(19f, 9f)
         }
 
+    /** Lucide chevrons-up-down: the scroll direction, used to switch to continuous scroll. */
+    public val ChevronsUpDown: ImageVector =
+        icon("chevrons-up-down") {
+            moveTo(7f, 15f)
+            lineTo(12f, 20f)
+            lineTo(17f, 15f)
+            moveTo(7f, 9f)
+            lineTo(12f, 4f)
+            lineTo(17f, 9f)
+        }
+
+    /** Lucide list: three rows with bullets, the table of contents. */
+    public val List: ImageVector =
+        icon("list") {
+            moveTo(8f, 6f)
+            lineTo(21f, 6f)
+            moveTo(8f, 12f)
+            lineTo(21f, 12f)
+            moveTo(8f, 18f)
+            lineTo(21f, 18f)
+            moveTo(3f, 6f)
+            lineTo(3.01f, 6f)
+            moveTo(3f, 12f)
+            lineTo(3.01f, 12f)
+            moveTo(3f, 18f)
+            lineTo(3.01f, 18f)
+        }
+
     public val ChevronLeft: ImageVector =
         icon("chevron-left") {
             moveTo(15f, 5f)

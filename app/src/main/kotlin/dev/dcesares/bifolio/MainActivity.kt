@@ -16,6 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.content.IntentCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -111,7 +114,18 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Content() {
         val state by reader.state.collectAsStateWithLifecycle()
+        val chromeVisible by reader.chromeVisible.collectAsStateWithLifecycle()
         BifolioTheme {
+            // UI-04: immersive reading hides the system bars; they come back with the chrome and in the library.
+            LaunchedEffect(state is ReaderUiState.Idle, chromeVisible) {
+                val bars = WindowCompat.getInsetsController(window, window.decorView)
+                bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                if (state is ReaderUiState.Idle || chromeVisible) {
+                    bars.show(WindowInsetsCompat.Type.systemBars())
+                } else {
+                    bars.hide(WindowInsetsCompat.Type.systemBars())
+                }
+            }
             LaunchedEffect(state) {
                 val failed = state as? ReaderUiState.Failed ?: return@LaunchedEffect
                 when {
@@ -120,6 +134,7 @@ class MainActivity : ComponentActivity() {
                         finish()
                     }
                     failed.reason == FailureReason.Unreadable && !openedExternally -> {
+                        openUri?.let(library::markUnavailable)
                         library.showNotice(LibraryNotice.Unreadable)
                         closeDocument()
                     }

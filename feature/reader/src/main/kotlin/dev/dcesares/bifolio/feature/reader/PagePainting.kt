@@ -155,6 +155,7 @@ internal class ColumnPainter(
     ): PreparedColumn {
         val ops = ArrayList<PaintOp>(draw.items.size + 1)
         val tableRects = LinkedHashMap<Int, IntArray>()
+        val marks = ArrayList<PaintOp>(1)
         for (item in draw.items) {
             when (item) {
                 is DrawText -> ops.add(textOp(item))
@@ -164,7 +165,7 @@ internal class ColumnPainter(
                 is DrawRule -> ops.add(ruleOp(item))
                 is DrawAtomic -> ops.add(atomicOp(item))
                 is DrawCalloutTitle -> ops.add(titleOp(item))
-                is DrawContinuation -> ops.add(continuationOp(item))
+                is DrawContinuation -> marks.add(continuationOp(item))
                 is DrawTableRow -> {
                     ops.add(tableRowOp(item))
                     if (item.tableWidth > item.columnWidth) {
@@ -184,6 +185,8 @@ internal class ColumnPainter(
                 }
             }
         }
+        // Painted last: the dots sit on the code surface and must not be covered by it.
+        ops.addAll(marks)
         if (draw.endsDocument) ops.add(ornamentOp(draw, columnHeight))
         val hits =
             tableRects.map { (block, r) ->
@@ -296,10 +299,15 @@ internal class ColumnPainter(
         return PaintOp { canvas, _ -> canvas.drawText(text, x, baseline, titlePaint) }
     }
 
-    /** Three quiet dots in the margin, level with the first line of a block continued from the previous page. */
+    /**
+     * Three quiet dots level with the first line of a block continued from the previous page. They hang in the
+     * margin when the block is indented, but never leave the column: at the column edge (code padding, tables)
+     * they sit halfway into the block's own inset, so they cannot reach the gutter or fold band (LAY-14).
+     */
     private fun continuationOp(item: DrawContinuation): PaintOp {
         val r = bodyPx * DOT_RADIUS_EM
-        val cx = item.x - bodyPx * CONTINUATION_OFFSET_EM
+        val inset = if (item.x == 0) cellPadding / 2f else item.x / 2f
+        val cx = maxOf(item.x - bodyPx * CONTINUATION_OFFSET_EM, inset, r)
         val cy = item.y + item.height / 2f
         val step = r * DOT_STEP
         return PaintOp { canvas, _ ->

@@ -14,12 +14,15 @@ import dev.dcesares.bifolio.layout.PageDetailer
 import dev.dcesares.bifolio.layout.PaginationService
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.Document
+import dev.dcesares.bifolio.model.Paragraph
+import dev.dcesares.bifolio.model.plainText
 import dev.dcesares.bifolio.parse.LoadResult
 import dev.dcesares.bifolio.parse.MarkdownLoader
 import dev.dcesares.bifolio.parse.SizeClass
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +36,23 @@ import java.io.IOException
 private val MarkdownExtensions = listOf(".md", ".markdown", ".mdown", ".mkd")
 private const val OCTET_STREAM = "application/octet-stream"
 private const val SAVE_INTERVAL_MILLIS = 1_000L
+
+/** The chrome leaves after this long without interaction (UI-03). */
+internal const val CHROME_AUTO_HIDE_MILLIS = 4_000L
 private const val NANOS_PER_MILLI = 1_000_000L
+private const val PREVIEW_MAX = 140
+private const val ELLIPSIS = "…"
+private val WHITESPACE = Regex("""\s+""")
+
+/** One line of the first top-level paragraph for the library (UI-15): plain text, collapsed, at most 140 characters. */
+internal fun previewOf(document: Document): String {
+    val paragraph = document.blocks.firstOrNull { it is Paragraph } as? Paragraph ?: return ""
+    val text = plainText(paragraph.content).replace(WHITESPACE, " ").trim()
+    if (text.length <= PREVIEW_MAX) return text
+    var end = PREVIEW_MAX - ELLIPSIS.length
+    if (Character.isHighSurrogate(text[end - 1])) end--
+    return text.substring(0, end).trimEnd() + ELLIPSIS
+}
 
 /** Receives named durations in milliseconds, for the PRF-04 measurements. */
 public fun interface PerfLog {
@@ -65,6 +84,7 @@ public class ReaderViewModel(
     private val computeDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val nanoClock: () -> Long = System::nanoTime,
     private val perf: PerfLog = PerfLog.None,
+    private val chromeDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<ReaderUiState>(ReaderUiState.Idle)
     public val state: StateFlow<ReaderUiState> = mutableState
@@ -85,6 +105,16 @@ public class ReaderViewModel(
             if ((current as? ReaderUiState.Ready)?.scrollOnly == true) ReadingMode.SCROLL else preferred
         }.stateIn(viewModelScope, SharingStarted.Eagerly, ReadingMode.PAGED)
 
+    private val mutableChromeVisible = MutableStateFlow(false)
+
+    /**
+     * Whether the chrome (and with it the system bars) is shown (UI-03, UI-04). Not persisted: a reader always
+     * opens immersive. It lives here so rotation and folding keep it. Only a center tap or the auto-hide changes it.
+     */
+    public val chromeVisible: StateFlow<Boolean> = mutableChromeVisible
+
+    private var chromeHiding: Job? = null
+
     private val pagination = PaginationService(LayoutCache())
     private var paginating: Job? = null
     private var lastRequest: PageRequest? = null
@@ -96,7 +126,33 @@ public class ReaderViewModel(
     private var lastSavedAt: Long? = null
     private var pending: Anchor? = null
 
+    /** Center tap (NAV-02): shows the chrome, or hides it. Never touches the reading mode. */
+    public fun toggleChrome() {
+        if (mutableChromeVisible.value) hideChrome() else showChrome()
+    }
+
+    /** Any use of the chrome restarts the 4 s countdown (UI-03). */
+    public fun keepChrome() {
+        if (mutableChromeVisible.value) showChrome()
+    }
+
+    private fun showChrome() {
+        mutableChromeVisible.value = true
+        chromeHiding?.cancel()
+        chromeHiding =
+            viewModelScope.launch(chromeDispatcher) {
+                delay(CHROME_AUTO_HIDE_MILLIS)
+                mutableChromeVisible.value = false
+            }
+    }
+
+    private fun hideChrome() {
+        chromeHiding?.cancel()
+        mutableChromeVisible.value = false
+    }
+
     public fun open(request: OpenRequest) {
+        hideChrome()
         flush()
         loading?.cancel()
         mutableState.value = ReaderUiState.Loading
@@ -109,6 +165,7 @@ public class ReaderViewModel(
 
     /** Back to the library: forgets the loaded document. */
     public fun close() {
+        hideChrome()
         flush()
         loading?.cancel()
         currentUri = null
@@ -142,7 +199,7 @@ public class ReaderViewModel(
         val anchor = restoreAnchor(document, repository.anchorFor(request.uri))
         val title = document.title?.takeIf { it.isNotBlank() } ?: name.substringBeforeLast('.', name)
         repository.upsert(
-            RecentDocument(request.uri, title, name, clock(), progressOf(document, anchor), hash),
+            RecentDocument(request.uri, title, name, clock(), progressOf(document, anchor), hash, previewOf(document)),
         )
         currentUri = request.uri
         val scrollOnly = loaded.sizeClass == SizeClass.SCROLL_ONLY
@@ -157,9 +214,11 @@ public class ReaderViewModel(
 
     /**
      * Switches between pages and scroll and stores the choice as the global profile (SCO-03). The anchor
-     * carries over, so the same passage stays in view (ANC-04).
+     * carries over, so the same passage stays in view (ANC-04). Called only from the chrome's mode control.
+     * TEMPORARY until the appearance sheet owns the reading mode (UI-10, M4); no tap on the page may call it.
      */
     public fun toggleMode() {
+        keepChrome()
         if ((mutableState.value as? ReaderUiState.Ready)?.scrollOnly != false) return
         val next = if (mode.value == ReadingMode.PAGED) ReadingMode.SCROLL else ReadingMode.PAGED
         viewModelScope.launch { preferences.setMode(next) }

@@ -84,6 +84,7 @@ internal class GridTextEngine : TextEngine {
                 density = request.density,
                 charWidthPx = GRID_CHAR_PX,
                 metrics = FlowMetrics(blockGap = 12, innerGap = 6),
+                fold = request.fold,
             )
         return PreparedText(GridMeasurer(), spec, config)
     }

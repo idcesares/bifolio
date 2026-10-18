@@ -189,6 +189,57 @@ class ReaderViewModelTest {
         }
 
     @Test
+    fun recentPreviewIsTheFirstParagraphWithCollapsedWhitespace() =
+        runTest {
+            val v = vm("u" to raw("# Title\n\nA *quiet*   start,\nwith **two** lines.\n\nSecond paragraph."))
+            v.open(OpenRequest("u", null, false))
+            assertEquals(
+                "A quiet start, with two lines.",
+                repo.recents
+                    .first()
+                    .single()
+                    .preview,
+            )
+        }
+
+    @Test
+    fun recentPreviewIsTruncatedTo140CharactersWithAnEllipsis() =
+        runTest {
+            val v = vm("u" to raw("word ".repeat(100).trim()))
+            v.open(OpenRequest("u", null, false))
+            val preview =
+                repo.recents
+                    .first()
+                    .single()
+                    .preview
+            assertEquals(140, preview.length)
+            assertTrue(preview.endsWith("…"))
+        }
+
+    @Test
+    fun recentPreviewIsEmptyWithoutAParagraphAndReopeningClearsUnavailable() =
+        runTest {
+            val v = vm("u" to raw("# Only a heading"))
+            v.open(OpenRequest("u", null, false))
+            assertEquals(
+                "",
+                repo.recents
+                    .first()
+                    .single()
+                    .preview,
+            )
+            repo.markUnavailable("u")
+            v.open(OpenRequest("u", null, false))
+            assertEquals(
+                false,
+                repo.recents
+                    .first()
+                    .single()
+                    .unavailable,
+            )
+        }
+
+    @Test
     fun anchorSavesAreThrottledToOncePerSecondAndFlushedOnStop() =
         runTest {
             val v = vm("u" to raw("# A\n\none\n\ntwo\n\nthree"))

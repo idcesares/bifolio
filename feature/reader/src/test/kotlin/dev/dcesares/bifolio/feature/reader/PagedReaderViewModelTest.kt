@@ -76,7 +76,7 @@ class PagedReaderViewModelTest {
     }
 
     @Test
-    fun `paged is the default mode and the center switch persists the choice globally`() =
+    fun `paged is the default mode and the mode switch persists the choice globally`() =
         runTest {
             val vm = opened()
             assertEquals(ReadingMode.PAGED, vm.mode.value)

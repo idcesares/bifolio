@@ -61,7 +61,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** Same thirds as the page turn zones (NAV-02): the middle 40% is not a turn. */
+/** Same zones as the page turns (NAV-02): outer 30% each side, so the middle 40% is the chrome tap. */
 private const val CENTER_START = 0.30f
 private const val CENTER_END = 0.70f
 private const val BIG_HEADING_GAP = 1.5f
@@ -77,33 +77,45 @@ public fun ReaderRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val mode by viewModel.mode.collectAsStateWithLifecycle()
+    val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
-            // A new surface per document and mode; the anchor carries the place across (ANC-04).
-            key(current.contentHash, mode) {
-                // Read once per surface: the surface owns the anchor while it is shown.
-                val start = remember { viewModel.anchor.value }
-                if (mode == ReadingMode.PAGED) {
-                    val paged by viewModel.paged.collectAsStateWithLifecycle()
-                    PagedSurface(
-                        layout = paged,
-                        initialAnchor = start,
-                        onRequest = viewModel::paginate,
-                        onSettled = viewModel::onAnchorSettled,
-                        onFirstDrawn = viewModel::onFirstSpreadDrawn,
-                        onToggleMode = viewModel::toggleMode,
-                        modifier = modifier,
-                        notices = current.notices,
-                    )
-                } else {
-                    ReaderScreen(
-                        ready = current,
-                        onAnchorSettled = viewModel::onAnchorSettled,
-                        modifier = modifier,
-                        startAnchor = start,
-                        onToggleMode = viewModel::toggleMode,
-                    )
+            Box(modifier.fillMaxSize()) {
+                // A new surface per document and mode; the anchor carries the place across (ANC-04).
+                key(current.contentHash, mode) {
+                    // Read once per surface: the surface owns the anchor while it is shown.
+                    val start = remember { viewModel.anchor.value }
+                    if (mode == ReadingMode.PAGED) {
+                        val paged by viewModel.paged.collectAsStateWithLifecycle()
+                        PagedSurface(
+                            layout = paged,
+                            initialAnchor = start,
+                            onRequest = viewModel::paginate,
+                            onSettled = viewModel::onAnchorSettled,
+                            onFirstDrawn = viewModel::onFirstSpreadDrawn,
+                            onToggleChrome = viewModel::toggleChrome,
+                            notices = current.notices,
+                            foldSource = rememberFoldSource(),
+                            document = current.document,
+                        )
+                    } else {
+                        ReaderScreen(
+                            ready = current,
+                            onAnchorSettled = viewModel::onAnchorSettled,
+                            startAnchor = start,
+                            onToggleChrome = viewModel::toggleChrome,
+                        )
+                    }
                 }
+                // Outside the key: switching mode swaps the page surface, never the chrome.
+                ReaderChrome(
+                    visible = chromeVisible,
+                    title = current.title,
+                    mode = mode,
+                    canSwitchMode = !current.scrollOnly,
+                    onSwitchMode = viewModel::toggleMode,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
             }
         is ReaderUiState.Failed -> ReaderFailure(current.reason, onBack, modifier)
         ReaderUiState.Idle, ReaderUiState.Loading ->
@@ -121,7 +133,7 @@ public fun ReaderScreen(
     onAnchorSettled: (Anchor) -> Unit,
     modifier: Modifier = Modifier,
     startAnchor: Anchor = ready.initialAnchor,
-    onToggleMode: (() -> Unit)? = null,
+    onToggleChrome: (() -> Unit)? = null,
 ) {
     val palette = BifolioTheme.palette
     val blocks = ready.document.blocks
@@ -169,19 +181,19 @@ public fun ReaderScreen(
 
     var noticesDismissed by rememberSaveable { mutableStateOf(false) }
     val showNotices = ready.notices.isNotEmpty() && !noticesDismissed
-    val insets = WindowInsets.safeDrawing.asPaddingValues()
+    val insets = ReaderInsets.asPaddingValues()
     val direction = LocalLayoutDirection.current
 
     BoxWithConstraints(
         modifier
             .fillMaxSize()
             .background(palette.page)
-            // TODO(M4): the center tap summons the chrome (NAV-02). Until it exists it switches the reading mode.
-            .pointerInput(onToggleMode) {
-                if (onToggleMode != null) {
+            // NAV-02: a center tap shows or hides the chrome. It never changes the reading mode.
+            .pointerInput(onToggleChrome) {
+                if (onToggleChrome != null) {
                     detectTapGestures { offset ->
                         val x = offset.x / size.width
-                        if (x in CENTER_START..CENTER_END) onToggleMode()
+                        if (x in CENTER_START..CENTER_END) onToggleChrome()
                     }
                 }
             },

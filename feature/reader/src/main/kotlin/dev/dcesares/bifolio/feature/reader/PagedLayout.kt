@@ -2,6 +2,7 @@ package dev.dcesares.bifolio.feature.reader
 
 import dev.dcesares.bifolio.layout.BlockMeasurer
 import dev.dcesares.bifolio.layout.FlowMetrics
+import dev.dcesares.bifolio.layout.FoldSpec
 import dev.dcesares.bifolio.layout.Geometry
 import dev.dcesares.bifolio.layout.PageDetailer
 import dev.dcesares.bifolio.layout.PageFlow
@@ -22,6 +23,11 @@ public data class PageRequest(
     /** Body size in sp, taken from the theme typography. */
     val bodySp: Float,
     val languageTag: String,
+    /**
+     * Folding feature in the coordinates of the usable area (insets already subtracted), or null. Part of the
+     * request so a hinge that moves without a window resize is a different layout (LAY-01, PAG-10).
+     */
+    val fold: FoldSpec? = null,
 ) {
     /** Body size in px at this density and font scale (TYP-01). */
     public val bodyPx: Float get() = bodySp * density * fontScale
@@ -85,6 +91,9 @@ public class AndroidTextEngine(
                 forcedColumns = forcedColumns,
                 metrics = flowMetricsFor(request),
                 typographyKey = config.hashCode(),
+                fold = request.fold,
+                // POS-04: the tabletop minimum region is four body lines of the real line height.
+                bodyLineHeightPx = config.bodySizePx * config.lineHeight,
             )
         return PreparedText(StaticLayoutBlockMeasurer(config), spec, config)
     }
