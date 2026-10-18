@@ -17,6 +17,9 @@ import androidx.compose.animation.core.tween
  */
 public object BifolioMotion {
     private const val READING_STIFFNESS = 700f
+    private const val CHROME_STIFFNESS = 450f
+    private const val CHROME_DAMPING = 0.65f
+    private const val CHROME_EXIT_MILLIS = 110
     private const val FADE_MILLIS = 180
     private const val CONTINUITY_MILLIS = 250
     private const val ANCHOR_GLOW_MILLIS = 600
@@ -39,6 +42,13 @@ public object BifolioMotion {
     /** Page turns, reflow and scroll snapping: spatial spring, no overshoot. */
     public fun <T> reading(): FiniteAnimationSpec<T> =
         spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = READING_STIFFNESS)
+
+    /** Chrome entrance: expressive spring, slight overshoot allowed (MOT-06). */
+    public fun <T> chromeEnter(): FiniteAnimationSpec<T> =
+        spring(dampingRatio = CHROME_DAMPING, stiffness = CHROME_STIFFNESS)
+
+    /** Chrome exit: shorter than the entrance and without overshoot (MOT-06). */
+    public fun <T> chromeExit(): FiniteAnimationSpec<T> = tween(CHROME_EXIT_MILLIS, easing = EMPHASIZED)
 
     /** Fade page turn and reduced motion: 180 ms, emphasized easing. */
     public fun <T> fade(): FiniteAnimationSpec<T> = tween(FADE_MILLIS, easing = EMPHASIZED)

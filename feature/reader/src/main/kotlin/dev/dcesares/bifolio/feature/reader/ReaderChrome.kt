@@ -3,6 +3,8 @@ package dev.dcesares.bifolio.feature.reader
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +35,7 @@ import dev.dcesares.bifolio.designsystem.BifolioIcons
 import dev.dcesares.bifolio.designsystem.BifolioMotion
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
+import dev.dcesares.bifolio.designsystem.rememberReducedMotion
 
 /**
  * Insets the reading surfaces lay out against: the display cutout only. The system bars are hidden while
@@ -58,8 +61,8 @@ internal val ChromeInsets: WindowInsets
  *
  * The table of contents, search, scrubber, page label and time remaining arrive with M4 and M5.
  *
- * Motion is a plain fade (`motion.fade`, also the reduced-motion path); the expressive chrome springs of
- * DESIGN section 6 join with Material 3 in M4. Fading in and out can be interrupted at any point.
+ * Motion (MOT-06): the bar fades and slides in on an expressive spring with slight overshoot, and leaves faster
+ * without overshoot. Reduced motion is a plain fade (MOT-07). Both can be interrupted at any point (MOT-09).
  */
 @Composable
 internal fun ReaderChrome(
@@ -68,14 +71,27 @@ internal fun ReaderChrome(
     onOpenAppearance: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val reduced = rememberReducedMotion()
     val palette = BifolioTheme.palette
     val insets = ChromeInsets.asPaddingValues()
     val direction = LocalLayoutDirection.current
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(BifolioMotion.fade()),
-        exit = fadeOut(BifolioMotion.fade()),
+        enter =
+            if (reduced) {
+                fadeIn(BifolioMotion.fade())
+            } else {
+                fadeIn(BifolioMotion.fade()) +
+                    slideInVertically(BifolioMotion.chromeEnter()) { -it / CHROME_TRAVEL }
+            },
+        exit =
+            if (reduced) {
+                fadeOut(BifolioMotion.fade())
+            } else {
+                fadeOut(BifolioMotion.chromeExit()) +
+                    slideOutVertically(BifolioMotion.chromeExit()) { -it / CHROME_TRAVEL }
+            },
     ) {
         Column(
             Modifier
@@ -113,3 +129,5 @@ internal fun ReaderChrome(
         }
     }
 }
+
+private const val CHROME_TRAVEL = 3
