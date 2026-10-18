@@ -17,3 +17,17 @@ Spec IDs: LAY-01 to LAY-03, LAY-10 to LAY-14, POS-01 to POS-06, ANC-07
 
 - Behavior is identical on any foldable, tri-fold, tablet or desktop window that reports the same geometry.
 - Samsung Flex Mode, Pixel book posture and tabletop come from the same code path.
+
+## Test-only dependencies (M3 instrumented suite)
+
+| Artifact | License | Use |
+|---|---|---|
+| `androidx.test:runner` | Apache-2.0 | Instrumentation runner for `:app` androidTest |
+| `androidx.test.ext:junit` | Apache-2.0 | `ActivityScenario` and AndroidX JUnit4 integration |
+| `androidx.compose.ui:ui-test-junit4`, `ui-test-manifest` | Apache-2.0 | Compose test rule and its debug manifest |
+| `androidx.window:window-testing` | Apache-2.0 | Fake folds for postures (already in the catalog) |
+
+Gradle Managed Device `pixelFoldApi37` (Pixel Fold profile, API 37, Google image) runs `AnchorSurvivalTest`:
+`./gradlew pixelFoldApi37DebugAndroidTest`. The fold and unfold case drives real device states through
+`cmd device_state` and is skipped on images without CLOSED and OPENED states. Process death is covered by the
+cold reopen case, which restores from storage exactly as a restarted process does (ANC-07).
