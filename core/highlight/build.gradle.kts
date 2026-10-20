@@ -1,9 +1,5 @@
 plugins {
-    id("bifolio.android.library")
-}
-
-android {
-    namespace = "dev.dcesares.bifolio.highlight"
+    id("bifolio.kotlin.jvm")
 }
 
 dependencies {
