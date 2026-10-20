@@ -115,11 +115,11 @@ Normative words: **MUST** is required for v1.0. **SHOULD** is expected unless an
 | SYN-06 | Tables (GFM) with alignment | See PAG-06 |
 | SYN-07 | Links, autolinks, reference links | Internal anchors navigate in-document; external links open after confirmation (NAV-08) |
 | SYN-08 | Images (local, relative or content URI; data URIs up to 2 MB) | Atomic block; alt text shown when unavailable |
-| SYN-09 | Footnotes | Superscript marker; tap opens a popover (UI-09). Definitions also listed at document end |
+| SYN-09 | Footnotes | Superscript marker; tap opens a popover (UI-09). Definitions are blocks at their source position; the UI may also gather them into a notes list at document end |
 | SYN-10 | GitHub alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) | Callout block with Lucide icon and tinted rule |
 | SYN-11 | Code highlighting for at least: kotlin, java, python, javascript, typescript, json, yaml, toml, bash/shell, sql, html, css, markdown, c, cpp, go, rust, swift, diff | Via the highlighter adapter (ADR-0007); unknown languages render unhighlighted |
 | SYN-12 | Math: `$...$` inline, `$$...$$` and fenced `math` display | Native renderer (ADR-0006); on parse failure show the TeX source in monospace with a subtle error mark |
-| SYN-13 | YAML front matter | Metadata card at top; `title` used as document title; `lang` sets hyphenation locale |
+| SYN-13 | YAML front matter | Metadata card at top; `title` overrides the first H1 as document title; `lang` (alias `language`, a BCP 47 tag) sets hyphenation locale |
 | SYN-14 | Mermaid fences | Source shown as code with a "Diagram (not rendered)" label |
 | SYN-15 | Horizontal rules | Centered ornament spacing, never a page break (it does not force one and is never split; it may sit at the top of a page) |
 
