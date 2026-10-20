@@ -74,7 +74,7 @@ internal class BlockFlattener(
         when (block) {
             is Heading ->
                 leaf(
-                    RenderedText.of(block.content, document.source, block.range.start, block.range.end),
+                    RenderedText.of(block.content, document.source, block.range.start, block.range.end, markers = true),
                     headingRole(block.level),
                     place,
                     out,
@@ -82,7 +82,7 @@ internal class BlockFlattener(
                 )
             is Paragraph ->
                 leaf(
-                    RenderedText.of(block.content, document.source, block.range.start, block.range.end),
+                    RenderedText.of(block.content, document.source, block.range.start, block.range.end, markers = true),
                     TextRole.BODY,
                     place,
                     out,
@@ -174,7 +174,7 @@ internal class BlockFlattener(
         out: BlockLayoutBuilder,
     ) {
         leaf(
-            RenderedText.of(block.summary, document.source, block.range.start, block.range.end),
+            RenderedText.of(block.summary, document.source, block.range.start, block.range.end, markers = true),
             TextRole.BODY,
             place,
             out,
@@ -228,6 +228,7 @@ internal class BlockFlattener(
                 sourceStart = if (mapped) map[0] else -1,
                 sourceEnd = if (mapped) map[rendered.text.length] else -1,
                 language = language,
+                targets = rendered.targets,
             )
         val kind = if (role == TextRole.CODE) LineKind.CODE else LineKind.TEXT
         out.beginRun()

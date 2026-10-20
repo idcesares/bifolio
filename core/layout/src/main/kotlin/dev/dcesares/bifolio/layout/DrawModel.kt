@@ -24,6 +24,8 @@ public class TextLeaf(
      * everything else, including indented code, math, front matter and diagrams, which stay plain.
      */
     public val language: String? = null,
+    /** Links and footnote markers inside [text], for tap hit testing (UI-09, NAV-07). */
+    public val targets: List<TextTarget> = emptyList(),
 )
 
 public enum class MarkerKind { BULLET, NUMBER, TASK_UNCHECKED, TASK_CHECKED }

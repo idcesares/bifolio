@@ -90,25 +90,26 @@ internal fun HighlightedText(
 ) {
     val highlighter = LocalSearchHighlighter.current
     val ranges = remember(highlighter, block) { highlighter?.let { h -> block?.let { h.hitsIn(it) } }.orEmpty() }
+    val surface = remember { TextSurface() }
+    val tappable = modifier.noteTaps(text, surface, LocalNoteHandler.current)
     if (ranges.isEmpty()) {
-        BasicText(text, modifier, style, softWrap = softWrap)
+        BasicText(text, tappable, style, onTextLayout = { surface.layout = it }, softWrap = softWrap)
         return
     }
     val shift = remember(inlines, ranges) { inlines?.let { FootnoteShift(it) } }
-    val layout = remember { arrayOfNulls<TextLayoutResult>(1) }
     val palette = BifolioTheme.palette
     val hit = palette.searchHit
     val focused = palette.searchHitFocused
     val outline = palette.accent
     BasicText(
         text,
-        modifier.drawBehind {
-            val result = layout[0] ?: return@drawBehind
+        tappable.drawBehind {
+            val result = surface.layout ?: return@drawBehind
             for (range in ranges) if (!range.focused) paint(result, range, shift, text.length, hit, null)
             for (range in ranges) if (range.focused) paint(result, range, shift, text.length, focused, outline)
         },
         style,
-        onTextLayout = { layout[0] = it },
+        onTextLayout = { surface.layout = it },
         softWrap = softWrap,
     )
 }

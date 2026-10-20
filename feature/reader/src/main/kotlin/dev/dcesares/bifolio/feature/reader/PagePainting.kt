@@ -51,6 +51,8 @@ internal class TableHit(
 internal class PreparedColumn(
     val ops: List<PaintOp>,
     val tables: List<TableHit>,
+    /** Links and footnote markers of the column, in px from the column origin (UI-09, NAV-07). */
+    val targets: List<TargetBox> = emptyList(),
 )
 
 /** Callout labels resolved from string resources on the main thread (UI-13). */
@@ -166,9 +168,13 @@ internal class ColumnPainter(
         val ops = ArrayList<PaintOp>(draw.items.size + 1)
         val tableRects = LinkedHashMap<Int, IntArray>()
         val marks = ArrayList<PaintOp>(1)
+        val targets = ArrayList<TargetBox>(0)
         for (item in draw.items) {
             when (item) {
-                is DrawText -> ops.add(textOp(item))
+                is DrawText -> {
+                    ops.add(textOp(item))
+                    if (item.leaf.targets.isNotEmpty()) targetBoxes(item, targets)
+                }
                 is DrawMarker -> ops.add(markerOp(item))
                 is DrawBar -> ops.add(barOp(item))
                 is DrawCodeSurface -> ops.add(codeSurfaceOp(item))
@@ -202,7 +208,43 @@ internal class ColumnPainter(
             tableRects.map { (block, r) ->
                 TableHit(block, r[X], r[TOP], r[WIDTH], r[BOTTOM] - r[TOP], r[SCROLL])
             }
-        return PreparedColumn(ops, hits)
+        return PreparedColumn(ops, hits, targets)
+    }
+
+    /**
+     * One box per line a link or marker of [item] covers, in px from the column origin and only where the text is
+     * visible (a leaf split over two pages shows a slice of its lines).
+     */
+    private fun targetBoxes(
+        item: DrawText,
+        out: MutableList<TargetBox>,
+    ) {
+        val layout = layoutOf(item.leaf)
+        val length = layout.text.length
+        val dy = (item.y - item.clipTop).toFloat()
+        for (target in item.leaf.targets) {
+            val start = target.start.coerceIn(0, length)
+            val end = target.end.coerceIn(start, length)
+            if (end == start) continue
+            for (line in layout.getLineForOffset(start)..layout.getLineForOffset(end - 1)) {
+                val top = maxOf(layout.getLineTop(line), item.clipTop)
+                val bottom = minOf(layout.getLineBottom(line), item.clipBottom)
+                if (bottom <= top) continue
+                val lineEnd = layout.getLineEnd(line)
+                val a = layout.getPrimaryHorizontal(maxOf(start, layout.getLineStart(line)))
+                val b = if (end >= lineEnd) layout.getLineRight(line) else layout.getPrimaryHorizontal(end)
+                out.add(
+                    TargetBox(
+                        item.x + minOf(a, b),
+                        dy + top,
+                        item.x + maxOf(a, b),
+                        dy + bottom,
+                        target.kind,
+                        target.value,
+                    ),
+                )
+            }
+        }
     }
 
     private fun textOp(item: DrawText): PaintOp {

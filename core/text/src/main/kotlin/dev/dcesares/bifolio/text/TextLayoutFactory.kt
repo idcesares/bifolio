@@ -181,6 +181,7 @@ public class TextLayoutFactory(
         if (palette != null) {
             if (flags and StyleFlag.LINK != 0) put(ForegroundColorSpan(palette.link))
             if (flags and StyleFlag.MARK != 0) put(BackgroundColorSpan(palette.mark))
+            if (flags and StyleFlag.NOTE != 0) put(ForegroundColorSpan(palette.accent))
         }
     }
 

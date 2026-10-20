@@ -11,6 +11,9 @@ public object StyleFlag {
     public const val SUBSCRIPT: Int = 64
     public const val MARK: Int = 128
     public const val UNDERLINE: Int = 256
+
+    /** A footnote marker (SYN-09): superscript in the accent color. */
+    public const val NOTE: Int = 512
 }
 
 /**

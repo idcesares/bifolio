@@ -168,6 +168,20 @@ public object BifolioIcons {
             "chevron-left",
             "m15 18-6-6 6-6",
         )
+
+    public val X: ImageVector =
+        icon(
+            "x",
+            "M18 6 6 18",
+            "m6 6 12 12",
+        )
+
+    public val ArrowRight: ImageVector =
+        icon(
+            "arrow-right",
+            "M5 12h14",
+            "m12 5 7 7-7 7",
+        )
 }
 
 /** Draws [icon] at 24dp in [tint]. Decorative when [contentDescription] is null. */

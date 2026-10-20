@@ -43,4 +43,11 @@ class SlugIndexTest {
         assertNull(index.blockIndexOf("#nope"))
         assertNull(index.blockIndexOf("https://example.org/#intro"))
     }
+
+    @Test
+    fun aLiteralPlusStaysAPlusAndBrokenEscapesDoNotThrow() {
+        assertNull(index.blockIndexOf("#a+b"))
+        assertNull(index.blockIndexOf("#%E0%A4%A"))
+        assertNull(index.blockIndexOf("#"))
+    }
 }

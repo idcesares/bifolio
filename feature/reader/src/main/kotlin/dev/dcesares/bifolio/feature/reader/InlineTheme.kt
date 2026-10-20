@@ -9,4 +9,6 @@ internal class InlineTheme(
     val codeBackground: Color,
     val markBackground: Color,
     val codeFamily: FontFamily,
+    /** Footnote markers (DESIGN section 3). */
+    val accent: Color = markBackground,
 )

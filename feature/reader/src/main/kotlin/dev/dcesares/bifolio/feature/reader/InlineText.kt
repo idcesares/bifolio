@@ -14,6 +14,9 @@ import androidx.compose.ui.unit.em
 import dev.dcesares.bifolio.model.Inline
 import dev.dcesares.bifolio.model.InlineStyle
 
+/** Annotation tag of a footnote marker; its value is the label. Markers are tapped by [noteTaps], not as links. */
+internal const val NOTE_TAG = "bifolio.note"
+
 private const val CODE_SCALE = 0.92f
 private const val SCRIPT_SCALE = 0.75f
 private const val MARK_ALPHA = 0.25f
@@ -61,7 +64,7 @@ private fun AnnotatedString.Builder.append(
             Inline.SoftBreak -> append(' ')
             Inline.HardBreak -> append('\n')
             is Inline.Image -> append(inline.alt)
-            is Inline.FootnoteReference -> withStyle(styleOf(InlineStyle.SUPERSCRIPT, theme)) { append(inline.label) }
+            is Inline.FootnoteReference -> appendMarker(inline.label, theme)
             is Inline.InlineMath -> withStyle(codeStyle(theme)) { append(inline.tex) }
         }
     }
@@ -81,3 +84,13 @@ private fun styleOf(
         InlineStyle.MARK -> SpanStyle(background = theme.markBackground.copy(alpha = MARK_ALPHA))
         InlineStyle.UNDERLINE -> SpanStyle(textDecoration = TextDecoration.Underline)
     }
+
+/** A footnote marker: a superscript label in the accent color, tagged so a tap on it opens the note (UI-09). */
+private fun AnnotatedString.Builder.appendMarker(
+    label: String,
+    theme: InlineTheme,
+) {
+    val at = length
+    withStyle(styleOf(InlineStyle.SUPERSCRIPT, theme).copy(color = theme.accent)) { append(label) }
+    if (length > at) addStringAnnotation(NOTE_TAG, label, at, length)
+}

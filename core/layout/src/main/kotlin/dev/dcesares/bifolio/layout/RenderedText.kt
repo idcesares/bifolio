@@ -10,6 +10,8 @@ internal class Rendered(
     /** `text.length + 1` non-decreasing source offsets; the last one is where the text ends. */
     val map: IntArray,
     val styles: TextStyles = TextStyles.NONE,
+    /** Links and footnote markers as runs of [text], in text order (UI-09, NAV-07). */
+    val targets: List<TextTarget> = emptyList(),
 )
 
 /**
@@ -27,15 +29,16 @@ internal object RenderedText {
         source: String,
         from: Int,
         to: Int,
+        markers: Boolean = false,
     ): Rendered {
-        val builder = Builder(source, from, maxOf(to, from), mapped = true, softBreak = ' ')
+        val builder = Builder(source, from, maxOf(to, from), mapped = true, softBreak = ' ', markers = markers)
         builder.walk(inlines, 0)
         return builder.finish()
     }
 
     /** Text and styles of a table cell, which has no source range (no mapping). Soft breaks are newlines. */
     fun cell(inlines: List<Inline>): Rendered {
-        val builder = Builder("", 0, 0, mapped = false, softBreak = '\n')
+        val builder = Builder("", 0, 0, mapped = false, softBreak = '\n', markers = false)
         builder.walk(inlines, 0)
         return builder.finish()
     }
@@ -46,8 +49,10 @@ internal object RenderedText {
         private val to: Int,
         private val mapped: Boolean,
         private val softBreak: Char,
+        private val markers: Boolean,
     ) {
         private val sb = StringBuilder()
+        private val targets = ArrayList<TextTarget>(0)
         private var map = if (mapped) IntArray(INITIAL) else IntArray(0)
         private var cursor = from
         private var runStarts = IntArray(RUNS)
@@ -69,13 +74,38 @@ internal object RenderedText {
                     is Inline.Emphasis -> walk(inline.children, flags or StyleFlag.ITALIC)
                     is Inline.Strong -> walk(inline.children, flags or StyleFlag.BOLD)
                     is Inline.Strikethrough -> walk(inline.children, flags or StyleFlag.STRIKETHROUGH)
-                    is Inline.Link -> walk(inline.children, flags or StyleFlag.LINK)
+                    is Inline.Link -> link(inline, flags)
                     is Inline.Styled -> walk(inline.children, flags or flagOf(inline.style))
                     Inline.SoftBreak -> breakChar(softBreak)
                     Inline.HardBreak -> breakChar('\n')
-                    is Inline.FootnoteReference -> Unit
+                    is Inline.FootnoteReference -> marker(inline.label, flags)
                 }
             }
+        }
+
+        private fun link(
+            inline: Inline.Link,
+            flags: Int,
+        ) {
+            val at = sb.length
+            walk(inline.children, flags or StyleFlag.LINK)
+            if (sb.length > at) targets.add(TextTarget(at, sb.length, TargetKind.LINK, inline.destination))
+        }
+
+        /** The label of a footnote reference, drawn as a superscript; it maps to where the reference stands. */
+        private fun marker(
+            label: String,
+            flags: Int,
+        ) {
+            if (!markers || label.isEmpty()) return
+            val at = sb.length
+            if (mapped) {
+                reserve(label.length)
+                for (i in label.indices) map[at + i] = cursor
+            }
+            sb.append(label)
+            run(at, sb.length, flags or StyleFlag.SUPERSCRIPT or StyleFlag.NOTE)
+            targets.add(TextTarget(at, sb.length, TargetKind.NOTE, label))
         }
 
         private fun flagOf(style: InlineStyle): Int =
@@ -157,10 +187,11 @@ internal object RenderedText {
                 } else {
                     TextStyles(runStarts.copyOf(runCount), runEnds.copyOf(runCount), runFlags.copyOf(runCount))
                 }
-            if (!mapped) return Rendered(sb.toString(), IntArray(0), styles)
+            val found = targets.sortedBy { it.start }
+            if (!mapped) return Rendered(sb.toString(), IntArray(0), styles, found)
             reserve(0)
             map[sb.length] = cursor
-            return Rendered(sb.toString(), map.copyOf(sb.length + 1), styles)
+            return Rendered(sb.toString(), map.copyOf(sb.length + 1), styles, found)
         }
     }
 

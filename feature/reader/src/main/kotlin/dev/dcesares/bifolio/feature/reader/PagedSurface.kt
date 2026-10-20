@@ -65,6 +65,7 @@ import dev.dcesares.bifolio.layout.AnchorMapper
 import dev.dcesares.bifolio.layout.Page
 import dev.dcesares.bifolio.layout.PageFlow
 import dev.dcesares.bifolio.layout.SearchHighlighter
+import dev.dcesares.bifolio.layout.TargetKind
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.CalloutKind
 import dev.dcesares.bifolio.model.Document
@@ -135,6 +136,9 @@ internal class SpreadStore(
  * painted under the text of the visible spread. [onCloseOverlay] answers Escape and returns whether it closed
  * something; while an overlay is open ([overlayOpen]) the surface lets go of the keyboard focus and takes it back
  * when the overlay closes.
+ *
+ * Links and footnote markers (NAV-07, UI-09): a tap on a drawn link reports its destination to [onLink]; a tap on a
+ * marker, whose touch area is at least 48dp around it, reports [onNote]. Neither turns the page or toggles the chrome.
  */
 @Composable
 internal fun PagedSurface(
@@ -158,6 +162,8 @@ internal fun PagedSurface(
     onCloseOverlay: (() -> Boolean)? = null,
     overlayOpen: Boolean = false,
     searchHighlighter: SearchHighlighter? = null,
+    onLink: (String) -> Unit = {},
+    onNote: (NoteTap) -> Unit = {},
 ) {
     val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
     val palette = BifolioTheme.palette
@@ -325,6 +331,9 @@ internal fun PagedSurface(
             tableAt(layout, store, index, position, startPx, topPx)
         }
         env.tableScroll = tableScroll
+        val touchSide = with(density) { Spacing.TouchTarget.toPx() }
+        env.targets = { position -> targetAt(layout, store, index, position, startPx, topPx, touchSide) }
+        env.onTarget = { box -> if (box.kind == TargetKind.NOTE) onNote(box.toNoteTap()) else onLink(box.value) }
 
         val drawn = remember(layout?.request) { BooleanArray(1) }
         // The last spread that was fully drawn stays on screen while the next layout, or the next colors, get ready,
@@ -390,6 +399,7 @@ internal fun PagedSurface(
                     }
                 },
         )
+        if (layout != null && store != null) PagedNoteSemantics(layout, store, index, startPx, topPx, onNote)
         if (layout != null && deckRegion != null) {
             val seek = remember { DeckSeek() }
             seek.document = document
@@ -629,12 +639,20 @@ private class PagedGesture {
     var onToggleChrome: () -> Unit = {}
     var tables: (Offset) -> TableTarget? = { null }
     lateinit var tableScroll: SnapshotStateMap<Int, Int>
+    var targets: (Offset) -> TargetBox? = { null }
+    var onTarget: (TargetBox) -> Unit = {}
 
     fun tap(
         position: Offset,
         heading: Int,
     ) {
         if (heading != 0) turn.commitNow(heading) else turn.reset()
+        // A link or a footnote marker under the finger is theirs; a tap that stops a running turn is not.
+        val target = if (heading == 0) targets(position) else null
+        if (target != null) {
+            onTarget(target)
+            return
+        }
         val x = position.x / width
         when {
             x < TAP_ZONE -> turn.turn(1)

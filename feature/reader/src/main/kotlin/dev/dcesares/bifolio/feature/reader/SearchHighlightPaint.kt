@@ -10,6 +10,7 @@ import dev.dcesares.bifolio.designsystem.Spacing
 import dev.dcesares.bifolio.designsystem.searchHit
 import dev.dcesares.bifolio.designsystem.searchHitFocused
 import dev.dcesares.bifolio.layout.SearchHighlighter
+import dev.dcesares.bifolio.layout.TargetKind
 import dev.dcesares.bifolio.layout.TextLeaf
 
 /**
@@ -63,6 +64,9 @@ internal class LeafHits(
     private val leaf: TextLeaf,
 ) {
     private var forHighlighter: SearchHighlighter? = null
+
+    /** The drawn text with footnote labels masked: a label is drawn but is not text a search can match (UI-08). */
+    private val searchable: String = maskNotes(leaf)
     private val hits = Path()
     private val current = Path()
     private val scratch = Path()
@@ -86,7 +90,7 @@ internal class LeafHits(
         hits.rewind()
         current.rewind()
         val length = layout.text.length
-        for (range in highlighter.hitsIn(leaf.text, leaf.sourceStart, leaf.sourceEnd)) {
+        for (range in highlighter.hitsIn(searchable, leaf.sourceStart, leaf.sourceEnd)) {
             val start = range.start.coerceIn(0, length)
             val end = range.end.coerceIn(start, length)
             if (end == start) continue
@@ -95,4 +99,16 @@ internal class LeafHits(
             (if (range.focused) current else hits).addPath(scratch)
         }
     }
+}
+
+private const val MASK = '￼'
+
+private fun maskNotes(leaf: TextLeaf): String {
+    val notes = leaf.targets.filter { it.kind == TargetKind.NOTE }
+    if (notes.isEmpty()) return leaf.text
+    val chars = leaf.text.toCharArray()
+    for (note in notes) {
+        for (i in note.start.coerceAtLeast(0) until note.end.coerceAtMost(chars.size)) chars[i] = MASK
+    }
+    return String(chars)
 }

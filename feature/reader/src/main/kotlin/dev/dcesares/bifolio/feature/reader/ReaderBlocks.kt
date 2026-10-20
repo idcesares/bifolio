@@ -70,8 +70,11 @@ import dev.dcesares.bifolio.model.Table
 import dev.dcesares.bifolio.model.TaskState
 import dev.dcesares.bifolio.model.ThematicBreak
 
-/** Receives link destinations tapped inside text. Internal anchors scroll; external links wait for NAV-08 (M5). */
+/** Receives link destinations tapped inside text (NAV-07). The reader resolves them: headings and notes jump. */
 internal val LocalLinkHandler = staticCompositionLocalOf<(String) -> Unit> { {} }
+
+/** Receives a footnote marker tapped inside text, with its bounds in window px (UI-09). */
+internal val LocalNoteHandler = staticCompositionLocalOf<(NoteTap) -> Unit> { {} }
 
 private const val MARKER_WIDTH_EM = 1.8f
 private const val TASK_BOX_EM = 0.8f

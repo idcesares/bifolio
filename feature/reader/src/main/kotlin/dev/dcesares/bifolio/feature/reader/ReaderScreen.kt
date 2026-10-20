@@ -46,9 +46,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -91,6 +94,7 @@ public fun ReaderRoute(
     viewModel: ReaderViewModel,
     onBack: () -> Unit,
     appearanceSheet: @Composable (onDismiss: () -> Unit) -> Unit = {},
+    onExternalLink: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -102,6 +106,7 @@ public fun ReaderRoute(
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     var tocOpen by rememberSaveable { mutableStateOf(false) }
     var tocCurrent by rememberSaveable { mutableStateOf<Int?>(null) }
+    var openNote by remember { mutableStateOf<NoteTap?>(null) }
     val foldSource = rememberFoldSource()
     var footerHeight by remember { mutableIntStateOf(0) }
     var searchBarHeight by remember { mutableIntStateOf(0) }
@@ -133,6 +138,10 @@ public fun ReaderRoute(
                 val inTabletop = fold?.let { it.isSeparating && it.orientation == FoldOrientation.Horizontal } == true
                 val closeOverlay: () -> Boolean = {
                     when {
+                        openNote != null -> {
+                            openNote = null
+                            true
+                        }
                         searchOpen -> {
                             viewModel.backSearch(compact)
                             true
@@ -145,6 +154,19 @@ public fun ReaderRoute(
                     }
                 }
                 val contents = remember(current.document) { TableOfContents(current.document.blocks) }
+                // NAV-07, UI-09: one resolver per document turns a tapped destination or marker into an action.
+                val resolver = remember(current.document) { LinkResolver(current.document.blocks) }
+                val onLink: (String) -> Unit = { destination ->
+                    when (val action = resolver.resolve(destination)) {
+                        is LinkAction.Jump -> {
+                            openNote = null
+                            viewModel.jumpTo(action.anchor)
+                        }
+                        is LinkAction.External -> onExternalLink(action.url)
+                        LinkAction.None -> Unit
+                    }
+                }
+                val onNote: (NoteTap) -> Unit = { tap -> if (resolver.definitionOf(tap.label) != null) openNote = tap }
                 // UI-07: no headings, no way in.
                 val openToc: (() -> Unit)? =
                     if (contents.isEmpty) {
@@ -179,7 +201,9 @@ public fun ReaderRoute(
                             jumps = viewModel.jumps,
                             onOpenSearch = viewModel::openSearch,
                             onCloseOverlay = closeOverlay,
-                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen,
+                            onLink = onLink,
+                            onNote = onNote,
+                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen || openNote != null,
                             searchHighlighter = searchHighlighter,
                         )
                     } else {
@@ -190,11 +214,12 @@ public fun ReaderRoute(
                             onToggleChrome = viewModel::toggleChrome,
                             onOpenToc = openToc,
                             volumeKeysTurn = volumeKeysTurn,
-                            onJump = viewModel::onJump,
                             jumps = viewModel.jumps,
                             onOpenSearch = viewModel::openSearch,
                             onCloseOverlay = closeOverlay,
-                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen,
+                            onLink = onLink,
+                            onNote = onNote,
+                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen || openNote != null,
                             searchHighlighter = searchHighlighter,
                         )
                     }
@@ -304,6 +329,29 @@ public fun ReaderRoute(
                             .align(Alignment.BottomCenter)
                             .onSizeChanged { searchBarHeight = it.height },
                 )
+                // UI-09: last, so Back closes the note before search or contents, and it draws above them.
+                if (openNote != null) BackHandler { openNote = null }
+                val note = openNote
+                val definition = note?.let { resolver.definitionOf(it.label) }
+                FootnotePopover(
+                    card =
+                        if (note != null && definition != null) {
+                            NoteCard(
+                                tap = note,
+                                definition = definition,
+                                onGoTo = {
+                                    openNote = null
+                                    viewModel.jumpTo(Anchor(definition.blockIndex, 0))
+                                },
+                                onDismiss = { openNote = null },
+                                onLink = onLink,
+                                onNote = onNote,
+                            )
+                        } else {
+                            null
+                        },
+                    fold = fold,
+                )
             }
         is ReaderUiState.Failed -> ReaderFailure(current.reason, onBack, modifier)
         ReaderUiState.Idle, ReaderUiState.Loading ->
@@ -316,7 +364,7 @@ public fun ReaderRoute(
  * index is the block index and an anchor maps straight to a scroll position (ANC-01).
  */
 @Composable
-public fun ReaderScreen(
+internal fun ReaderScreen(
     ready: ReaderUiState.Ready,
     onAnchorSettled: (Anchor) -> Unit,
     modifier: Modifier = Modifier,
@@ -324,7 +372,8 @@ public fun ReaderScreen(
     onToggleChrome: (() -> Unit)? = null,
     onOpenToc: (() -> Unit)? = null,
     volumeKeysTurn: Boolean = false,
-    onJump: () -> Unit = {},
+    onLink: (String) -> Unit = {},
+    onNote: (NoteTap) -> Unit = {},
     jumps: Flow<Anchor> = emptyFlow(),
     onOpenSearch: (() -> Unit)? = null,
     onCloseOverlay: (() -> Boolean)? = null,
@@ -338,20 +387,6 @@ public fun ReaderScreen(
     val scope = rememberCoroutineScope()
     val start = startAnchor.blockIndex.coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = start)
-    val slugs = remember(blocks) { SlugIndex(blocks) }
-    val onLink =
-        remember(slugs, reducedMotion, listState, onJump) {
-            { destination: String ->
-                val target = slugs.blockIndexOf(destination)
-                if (target != null) {
-                    onJump()
-                    scope.launch {
-                        if (reducedMotion) listState.scrollToItem(target) else listState.animateScrollToItem(target)
-                    }
-                }
-                // TODO(NAV-08, M5): external links open only after confirmation. They are ignored until then.
-            }
-        }
 
     // ANC-06: the return chip asks for an anchor to be shown again.
     LaunchedEffect(jumps) { jumps.collect { listState.scrollToAnchor(blocks, it) } }
@@ -385,6 +420,13 @@ public fun ReaderScreen(
     val keys = rememberUpdatedState(volumeKeysTurn)
     val openSearch = rememberUpdatedState(onOpenSearch)
     val closeOverlay = rememberUpdatedState(onCloseOverlay)
+    // Markers report window px; the popover wants px from the top-left of this surface.
+    val origin = remember { arrayOf(Offset.Zero) }
+    val latestNote = rememberUpdatedState(onNote)
+    val noteHere: (NoteTap) -> Unit =
+        remember {
+            { tap -> latestNote.value(NoteTap(tap.label, tap.bounds.translate(-origin[0]))) }
+        }
     BoxWithConstraints(
         modifier
             .fillMaxSize()
@@ -418,6 +460,7 @@ public fun ReaderScreen(
                 }
                 handled
             }.focusable()
+            .onGloballyPositioned { origin[0] = it.positionInWindow() }
             // NAV-02: a center tap shows or hides the chrome. It never changes the reading mode.
             .pointerInput(onToggleChrome) {
                 if (onToggleChrome != null) {
@@ -448,6 +491,7 @@ public fun ReaderScreen(
             }
             CompositionLocalProvider(
                 LocalLinkHandler provides onLink,
+                LocalNoteHandler provides noteHere,
                 LocalSearchHighlighter provides searchHighlighter,
             ) {
                 LazyColumn(
