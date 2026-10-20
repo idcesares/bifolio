@@ -114,7 +114,7 @@ Normative words: **MUST** is required for v1.0. **SHOULD** is expected unless an
 | SYN-05 | Fenced and indented code | Monospace, highlighted (SYN-11), wrap or horizontal scroll per setting |
 | SYN-06 | Tables (GFM) with alignment | See PAG-06 |
 | SYN-07 | Links, autolinks, reference links | Internal anchors navigate in-document; external links open after confirmation (NAV-08) |
-| SYN-08 | Images (local, relative or content URI; data URIs up to 2 MB) | Atomic block; alt text shown when unavailable |
+| SYN-08 | Images (relative paths inside a granted folder, or data URIs up to 2 MB of encoded text). Absolute paths, `file:`, `content:` URIs in document text and remote URLs are never loaded. Only a paragraph holding a single Markdown image becomes an image block; inline, multiple and linked images, and `<img>`, show alt text. Image pixels map 1:1 to dp | Atomic block; alt text shown when unavailable |
 | SYN-09 | Footnotes | Superscript marker; tap opens a popover (UI-09). Definitions are blocks at their source position; the UI may also gather them into a notes list at document end |
 | SYN-10 | GitHub alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) | Callout block with Lucide icon and tinted rule |
 | SYN-11 | Code highlighting for at least: kotlin, java, python, javascript, typescript, json, yaml, toml, bash/shell, sql, html, css, markdown, c, cpp, go, rust, swift, diff | Via the highlighter adapter (ADR-0007); unknown languages render unhighlighted. Aliases: `xml` and `svg` use the html rules, `jsonc` uses json |
@@ -255,7 +255,7 @@ All values in px at the current density; `W` is the usable window width after in
 | UI-11 | **About**: version, license (Apache-2.0), open source licenses screen generated from dependencies, link text for the source repository and `bifolio@dcesares.dev` |
 | UI-12 | Icons: Lucide, outlined, 1.5dp stroke at 24dp (ADR-0009). No other icon set |
 | UI-13 | Every user-facing string MUST live in string resources (English in v1) |
-| UI-14 | Relative image folder grant: when a document references relative images and no grant exists, show one inline banner ("Show images from this folder") that opens the folder picker at the document's location when possible. Never prompt more than once per folder |
+| UI-14 | Relative image folder grant: when a document references relative images and no grant exists, show one inline banner ("Show images from this folder") that opens the folder picker at the document's location when possible. The banner reserves its height above the page area and never covers text. A refusal applies to every document in the same folder |
 | UI-15 | **Recent preview**: each recent shows a one-line preview (at most 140 characters) of the first paragraph of the document, taken from the parsed model when the document is opened and stored with the recent. The library never reads or parses a document to build the list. Documents without a paragraph show no preview line |
 | UI-16 | **Unavailable recent**: when opening a recent fails because the file moved, was deleted or access was revoked, the recent is marked unavailable, shown dimmed with the label "Unavailable" and a remove action, and is kept until the user removes it. A later successful open clears the mark. The library never checks files while listing |
 
@@ -337,7 +337,7 @@ These are known unknowns. Each must be closed with an ADR or a spec edit before 
 
 | ID | Item | Needed by |
 |---|---|---|
-| OPN-01 | Pin current stable versions: Kotlin, AGP, Compose BOM, Material 3, Material 3 Adaptive, WindowManager, commonmark-java, Coil 3, Roborazzi | M0 |
+| OPN-01 | Pin current stable versions: Kotlin, AGP, Compose BOM, Material 3, Material 3 Adaptive, WindowManager, commonmark-java, Roborazzi (images use the platform decoder, no image library) | M0 |
 | OPN-02 | Confirm license and maturity of the math library (huarangmeng/latex, MIT) and its fallback RaTeX; spike rendering of 20 corpus formulas | M5 |
 | OPN-03 | Confirm license of each bundled font from its upstream repository and record in `docs/design/FONTS.md` | M4 |
 | OPN-04 | Confirm a Compose-compatible Lucide icon source with ISC license, or import the needed SVGs as vector drawables | M4 |
