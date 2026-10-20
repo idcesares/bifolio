@@ -9,10 +9,12 @@ import dev.dcesares.bifolio.data.ReadingPreferences
 import dev.dcesares.bifolio.data.RecentDocument
 import dev.dcesares.bifolio.data.RecentsRepository
 import dev.dcesares.bifolio.layout.CancellationSignal
+import dev.dcesares.bifolio.layout.DocumentSearch
 import dev.dcesares.bifolio.layout.GeometryCalculator
 import dev.dcesares.bifolio.layout.LayoutCache
 import dev.dcesares.bifolio.layout.PageDetailer
 import dev.dcesares.bifolio.layout.PaginationService
+import dev.dcesares.bifolio.layout.SearchResult
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.model.Paragraph
@@ -26,6 +28,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -94,6 +97,9 @@ public class ReaderViewModel(
     private val nanoClock: () -> Long = System::nanoTime,
     private val perf: PerfLog = PerfLog.None,
     private val chromeDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val searcher: (Document, String, () -> Unit) -> SearchResult = { document, query, cancelled ->
+        DocumentSearch.search(document, query, checkCancelled = cancelled)
+    },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<ReaderUiState>(ReaderUiState.Idle)
     public val state: StateFlow<ReaderUiState> = mutableState
@@ -223,6 +229,10 @@ public class ReaderViewModel(
     /** A jump is about to move the reader: remember where it is now and offer the way back (ANC-06). */
     public fun onJump() {
         mutableReturnAnchor.value = mutableAnchor.value
+        startReturnExpiry()
+    }
+
+    private fun startReturnExpiry() {
         returnExpiry?.cancel()
         returnExpiry =
             viewModelScope.launch(chromeDispatcher) {
@@ -236,8 +246,98 @@ public class ReaderViewModel(
      * asks the surface on screen to show the anchor (ANC-06). The target is an anchor, never a page (ANC-01).
      */
     public fun jumpTo(target: Anchor) {
+        searchOwnsReturn = false
         onJump()
         mutableJumps.tryEmit(target)
+    }
+
+    private val mutableSearch = MutableStateFlow(SearchState())
+
+    /** The search session: query, results, current result and what of it is on screen (UI-08). */
+    internal val search: StateFlow<SearchState> = mutableSearch
+
+    private var searching: Job? = null
+
+    /** True while the return chip on screen was started by a search jump, so the next result keeps its origin. */
+    private var searchOwnsReturn = false
+
+    /** Opens the result list (Ctrl+F, the search button). A document must be open. */
+    internal fun openSearch() {
+        if (mutableState.value !is ReaderUiState.Ready) return
+        keepChrome()
+        mutableSearch.value = mutableSearch.value.opened()
+    }
+
+    /**
+     * The query changed. A blank one clears at once. Otherwise the engine runs on [computeDispatcher] after
+     * [SEARCH_DEBOUNCE_MILLIS] without another keystroke; a newer query cancels the running one, which the engine
+     * notices at its next text unit.
+     */
+    internal fun setSearchQuery(text: String) {
+        searching?.cancel()
+        mutableSearch.value = mutableSearch.value.withQuery(text)
+        val ready = mutableState.value as? ReaderUiState.Ready ?: return
+        if (text.isBlank()) return
+        searching =
+            viewModelScope.launch {
+                delay(SEARCH_DEBOUNCE_MILLIS)
+                val found = withContext(computeDispatcher) { searcher(ready.document, text) { ensureActive() } }
+                mutableSearch.value = mutableSearch.value.withResult(found)
+            }
+    }
+
+    internal fun searchNext() = stepSearch { it.next() }
+
+    internal fun searchPrevious() = stepSearch { it.previous() }
+
+    private fun stepSearch(step: (SearchState) -> SearchState) {
+        keepChrome()
+        val next = step(mutableSearch.value)
+        mutableSearch.value = next
+        jumpToCurrentMatch(next)
+    }
+
+    /** A result was chosen in the list. [collapseList] is true on a compact window, where the bar takes over. */
+    internal fun selectSearchResult(
+        index: Int,
+        collapseList: Boolean,
+    ) {
+        keepChrome()
+        val next = mutableSearch.value.selected(index, collapseList)
+        mutableSearch.value = next
+        jumpToCurrentMatch(next)
+    }
+
+    /**
+     * Shows the current match. Only the first jump of a session records the position the reader came from, so
+     * the return chip leads back to where the search began, not to the previous result (ANC-06).
+     */
+    private fun jumpToCurrentMatch(state: SearchState) {
+        val target = state.currentMatch?.anchor ?: return
+        if (searchOwnsReturn && mutableReturnAnchor.value != null) {
+            startReturnExpiry()
+        } else {
+            onJump()
+            searchOwnsReturn = true
+        }
+        mutableJumps.tryEmit(target)
+    }
+
+    internal fun showSearchList() {
+        mutableSearch.value = mutableSearch.value.listShown()
+    }
+
+    /** Back or Escape in search: one level at a time. [hasBar] is true on a compact window. */
+    internal fun backSearch(hasBar: Boolean) {
+        val next = mutableSearch.value.backed(hasBar)
+        if (next.panel == SearchPanel.Closed) closeSearch() else mutableSearch.value = next
+    }
+
+    /** Ends the session: results and highlights go; a running search stops. */
+    internal fun closeSearch() {
+        searching?.cancel()
+        searchOwnsReturn = false
+        mutableSearch.value = SearchState()
     }
 
     /** The chip was tapped: go back to the pre-jump anchor. The chip is gone afterwards. */
@@ -254,6 +354,7 @@ public class ReaderViewModel(
 
     public fun open(request: OpenRequest) {
         hideChrome()
+        closeSearch()
         dismissReturn()
         flush()
         loading?.cancel()
@@ -268,6 +369,7 @@ public class ReaderViewModel(
     /** Back to the library: forgets the loaded document. */
     public fun close() {
         hideChrome()
+        closeSearch()
         dismissReturn()
         flush()
         loading?.cancel()

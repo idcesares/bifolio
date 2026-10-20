@@ -216,7 +216,16 @@ internal class BlockFlattener(
         val top = place.top
         val m = measurer.measureLines(rendered.text, role, w, rendered.styles)
         if (m.count == 0) return
-        val leaf = TextLeaf(rendered.text, rendered.styles, role, w)
+        val mapped = map.size > rendered.text.length
+        val leaf =
+            TextLeaf(
+                rendered.text,
+                rendered.styles,
+                role,
+                w,
+                sourceStart = if (mapped) map[0] else -1,
+                sourceEnd = if (mapped) map[rendered.text.length] else -1,
+            )
         val kind = if (role == TextRole.CODE) LineKind.CODE else LineKind.TEXT
         out.beginRun()
         if (!free) out.beginUnit(keep)

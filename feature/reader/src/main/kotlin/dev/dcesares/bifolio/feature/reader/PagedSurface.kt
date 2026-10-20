@@ -64,6 +64,7 @@ import dev.dcesares.bifolio.designsystem.rememberReducedMotion
 import dev.dcesares.bifolio.layout.AnchorMapper
 import dev.dcesares.bifolio.layout.Page
 import dev.dcesares.bifolio.layout.PageFlow
+import dev.dcesares.bifolio.layout.SearchHighlighter
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.CalloutKind
 import dev.dcesares.bifolio.model.Document
@@ -129,6 +130,11 @@ internal class SpreadStore(
  * the deck region of the same surface. The deck seeks through [document] by anchor, never by page number.
  * [onOpenToc] opens the table of contents (UI-07); [showToc] is false when the document has no headings, which
  * removes the deck button.
+ *
+ * Search (UI-08): [onOpenSearch] answers Ctrl+F and adds a button to the deck; [searchHighlighter] finds the hits
+ * painted under the text of the visible spread. [onCloseOverlay] answers Escape and returns whether it closed
+ * something; while an overlay is open ([overlayOpen]) the surface lets go of the keyboard focus and takes it back
+ * when the overlay closes.
  */
 @Composable
 internal fun PagedSurface(
@@ -148,6 +154,10 @@ internal fun PagedSurface(
     volumeKeysTurn: Boolean = false,
     jumps: Flow<Anchor> = emptyFlow(),
     appearance: AppearanceProfile = AppearanceProfile(),
+    onOpenSearch: (() -> Unit)? = null,
+    onCloseOverlay: (() -> Boolean)? = null,
+    overlayOpen: Boolean = false,
+    searchHighlighter: SearchHighlighter? = null,
 ) {
     val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
     val palette = BifolioTheme.palette
@@ -221,7 +231,7 @@ internal fun PagedSurface(
 
     // NAV-03, NAV-04: keys act on the surface, which asks for focus so they arrive without a tap first.
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(overlayOpen) { if (!overlayOpen) focus.requestFocus() }
     val keys = rememberUpdatedState(volumeKeysTurn)
     val assets = LocalContext.current.assets
     val fonts = remember(appearance.font, assets) { fontSetOf(appearance.font, assets) }
@@ -234,6 +244,13 @@ internal fun PagedSurface(
                 val command = event.readerCommand(keys.value)
                 if (command == null) {
                     false
+                } else if (command == ReaderCommand.SEARCH) {
+                    onOpenSearch?.let {
+                        it()
+                        true
+                    } ?: false
+                } else if (command == ReaderCommand.CLOSE) {
+                    onCloseOverlay?.invoke() ?: false
                 } else {
                     val handled = flow != null && command.isHandledBySpreads(onOpenToc)
                     if (handled && flow != null) {
@@ -321,6 +338,10 @@ internal fun PagedSurface(
             snapshotFlow { pages.all { store.columns.containsKey(it) } }.first { it }
             if (reduced) settle.snapTo(1f) else settle.animateTo(1f, BifolioMotion.fade())
         }
+        val highlights =
+            remember(searchHighlighter, palette, density.density) {
+                searchHighlighter?.let { PageHighlights(it, palette, density.density) }
+            }
         val pagePaint = remember(palette) { Paint().apply { color = palette.page.toArgb() } }
         val glowPaint = remember(palette) { Paint().apply { color = palette.accent.toArgb() } }
         val deckRegion = layout?.geometry?.deckRegion
@@ -347,7 +368,7 @@ internal fun PagedSurface(
                                 topPx,
                                 size.width,
                                 size.height,
-                                FramePaints(pagePaint, glowPaint, continuity),
+                                FramePaints(pagePaint, glowPaint, continuity, highlights),
                             )
                         val scroll = { block: Int -> tableScroll[block] ?: 0 }
                         val painted = live.complete()
@@ -399,6 +420,7 @@ internal fun PagedSurface(
                     onSeekFinished = seek::finish,
                     onOpenToc = onOpenToc,
                     showToc = showToc,
+                    onOpenSearch = onOpenSearch,
                 )
             }
         }
@@ -417,6 +439,7 @@ private class FramePaints(
     val page: Paint,
     val glow: Paint,
     val continuity: ContinuityMotion,
+    val search: PageHighlights? = null,
 )
 
 /** What one frame needs to paint: the shown spread and, during a turn, the one coming in. */
@@ -507,7 +530,9 @@ private class SpreadFrame(
             val prepared = store!!.columns[page] ?: continue
             canvas.save()
             canvas.translate(originX + geometry.columnLefts[column], originY + geometry.verticalMargin)
-            for (op in prepared.ops) op.draw(canvas, tableScroll)
+            for (op in prepared.ops) {
+                if (op is HighlightingOp) op.draw(canvas, tableScroll, paints.search) else op.draw(canvas, tableScroll)
+            }
             canvas.restore()
         }
         canvas.restore()
@@ -696,7 +721,7 @@ private fun PagedGesture.move(
     return true
 }
 
-/** Spreads act on turns and jumps; the table of contents only when it exists; search and close are not ours yet. */
+/** Spreads act on turns and jumps; the table of contents only when it exists; search and close are answered above. */
 private fun ReaderCommand.isHandledBySpreads(onOpenToc: (() -> Unit)?): Boolean =
     when (this) {
         ReaderCommand.NEXT, ReaderCommand.PREVIOUS, ReaderCommand.FIRST, ReaderCommand.LAST -> true

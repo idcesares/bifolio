@@ -156,6 +156,13 @@ public object BifolioIcons {
             "M12 18a6 6 0 0 0 0-12v12z",
         )
 
+    public val Search: ImageVector =
+        icon(
+            "search",
+            "m21 21-4.34-4.34",
+            "M19 11A8 8 0 0 1 11 19A8 8 0 0 1 3 11A8 8 0 0 1 11 3A8 8 0 0 1 19 11z",
+        )
+
     public val ChevronLeft: ImageVector =
         icon(
             "chevron-left",

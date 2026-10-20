@@ -55,4 +55,21 @@
         <item quantity="one">Hide %1$d deeper heading</item>
         <item quantity="other">Hide %1$d deeper headings</item>
     </plurals>
+    <string name="reader_search_open">Search in document</string>
+    <string name="reader_search_title">Search</string>
+    <string name="reader_search_hint">Search this document</string>
+    <string name="reader_search_close">Close search</string>
+    <string name="reader_search_previous">Previous result</string>
+    <string name="reader_search_next">Next result</string>
+    <string name="reader_search_show_list">Show all results</string>
+    <string name="reader_search_position">%1$d of %2$d</string>
+    <string name="reader_search_idle">Type to search the whole document. Case and accents do not matter.</string>
+    <string name="reader_search_searching">Searching…</string>
+    <string name="reader_search_none">No results for “%1$s”</string>
+    <string name="reader_search_truncated">Showing the first %1$d results. Type more to narrow them.</string>
+    <string name="reader_search_current">Current result</string>
+    <plurals name="reader_search_results">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
 </resources>

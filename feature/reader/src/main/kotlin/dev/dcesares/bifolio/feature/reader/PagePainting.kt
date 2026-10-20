@@ -202,12 +202,20 @@ internal class ColumnPainter(
         val width = item.leaf.width.toFloat()
         val top = item.clipTop.toFloat()
         val bottom = item.clipBottom.toFloat()
-        return PaintOp { canvas, _ ->
-            canvas.save()
-            canvas.translate(x, y)
-            canvas.clipRect(0f, top, width, bottom)
-            layout.draw(canvas)
-            canvas.restore()
+        val hits = LeafHits(layout, item.leaf)
+        return object : HighlightingOp {
+            override fun draw(
+                canvas: Canvas,
+                tableScroll: (Int) -> Int,
+                highlights: PageHighlights?,
+            ) {
+                canvas.save()
+                canvas.translate(x, y)
+                canvas.clipRect(0f, top, width, bottom)
+                if (highlights != null) hits.paint(canvas, highlights)
+                layout.draw(canvas)
+                canvas.restore()
+            }
         }
     }
 
@@ -332,7 +340,10 @@ internal class ColumnPainter(
     private fun tableRowOp(row: DrawTableRow): PaintOp {
         val pad = cellPadding
         val scrolls = row.tableWidth > row.columnWidth
-        val cells = row.cells.mapNotNull { cell -> cell.leaf?.let { Triple(cell, layoutOf(it), it.width) } }
+        val cells =
+            row.cells.mapNotNull { cell ->
+                cell.leaf?.let { Cell(cell.x, cell.alignment, layoutOf(it), it.width, LeafHits(layoutOf(it), it)) }
+            }
         val top = row.y.toFloat()
         val bottom = (row.y + row.height).toFloat()
         val left = row.x.toFloat()
@@ -340,26 +351,41 @@ internal class ColumnPainter(
         val maxScroll = (row.tableWidth - row.columnWidth).coerceAtLeast(0)
         val block = row.blockIndex
         val header = row.header
-        return PaintOp { canvas, tableScroll ->
-            val scroll = if (scrolls) tableScroll(block).coerceIn(0, maxScroll) else 0
-            canvas.save()
-            canvas.clipRect(left, top, right, bottom)
-            if (header) canvas.drawRect(left, top, right, bottom, fill)
-            for ((cell, layout, width) in cells) {
-                val x = left + cell.x + pad - scroll + alignOffset(cell.alignment, width, layout)
+        return object : HighlightingOp {
+            override fun draw(
+                canvas: Canvas,
+                tableScroll: (Int) -> Int,
+                highlights: PageHighlights?,
+            ) {
+                val scroll = if (scrolls) tableScroll(block).coerceIn(0, maxScroll) else 0
                 canvas.save()
-                canvas.translate(x, top + pad)
-                layout.draw(canvas)
+                canvas.clipRect(left, top, right, bottom)
+                if (header) canvas.drawRect(left, top, right, bottom, fill)
+                for (cell in cells) {
+                    val x = left + cell.x + pad - scroll + alignOffset(cell.alignment, cell.width, cell.layout)
+                    canvas.save()
+                    canvas.translate(x, top + pad)
+                    if (highlights != null) cell.hits.paint(canvas, highlights)
+                    cell.layout.draw(canvas)
+                    canvas.restore()
+                }
+                canvas.drawLine(left, bottom, right, bottom, ruleStroke)
+                if (scrolls) {
+                    canvas.drawLine(left, top, left, bottom, ruleStroke)
+                    canvas.drawLine(right, top, right, bottom, ruleStroke)
+                }
                 canvas.restore()
             }
-            canvas.drawLine(left, bottom, right, bottom, ruleStroke)
-            if (scrolls) {
-                canvas.drawLine(left, top, left, bottom, ruleStroke)
-                canvas.drawLine(right, top, right, bottom, ruleStroke)
-            }
-            canvas.restore()
         }
     }
+
+    private class Cell(
+        val x: Int,
+        val alignment: ColumnAlignment,
+        val layout: Layout,
+        val width: Int,
+        val hits: LeafHits,
+    )
 
     private fun alignOffset(
         alignment: ColumnAlignment,

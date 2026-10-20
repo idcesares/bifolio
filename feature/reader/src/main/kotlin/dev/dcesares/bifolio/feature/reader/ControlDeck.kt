@@ -46,6 +46,7 @@ internal const val DECK_PREVIOUS_TAG = "deck-previous"
 internal const val DECK_NEXT_TAG = "deck-next"
 internal const val DECK_SCRUBBER_TAG = "deck-scrubber"
 internal const val DECK_TOC_TAG = "deck-toc"
+internal const val DECK_SEARCH_TAG = "deck-search"
 
 private val ThumbRadius = 7.dp
 private const val DISABLED_ALPHA = 0.4f
@@ -60,7 +61,7 @@ private const val DISABLED_ALPHA = 0.4f
  * dragged and calls [onSeekFinished] when the finger leaves; the caller turns the fraction into an anchor.
  *
  * The table of contents button is shown only when the document has headings ([showToc], UI-07). While [onOpenToc]
- * is null it is shown disabled and opens nothing.
+ * is null it is shown disabled and opens nothing. A search button joins it when [onOpenSearch] is given (UI-08).
  */
 @Composable
 internal fun ControlDeck(
@@ -72,6 +73,7 @@ internal fun ControlDeck(
     modifier: Modifier = Modifier,
     onOpenToc: (() -> Unit)? = null,
     showToc: Boolean = true,
+    onOpenSearch: (() -> Unit)? = null,
 ) {
     val palette = BifolioTheme.palette
     Column(modifier.fillMaxSize().background(palette.page)) {
@@ -97,6 +99,7 @@ internal fun ControlDeck(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DeckScrubber(progress, onSeek, onSeekFinished, Modifier.weight(1f))
+            if (onOpenSearch != null) SearchDeckButton(onOpenSearch)
             if (showToc) TocButton(onOpenToc)
         }
     }
@@ -122,6 +125,24 @@ private fun DeckZone(
             contentDescription = description,
             tint = BifolioTheme.palette.inkMuted,
             modifier = Modifier.testTag(tag),
+        )
+    }
+}
+
+/** Opens search (UI-08). */
+@Composable
+private fun SearchDeckButton(onOpen: () -> Unit) {
+    Box(
+        Modifier
+            .defaultMinSize(Spacing.TouchTarget, Spacing.TouchTarget)
+            .clickable(role = Role.Button, onClick = onOpen),
+        contentAlignment = Alignment.Center,
+    ) {
+        BifolioIcon(
+            BifolioIcons.Search,
+            contentDescription = stringResource(R.string.reader_search_open),
+            tint = BifolioTheme.palette.inkMuted,
+            modifier = Modifier.testTag(DECK_SEARCH_TAG),
         )
     }
 }

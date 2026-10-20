@@ -1,6 +1,7 @@
 package dev.dcesares.bifolio.designsystem
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import kotlin.math.pow
@@ -42,6 +43,21 @@ class ContrastTest {
             assertTrue(ratio(it.inkMuted, it.page) >= 4.5, "${it.id} inkMuted")
             assertTrue(ratio(it.accent, it.page) >= 4.5, "${it.id} accent")
             assertTrue(ratio(it.link, it.page) >= 4.5, "${it.id} link")
+        }
+    }
+
+    @Test
+    fun searchHitsKeepInkAtFourPointFiveAndShowAgainstThePage() {
+        all.forEach {
+            val hit = it.searchHit.compositeOver(it.page)
+            val focused = it.searchHitFocused.compositeOver(it.page)
+            assertTrue(ratio(it.ink, hit) >= 4.5, "${it.id} ink on hit")
+            assertTrue(ratio(it.ink, focused) >= 4.5, "${it.id} ink on focused hit")
+            assertTrue(ratio(hit, it.page) >= 1.2, "${it.id} hit against page")
+            assertTrue(ratio(focused, it.page) >= 1.5, "${it.id} focused hit against page")
+            assertTrue(ratio(focused, hit) >= 1.1, "${it.id} focused against other hits")
+            // Not the ==mark== tint (accent at 25%).
+            assertTrue(it.searchHit != it.accent.copy(alpha = 0.25f), "${it.id} differs from mark")
         }
     }
 

@@ -110,15 +110,18 @@ internal fun BlockContent(
     val type = BifolioTheme.typography
     when (block) {
         is Heading ->
-            BasicText(
-                inlineText(block.content),
+            HighlightedText(
+                text = inlineText(block.content),
+                block = block,
                 style = type.heading(block.level),
                 modifier = modifier.semantics { heading() },
+                inlines = block.content,
             )
-        is Paragraph -> BasicText(inlineText(block.content), style = type.body, modifier = modifier)
+        is Paragraph ->
+            HighlightedText(inlineText(block.content), block, type.body, modifier, inlines = block.content)
         is ListBlock -> ListView(block, modifier)
         is BlockQuote -> BarredBlocks(block.blocks, BifolioTheme.palette.rule, null, modifier)
-        is CodeBlock -> CodeView(block.code, modifier)
+        is CodeBlock -> CodeView(block.code, modifier, block)
         is Table -> TableView(block, modifier)
         is ThematicBreak ->
             Box(modifier.fillMaxWidth().height(Spacing.Rule).background(BifolioTheme.palette.rule))
@@ -136,7 +139,7 @@ internal fun BlockContent(
         is MermaidFence ->
             Column(modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 BasicText(stringResource(R.string.reader_diagram_not_rendered), style = type.caption)
-                CodeView(block.source)
+                CodeView(block.source, block = block)
             }
     }
 }
@@ -193,6 +196,8 @@ private fun BarredBlocks(
 private fun CodeView(
     code: String,
     modifier: Modifier = Modifier,
+    /** The block whose search hits are painted in the code, or null for blocks the search does not read. */
+    block: Block? = null,
 ) {
     Box(
         modifier
@@ -201,7 +206,7 @@ private fun CodeView(
             .background(BifolioTheme.palette.codeSurface),
     ) {
         Box(Modifier.horizontalScroll(rememberScrollState()).padding(Spacing.M)) {
-            BasicText(code, style = BifolioTheme.typography.code, softWrap = false)
+            HighlightedText(AnnotatedString(code), block, BifolioTheme.typography.code, softWrap = false)
         }
     }
 }
@@ -291,7 +296,12 @@ private fun DetailsView(
         ) {
             BifolioIcon(if (open) BifolioIcons.ChevronDown else BifolioIcons.ChevronRight, null, palette.inkMuted)
             Spacer(Modifier.width(Spacing.S))
-            BasicText(inlineText(block.summary), style = type.body.copy(fontWeight = FontWeight.SemiBold))
+            HighlightedText(
+                inlineText(block.summary),
+                block,
+                type.body.copy(fontWeight = FontWeight.SemiBold),
+                inlines = block.summary,
+            )
         }
         if (open) {
             BlockStack(block.blocks, Modifier.padding(start = Spacing.Xl, top = Spacing.S))

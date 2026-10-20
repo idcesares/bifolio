@@ -15,6 +15,10 @@ public class TextLeaf(
     public val role: TextRole,
     /** Width in px the text was broken for. */
     public val width: Int,
+    /** Source offset of the first character, or -1 when the text has no source mapping (table cells). */
+    public val sourceStart: Int = -1,
+    /** Source offset where the text ends (half open), or -1 when the text has no source mapping. */
+    public val sourceEnd: Int = -1,
 )
 
 public enum class MarkerKind { BULLET, NUMBER, TASK_UNCHECKED, TASK_CHECKED }

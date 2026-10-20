@@ -22,6 +22,20 @@ public data class ReadingPalette(
 )
 
 private const val RULE_ALPHA = 0.35f
+private const val HIT_ALPHA_LIGHT = 0.14f
+private const val HIT_ALPHA_DARK = 0.28f
+private const val HIT_FOCUSED_ALPHA = 0.4f
+
+/**
+ * Other search hits (UI-08, DESIGN.md section 2): `ink` as a neutral wash, stronger on dark pages where a light
+ * wash on black is hardly seen. Not the accent tint of `==mark==`.
+ */
+public val ReadingPalette.searchHit: Color
+    get() = ink.copy(alpha = if (isDark) HIT_ALPHA_DARK else HIT_ALPHA_LIGHT)
+
+/** The current search hit: `accent` wash. Painted with an outline too, so it never relies on color alone. */
+public val ReadingPalette.searchHitFocused: Color
+    get() = accent.copy(alpha = HIT_FOCUSED_ALPHA)
 
 private fun palette(
     id: ReadingThemeId,

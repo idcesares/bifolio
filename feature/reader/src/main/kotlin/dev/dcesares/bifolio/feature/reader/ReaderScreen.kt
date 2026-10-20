@@ -65,6 +65,8 @@ import dev.dcesares.bifolio.designsystem.BifolioIcons
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
 import dev.dcesares.bifolio.designsystem.rememberReducedMotion
+import dev.dcesares.bifolio.layout.FoldOrientation
+import dev.dcesares.bifolio.layout.SearchHighlighter
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.Block
 import dev.dcesares.bifolio.model.Heading
@@ -102,11 +104,46 @@ public fun ReaderRoute(
     var tocCurrent by rememberSaveable { mutableStateOf<Int?>(null) }
     val foldSource = rememberFoldSource()
     var footerHeight by remember { mutableIntStateOf(0) }
+    var searchBarHeight by remember { mutableIntStateOf(0) }
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val timeLeft by viewModel.timeLeft.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
-            Box(modifier.fillMaxSize()) {
+            BoxWithConstraints(modifier.fillMaxSize()) {
+                // UI-08: the sheet or pane rule is the TOC's, from the window width only (LAY-01).
+                val compact = !isSidePane(maxWidth)
+                val searchState by viewModel.search.collectAsStateWithLifecycle()
+                val searchOpen = searchState.panel != SearchPanel.Closed
+                val searchHighlighter =
+                    remember(current.document, searchState.query, searchState.result, searchState.current, searchOpen) {
+                        if (searchState.showsHighlights) {
+                            SearchHighlighter(
+                                current.document,
+                                searchState.query,
+                                searchState.result,
+                                searchState.current,
+                            )
+                        } else {
+                            null
+                        }
+                    }
+                val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
+                val density = LocalDensity.current
+                // The deck of tabletop posture has its own search button; the floating one would sit on it.
+                val inTabletop = fold?.let { it.isSeparating && it.orientation == FoldOrientation.Horizontal } == true
+                val closeOverlay: () -> Boolean = {
+                    when {
+                        searchOpen -> {
+                            viewModel.backSearch(compact)
+                            true
+                        }
+                        tocOpen -> {
+                            tocOpen = false
+                            true
+                        }
+                        else -> false
+                    }
+                }
                 val contents = remember(current.document) { TableOfContents(current.document.blocks) }
                 // UI-07: no headings, no way in.
                 val openToc: (() -> Unit)? =
@@ -140,6 +177,10 @@ public fun ReaderRoute(
                             volumeKeysTurn = volumeKeysTurn,
                             appearance = appearance,
                             jumps = viewModel.jumps,
+                            onOpenSearch = viewModel::openSearch,
+                            onCloseOverlay = closeOverlay,
+                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen,
+                            searchHighlighter = searchHighlighter,
                         )
                     } else {
                         ReaderScreen(
@@ -151,6 +192,10 @@ public fun ReaderRoute(
                             volumeKeysTurn = volumeKeysTurn,
                             onJump = viewModel::onJump,
                             jumps = viewModel.jumps,
+                            onOpenSearch = viewModel::openSearch,
+                            onCloseOverlay = closeOverlay,
+                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen,
+                            searchHighlighter = searchHighlighter,
                         )
                     }
                 }
@@ -186,7 +231,28 @@ public fun ReaderRoute(
                     modifier =
                         Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = with(LocalDensity.current) { footerHeight.toDp() }),
+                            .padding(
+                                bottom =
+                                    with(LocalDensity.current) {
+                                        if (searchState.panel == SearchPanel.Bar) {
+                                            maxOf(footerHeight, searchBarHeight).toDp()
+                                        } else {
+                                            footerHeight.toDp()
+                                        }
+                                    },
+                            ),
+                )
+                // UI-08: a way into search on a phone, with the chrome; Ctrl+F and the deck cover the rest.
+                SearchButton(
+                    visible = chromeVisible && !searchOpen && !tocOpen && !(mode == ReadingMode.PAGED && inTabletop),
+                    onClick = viewModel::openSearch,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(
+                                end = Spacing.L,
+                                bottom = with(LocalDensity.current) { footerHeight.toDp() } + Spacing.M,
+                            ),
                 )
                 if (sheetOpen) {
                     BackHandler { sheetOpen = false }
@@ -194,8 +260,6 @@ public fun ReaderRoute(
                 }
                 if (!contents.isEmpty) {
                     if (tocOpen) BackHandler { tocOpen = false }
-                    val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
-                    val density = LocalDensity.current
                     TocSheet(
                         state =
                             TocState(
@@ -211,6 +275,35 @@ public fun ReaderRoute(
                         clearance = with(density) { fold.tocClearance { it.toDp() } },
                     )
                 }
+                // After the TOC's handler, so Back closes search first when both were ever open.
+                if (searchOpen) BackHandler { viewModel.backSearch(compact) }
+                val searchActions =
+                    remember(viewModel, compact) {
+                        SearchActions(
+                            onQuery = viewModel::setSearchQuery,
+                            onSelect = { viewModel.selectSearchResult(it, collapseList = compact) },
+                            onNext = viewModel::searchNext,
+                            onPrevious = viewModel::searchPrevious,
+                            onShowList = viewModel::showSearchList,
+                            onBack = { viewModel.backSearch(compact) },
+                            onClose = viewModel::closeSearch,
+                        )
+                    }
+                SearchSheet(
+                    state = searchState,
+                    actions = searchActions,
+                    visible = searchState.panel == SearchPanel.List,
+                    clearance = with(density) { fold.tocClearance { it.toDp() } },
+                )
+                SearchBar(
+                    state = searchState,
+                    actions = searchActions,
+                    visible = searchState.panel == SearchPanel.Bar,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .onSizeChanged { searchBarHeight = it.height },
+                )
             }
         is ReaderUiState.Failed -> ReaderFailure(current.reason, onBack, modifier)
         ReaderUiState.Idle, ReaderUiState.Loading ->
@@ -233,6 +326,10 @@ public fun ReaderScreen(
     volumeKeysTurn: Boolean = false,
     onJump: () -> Unit = {},
     jumps: Flow<Anchor> = emptyFlow(),
+    onOpenSearch: (() -> Unit)? = null,
+    onCloseOverlay: (() -> Boolean)? = null,
+    overlayOpen: Boolean = false,
+    searchHighlighter: SearchHighlighter? = null,
 ) {
     val palette = BifolioTheme.palette
     val blocks = ready.document.blocks
@@ -284,8 +381,10 @@ public fun ReaderScreen(
 
     // NAV-05: the keyboard scrolls by 90% of the viewport; NAV-04 volume keys do the same when enabled.
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(overlayOpen) { if (!overlayOpen) focus.requestFocus() }
     val keys = rememberUpdatedState(volumeKeysTurn)
+    val openSearch = rememberUpdatedState(onOpenSearch)
+    val closeOverlay = rememberUpdatedState(onCloseOverlay)
     BoxWithConstraints(
         modifier
             .fillMaxSize()
@@ -293,10 +392,12 @@ public fun ReaderScreen(
             .focusRequester(focus)
             .onPreviewKeyEvent { event ->
                 val command = event.readerCommand(keys.value)
-                // Search and close belong to overlays that do not exist yet, and the TOC needs its opener.
+                // Search, close and the TOC need their openers; without them the key is not ours.
                 val handled =
                     when (command) {
-                        null, ReaderCommand.SEARCH, ReaderCommand.CLOSE -> false
+                        null -> false
+                        ReaderCommand.SEARCH -> openSearch.value != null
+                        ReaderCommand.CLOSE -> closeOverlay.value?.invoke() ?: false
                         ReaderCommand.TOC -> onOpenToc != null
                         else -> true
                     }
@@ -310,6 +411,7 @@ public fun ReaderScreen(
                             ReaderCommand.FIRST -> listState.scrollToItem(0)
                             ReaderCommand.LAST -> listState.scrollToItem((blocks.size - 1).coerceAtLeast(0))
                             ReaderCommand.TOC -> onOpenToc?.invoke()
+                            ReaderCommand.SEARCH -> openSearch.value?.invoke()
                             else -> Unit
                         }
                     }
@@ -344,7 +446,10 @@ public fun ReaderScreen(
                         ),
                 )
             }
-            CompositionLocalProvider(LocalLinkHandler provides onLink) {
+            CompositionLocalProvider(
+                LocalLinkHandler provides onLink,
+                LocalSearchHighlighter provides searchHighlighter,
+            ) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),

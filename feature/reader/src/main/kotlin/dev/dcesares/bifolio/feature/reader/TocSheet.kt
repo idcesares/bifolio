@@ -69,10 +69,10 @@ import dev.dcesares.bifolio.layout.FoldSpec
 internal const val TOC_SHEET_TAG = "toc-sheet"
 internal const val TOC_ROW_TAG = "toc-row"
 
-private const val SHEET_MAX_HEIGHT = 0.85f
+internal const val SHEET_MAX_HEIGHT = 0.85f
 private const val MAX_INDENT_STEPS = 5
 private const val ROWS_ABOVE_CURRENT = 2
-private val CurrentBar = 3.dp
+internal val CurrentBar = 3.dp
 
 /** Where the pane may not go: the sheet or pane keeps clear of a separating fold (DESIGN section 5). */
 internal data class TocClearance(
@@ -146,7 +146,7 @@ internal fun TocSheet(
     }
 }
 
-private fun panelEnter(
+internal fun panelEnter(
     side: Boolean,
     reduced: Boolean,
 ) = when {
@@ -155,7 +155,7 @@ private fun panelEnter(
     else -> fadeIn(BifolioMotion.fade()) + slideInVertically(BifolioMotion.chromeEnter()) { it }
 }
 
-private fun panelExit(
+internal fun panelExit(
     side: Boolean,
     reduced: Boolean,
 ) = when {

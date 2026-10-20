@@ -138,4 +138,71 @@ class ReaderKeyNavigationTest {
         // The list reports its first visible item, which can be the block just above the target under the top padding.
         assertTrue("shown near block 3: ${settled.last()}", settled.last().blockIndex in 2..3)
     }
+
+    private fun ctrl(key: Key) {
+        compose.onRoot().performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(key)
+            keyUp(Key.CtrlLeft)
+        }
+        compose.waitForIdle()
+    }
+
+    /** NAV-03, UI-08: Ctrl+F opens search and Escape closes the overlay, on the scroll surface. */
+    @Test
+    fun scrollCtrlFOpensSearchAndEscapeClosesTheOverlay() {
+        var opened = 0
+        var closed = 0
+        RuntimeEnvironment.setQualifiers("+$PHONE")
+        val ready = ReaderUiState.Ready(document, "T", "h", emptySet(), Anchor(0, 0))
+        compose.setContent {
+            BifolioTheme {
+                ReaderScreen(
+                    ready,
+                    { settled += it },
+                    onOpenSearch = { opened++ },
+                    onCloseOverlay = {
+                        closed++
+                        true
+                    },
+                )
+            }
+        }
+        compose.waitForIdle()
+        ctrl(Key.F)
+        press(Key.Escape)
+        assertEquals(1, opened)
+        assertEquals(1, closed)
+    }
+
+    /** NAV-03, UI-08: the same on the paged surface; Escape with nothing to close is left alone. */
+    @Test
+    fun pagedCtrlFOpensSearchAndEscapeClosesTheOverlay() {
+        var opened = 0
+        var closed = 0
+        RuntimeEnvironment.setQualifiers("+$PHONE")
+        val layout = buildLayout(document, PageRequest(824, 1830, 2f, 1f, 18f, "en"))
+        compose.setContent {
+            BifolioTheme {
+                PagedSurface(
+                    layout = layout,
+                    initialAnchor = Anchor(0, 0),
+                    onRequest = {},
+                    onSettled = { settled += it },
+                    onFirstDrawn = {},
+                    onToggleChrome = {},
+                    onOpenSearch = { opened++ },
+                    onCloseOverlay = {
+                        closed++
+                        false
+                    },
+                )
+            }
+        }
+        compose.waitForIdle()
+        ctrl(Key.F)
+        press(Key.Escape)
+        assertEquals(1, opened)
+        assertEquals(1, closed)
+    }
 }
