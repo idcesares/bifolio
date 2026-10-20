@@ -76,8 +76,8 @@ class InlineRangeTest {
 
     @Test
     fun `image alt window is the whole image syntax`() {
-        val md = "![alt *e*](u.png)\n"
-        val img = inlinesOf(md).single() as Inline.Image
+        val md = "![alt *e*](u.png) after\n"
+        val img = inlinesOf(md).first() as Inline.Image
         assertEquals("alt e", img.alt)
         assertEquals(SourceRange(0, 17), img.range)
     }
