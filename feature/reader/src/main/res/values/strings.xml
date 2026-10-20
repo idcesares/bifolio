@@ -7,7 +7,11 @@
     <string name="reader_failed_too_large">This file is larger than 32 MiB, which is more than Bifolio opens.</string>
     <string name="reader_failed_unreadable">Could not read this file. It may have moved, or access may have been revoked.</string>
     <string name="reader_back_to_library">Back to library</string>
-    <string name="reader_image_placeholder">Image: %1$s</string>
+    <string name="reader_image_no_alt">Image</string>
+    <string name="reader_images_offer">Images in this document are in a folder. Show them?</string>
+    <string name="reader_images_wrong_folder">That folder does not contain this document. Choose the folder it is in, or a parent of it.</string>
+    <string name="reader_images_choose">Choose folder</string>
+    <string name="reader_images_dismiss">Hide this message</string>
     <string name="reader_diagram_not_rendered">Diagram (not rendered)</string>
     <string name="reader_callout_note">Note</string>
     <string name="reader_callout_tip">Tip</string>

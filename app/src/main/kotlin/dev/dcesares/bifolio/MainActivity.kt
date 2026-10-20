@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
                     repository = app.recents,
                     preferences = app.readingPreferences,
                     perf = perfLog(),
+                    folders = app.folderGrants,
                 )
             }
         }

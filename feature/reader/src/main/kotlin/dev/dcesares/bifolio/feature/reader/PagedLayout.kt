@@ -130,6 +130,8 @@ public class PagedLayout(
     public val config: TextStyleConfig,
     public val flow: PageFlow,
     public val detailer: PageDetailer,
+    /** Which snapshot of image sizes this layout was made from; a new one means different boxes (PAG-07). */
+    public val imageKey: Int = 0,
 ) {
     public val stage: PaginationStage
         get() =

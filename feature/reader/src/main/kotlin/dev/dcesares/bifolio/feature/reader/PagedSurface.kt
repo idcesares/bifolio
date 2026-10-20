@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -22,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +50,7 @@ import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -166,6 +169,10 @@ internal fun PagedSurface(
     searchHighlighter: SearchHighlighter? = null,
     onLink: (String) -> Unit = {},
     onNote: (NoteTap) -> Unit = {},
+    images: ImageRenderer? = null,
+    imageBanner: ImageBanner = ImageBanner.Hidden,
+    onPickFolder: (String?) -> Unit = {},
+    onDismissImageBanner: () -> Unit = {},
 ) {
     val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
     val palette = BifolioTheme.palette
@@ -184,11 +191,15 @@ internal fun PagedSurface(
     val tableScroll = remember { mutableStateMapOf<Int, Int>() }
     var shown by remember { mutableStateOf(initialAnchor) }
     var noticesDismissed by rememberSaveable { mutableStateOf(false) }
+    // UI-14: the folder banner takes its height from the page area, so it never covers text. The page is laid out
+    // again for the shorter area and keeps the reading anchor like any other change of geometry.
+    var bannerPx by remember { mutableIntStateOf(0) }
+    val bannerReserve = if (imageBanner == ImageBanner.Hidden) 0 else bannerPx
 
     val flow = layout?.flow
     val index = remember(flow, shown) { flow?.spreadIndexOf(shown) ?: -1 }
     val store =
-        remember(layout?.request, palette, labels) {
+        remember(layout?.request, layout?.imageKey, palette, labels, images) {
             layout?.let {
                 val metrics = it.geometry.metrics
                 val painter =
@@ -199,6 +210,7 @@ internal fun PagedSurface(
                         cellPadding = metrics.tableCellPadding.toFloat(),
                         factory = TextLayoutFactory(it.config),
                         labels = labels,
+                        images = images,
                     )
                 SpreadStore(painter)
             }
@@ -292,7 +304,8 @@ internal fun PagedSurface(
         // Platform fold bounds are physical, so the fold shifts by the left inset, not the start inset (RTL).
         val leftPx = with(density) { insetLeft.toPx() }
         val endPx = with(density) { insetEnd.toPx() }
-        val topPx = with(density) { insetTop.toPx() }
+        val reservePx = if (bannerReserve > 0) bannerReserve + with(density) { Spacing.S.toPx() } else 0f
+        val topPx = with(density) { insetTop.toPx() } + reservePx
         val bottomPx = with(density) { insetBottom.toPx() }
         val usableWidth = (constraints.maxWidth - startPx - endPx).toInt().coerceAtLeast(1)
         val usableHeight = (constraints.maxHeight - topPx - bottomPx).toInt().coerceAtLeast(1)
@@ -401,6 +414,8 @@ internal fun PagedSurface(
             pageBox
                 .pointerInput(Unit) { awaitEachGesture { readGesture(env) } }
                 .drawBehind {
+                    // Redraw when a decoded bitmap lands (SYN-08).
+                    images?.observe()
                     drawIntoCanvas { c ->
                         val wash = picked.selection?.let { SelectionWash(it, runsNow(), washPaint) }
                         val live =
@@ -477,12 +492,16 @@ internal fun PagedSurface(
                 )
             }
         }
-        if (notices.isNotEmpty() && !noticesDismissed) {
-            NoticeStack(
-                notices = notices,
-                onDismiss = { noticesDismissed = true },
-                modifier = Modifier.padding(start = insetStart + Spacing.L, end = insetEnd + Spacing.L, top = insetTop),
-            )
+        val showNotices = notices.isNotEmpty() && !noticesDismissed
+        if (showNotices || imageBanner != ImageBanner.Hidden) {
+            Column(
+                Modifier
+                    .padding(start = insetStart + Spacing.L, end = insetEnd + Spacing.L, top = insetTop)
+                    .onSizeChanged { bannerPx = it.height },
+            ) {
+                if (showNotices) NoticeStack(notices = notices, onDismiss = { noticesDismissed = true })
+                ImageFolderBanner(imageBanner, onPickFolder, onDismissImageBanner)
+            }
         }
     }
 }

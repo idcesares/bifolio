@@ -118,6 +118,8 @@ public fun ReaderRoute(
     var footerHeight by remember { mutableIntStateOf(0) }
     var searchBarHeight by remember { mutableIntStateOf(0) }
     val progress by viewModel.progress.collectAsStateWithLifecycle()
+    val images by viewModel.imageSession.collectAsStateWithLifecycle()
+    val banner by viewModel.imageBanner.collectAsStateWithLifecycle()
     val timeLeft by viewModel.timeLeft.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
@@ -221,6 +223,10 @@ public fun ReaderRoute(
                             onNote = onNote,
                             overlayOpen = anyOverlay,
                             searchHighlighter = searchHighlighter,
+                            images = images?.renderer,
+                            imageBanner = banner,
+                            onPickFolder = viewModel::onFolderPicked,
+                            onDismissImageBanner = viewModel::dismissImageBanner,
                         )
                     } else {
                         ReaderScreen(
@@ -237,6 +243,10 @@ public fun ReaderRoute(
                             onNote = onNote,
                             overlayOpen = anyOverlay,
                             searchHighlighter = searchHighlighter,
+                            images = images?.renderer,
+                            imageBanner = banner,
+                            onPickFolder = viewModel::onFolderPicked,
+                            onDismissImageBanner = viewModel::dismissImageBanner,
                         )
                     }
                 }
@@ -413,6 +423,10 @@ internal fun ReaderScreen(
     onCloseOverlay: (() -> Boolean)? = null,
     overlayOpen: Boolean = false,
     searchHighlighter: SearchHighlighter? = null,
+    images: ImageRenderer? = null,
+    imageBanner: ImageBanner = ImageBanner.Hidden,
+    onPickFolder: (String?) -> Unit = {},
+    onDismissImageBanner: () -> Unit = {},
 ) {
     val palette = BifolioTheme.palette
     val blocks = ready.document.blocks
@@ -445,6 +459,7 @@ internal fun ReaderScreen(
 
     var noticesDismissed by rememberSaveable { mutableStateOf(false) }
     val showNotices = ready.notices.isNotEmpty() && !noticesDismissed
+    val showBanner = imageBanner != ImageBanner.Hidden
     val insets = ReaderInsets.asPaddingValues()
     val direction = LocalLayoutDirection.current
 
@@ -512,22 +527,23 @@ internal fun ReaderScreen(
         val margin = maxOf(Spacing.PageMarginMin, usable * Spacing.PAGE_MARGIN_FRACTION)
         val side = maxOf(margin, (usable - Spacing.MaxMeasure) / 2)
         Column(Modifier.fillMaxSize()) {
-            if (showNotices) {
-                NoticeStack(
-                    notices = ready.notices,
-                    onDismiss = { noticesDismissed = true },
-                    modifier =
-                        Modifier.padding(
-                            start = insetStart + side,
-                            end = insetEnd + side,
-                            top = insets.calculateTopPadding(),
-                        ),
-                )
+            if (showNotices || showBanner) {
+                Column(
+                    Modifier.padding(
+                        start = insetStart + side,
+                        end = insetEnd + side,
+                        top = insets.calculateTopPadding(),
+                    ),
+                ) {
+                    if (showNotices) NoticeStack(notices = ready.notices, onDismiss = { noticesDismissed = true })
+                    ImageFolderBanner(imageBanner, onPickFolder, onDismissImageBanner)
+                }
             }
             CompositionLocalProvider(
                 LocalLinkHandler provides onLink,
                 LocalNoteHandler provides noteHere,
                 LocalSearchHighlighter provides searchHighlighter,
+                LocalImageRenderer provides images,
             ) {
                 // NAV-09: a long press selects text and the platform bar offers Copy, in reading palette colors.
                 CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
@@ -539,7 +555,14 @@ internal fun ReaderScreen(
                                 PaddingValues(
                                     start = insetStart + side,
                                     end = insetEnd + side,
-                                    top = if (showNotices) Spacing.L else insets.calculateTopPadding() + Spacing.Xl,
+                                    top =
+                                        if (showNotices ||
+                                            showBanner
+                                        ) {
+                                            Spacing.L
+                                        } else {
+                                            insets.calculateTopPadding() + Spacing.Xl
+                                        },
                                     bottom = insets.calculateBottomPadding() + Spacing.Xl,
                                 ),
                         ) {

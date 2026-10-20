@@ -131,12 +131,7 @@ internal fun BlockContent(
         is HtmlDetails -> DetailsView(block, modifier)
         is Callout -> BarredBlocks(block.blocks, BifolioTheme.palette.accent, calloutLabel(block.kind), modifier)
         is FootnoteDefinition -> BlockStack(block.blocks, modifier)
-        is ImageBlock ->
-            BasicText(
-                stringResource(R.string.reader_image_placeholder, block.alt),
-                style = type.caption,
-                modifier = modifier,
-            )
+        is ImageBlock -> ImageView(block, modifier)
         is MathBlock -> CodeView(block.tex, modifier)
         is FrontMatter -> CodeView(block.raw, modifier)
         is MermaidFence ->

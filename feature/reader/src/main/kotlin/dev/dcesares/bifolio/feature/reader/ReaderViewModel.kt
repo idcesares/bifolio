@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.dcesares.bifolio.data.AppearanceProfile
 import dev.dcesares.bifolio.data.ContentHash
+import dev.dcesares.bifolio.data.FolderGrant
+import dev.dcesares.bifolio.data.FolderGrantRepository
+import dev.dcesares.bifolio.data.FolderPaths
 import dev.dcesares.bifolio.data.ReadingMode
 import dev.dcesares.bifolio.data.ReadingPreferences
 import dev.dcesares.bifolio.data.RecentDocument
@@ -25,8 +28,11 @@ import dev.dcesares.bifolio.parse.LoadResult
 import dev.dcesares.bifolio.parse.MarkdownLoader
 import dev.dcesares.bifolio.parse.SizeClass
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -100,6 +106,8 @@ public class ReaderViewModel(
     private val searcher: (Document, String, () -> Unit) -> SearchResult = { document, query, cancelled ->
         DocumentSearch.search(document, query, checkCancelled = cancelled)
     },
+    private val folders: FolderGrantRepository? = null,
+    private val imageIo: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<ReaderUiState>(ReaderUiState.Idle)
     public val state: StateFlow<ReaderUiState> = mutableState
@@ -193,6 +201,7 @@ public class ReaderViewModel(
     private val pagination = PaginationService(LayoutCache())
     private var paginating: Job? = null
     private var lastRequest: PageRequest? = null
+    private var lastImageKey = 0
     private var requestedAt = 0L
     private var firstDrawReported = false
 
@@ -363,7 +372,13 @@ public class ReaderViewModel(
         lastSavedAt = null
         pending = null
         resetPaging()
-        loading = viewModelScope.launch { mutableState.value = load(request) }
+        stopImages()
+        loading =
+            viewModelScope.launch {
+                val loaded = load(request)
+                mutableState.value = loaded
+                if (loaded is ReaderUiState.Ready) startImages(loaded, request.uri)
+            }
     }
 
     /** Back to the library: forgets the loaded document. */
@@ -375,12 +390,14 @@ public class ReaderViewModel(
         loading?.cancel()
         currentUri = null
         resetPaging()
+        stopImages()
         mutableState.value = ReaderUiState.Idle
     }
 
     private fun resetPaging() {
         paginating?.cancel()
         lastRequest = null
+        lastImageKey = 0
         mutablePaged.value = null
     }
 
@@ -445,8 +462,12 @@ public class ReaderViewModel(
      */
     public fun paginate(request: PageRequest) {
         val ready = mutableState.value as? ReaderUiState.Ready ?: return
-        if (ready.scrollOnly || request == lastRequest) return
+        // One snapshot per run: the paginator and the detailer see the sizes the key stands for (PAG-07).
+        val snapshot = imageSession.value?.sizes?.value ?: ImageSizeSnapshot.EMPTY
+        if (ready.scrollOnly || (request == lastRequest && snapshot.key == lastImageKey)) return
         lastRequest = request
+        lastImageKey = snapshot.key
+        val images = snapshot.scaledBy(request.density)
         paginating?.cancel()
         // The previous layout stays up until the new one has its first stage, so a change never blanks the page.
         firstDrawReported = false
@@ -457,11 +478,20 @@ public class ReaderViewModel(
             viewModelScope.launch(computeDispatcher) {
                 val text = engine.prepare(request)
                 val geometry = GeometryCalculator.compute(text.spec)
-                val detailer = PageDetailer(ready.document, text.measurer, geometry)
+                val detailer = PageDetailer(ready.document, text.measurer, geometry, images)
                 val cancel = CancellationSignal { !isActive }
-                pagination.paginate(ready.contentHash, ready.document, text.measurer, geometry, from, cancel) { flow ->
+                pagination.paginate(
+                    ready.contentHash,
+                    ready.document,
+                    text.measurer,
+                    geometry,
+                    from,
+                    cancel,
+                    images,
+                    snapshot.key,
+                ) { flow ->
                     if (!isActive) return@paginate
-                    val layout = PagedLayout(request, geometry, text.config, flow, detailer)
+                    val layout = PagedLayout(request, geometry, text.config, flow, detailer, snapshot.key)
                     perf.record(
                         "pagination.${layout.stage.name.lowercase()}",
                         (nanoClock() - started) / NANOS_PER_MILLI,
@@ -469,6 +499,98 @@ public class ReaderViewModel(
                     mutablePaged.value = layout
                 }
             }
+    }
+
+    private val mutableImages = MutableStateFlow<ImageSession?>(null)
+
+    /** The images of the open document: sizes, pixels and where they come from (SYN-08, PAG-07). */
+    internal val imageSession: StateFlow<ImageSession?> = mutableImages
+
+    private val mutableImageBanner = MutableStateFlow<ImageBanner>(ImageBanner.Hidden)
+
+    /** Whether to offer the folder of the open document, for its relative images (UI-14). */
+    public val imageBanner: StateFlow<ImageBanner> = mutableImageBanner
+
+    private var imageScope: CoroutineScope? = null
+    private var sizeWatcher: Job? = null
+
+    private fun stopImages() {
+        sizeWatcher?.cancel()
+        imageScope?.cancel()
+        sizeWatcher = null
+        imageScope = null
+        mutableImages.value = null
+        mutableImageBanner.value = ImageBanner.Hidden
+    }
+
+    private suspend fun startImages(
+        ready: ReaderUiState.Ready,
+        uri: String,
+    ) {
+        val grant = folders?.find(uri)
+        val session = beginImages(ready, grant)
+        val asks = folders != null && grant == null && session.needsFolder()
+        if (asks && !folders.isDismissed(uri)) {
+            mutableImageBanner.value = ImageBanner.Offer(FolderPaths.pickerStart(uri))
+        }
+    }
+
+    private fun beginImages(
+        ready: ReaderUiState.Ready,
+        grant: FolderGrant?,
+    ): ImageSession {
+        sizeWatcher?.cancel()
+        imageScope?.cancel()
+        val scope = CoroutineScope(SupervisorJob() + computeDispatcher)
+        imageScope = scope
+        val repository = folders
+        val session =
+            ImageSession(
+                ready.document,
+                grant,
+                { segments -> if (grant != null && repository != null) repository.open(grant, segments) else null },
+                scope,
+                imageIo,
+            )
+        mutableImages.value = session
+        session.start()
+        // Sizes arrive in batches; each batch is a new snapshot and so a new pagination from the reading anchor.
+        sizeWatcher =
+            viewModelScope.launch {
+                session.sizes.collect { snapshot ->
+                    val request = lastRequest
+                    if (request != null && snapshot.key != lastImageKey) paginate(request)
+                }
+            }
+        return session
+    }
+
+    /** The folder chooser returned [tree] (null when cancelled). It must hold the open document (UI-14). */
+    public fun onFolderPicked(tree: String?) {
+        val ready = mutableState.value as? ReaderUiState.Ready ?: return
+        val uri = currentUri ?: return
+        val repository = folders ?: return
+        if (tree == null) return
+        viewModelScope.launch {
+            val grant = repository.add(tree, uri)
+            // The document may have been closed or replaced while the provider was asked: that answer is not for it.
+            val now = mutableState.value as? ReaderUiState.Ready
+            if (currentUri != uri || now == null || now.contentHash != ready.contentHash) return@launch
+            if (grant == null) {
+                mutableImageBanner.value = ImageBanner.WrongFolder(FolderPaths.pickerStart(uri))
+            } else {
+                mutableImageBanner.value = ImageBanner.Hidden
+                beginImages(ready, grant)
+            }
+        }
+    }
+
+    /** The banner was dismissed: the document is not asked about again (UI-14). */
+    public fun dismissImageBanner() {
+        mutableImageBanner.value = ImageBanner.Hidden
+        val uri = currentUri ?: return
+        val repository = folders ?: return
+        viewModelScope.launch { repository.dismiss(uri) }
     }
 
     /** The surface drew its first spread for the current request: the "first spread" time of PRF-04. */

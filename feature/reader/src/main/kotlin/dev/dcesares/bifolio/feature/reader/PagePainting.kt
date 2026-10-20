@@ -23,8 +23,10 @@ import dev.dcesares.bifolio.layout.PageDraw
 import dev.dcesares.bifolio.layout.TargetKind
 import dev.dcesares.bifolio.layout.TextLeaf
 import dev.dcesares.bifolio.layout.TextRole
+import dev.dcesares.bifolio.layout.TextStyles
 import dev.dcesares.bifolio.model.CalloutKind
 import dev.dcesares.bifolio.model.ColumnAlignment
+import dev.dcesares.bifolio.model.ImageBlock
 import dev.dcesares.bifolio.text.ColorRuns
 import dev.dcesares.bifolio.text.TextLayoutFactory
 import dev.dcesares.bifolio.text.TextPalette
@@ -119,6 +121,8 @@ internal class ColumnPainter(
     private val cellPadding: Float,
     private val factory: TextLayoutFactory,
     private val labels: CalloutLabels,
+    /** Where image pixels come from (SYN-08); null paints every image as a frame. */
+    private val images: ImageRenderer? = null,
 ) {
     private val textPalette =
         TextPalette(
@@ -154,6 +158,7 @@ internal class ColumnPainter(
             color = palette.accent.toArgb()
             isFakeBoldText = true
         }
+    private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val markerPaint = factory.paintOf(TextRole.BODY, textPalette).apply { color = palette.inkMuted.toArgb() }
 
     private fun px(dp: Float): Float = dp * density
@@ -201,7 +206,7 @@ internal class ColumnPainter(
                 is DrawBar -> ops.add(barOp(item))
                 is DrawCodeSurface -> ops.add(codeSurfaceOp(item))
                 is DrawRule -> ops.add(ruleOp(item))
-                is DrawAtomic -> ops.add(atomicOp(item))
+                is DrawAtomic -> ops.add(atomicOrImageOp(item))
                 is DrawCalloutTitle -> ops.add(titleOp(item))
                 is DrawContinuation -> marks.add(continuationOp(item))
                 is DrawTableRow -> {
@@ -400,6 +405,54 @@ internal class ColumnPainter(
             canvas.drawRoundRect(rect, radius, radius, ruleStroke)
         }
     }
+
+    /**
+     * An image (SYN-08, PAG-07): its pixels scaled into the box the layout reserved, or the frame with the alt text
+     * where there are none. While a known image is still decoding only the frame shows. Draw never waits: it asks
+     * the renderer, which answers from its cache and starts a decode otherwise.
+     */
+    private fun imageOp(
+        item: DrawAtomic,
+        block: ImageBlock,
+    ): PaintOp {
+        val rect =
+            RectF(item.x.toFloat(), item.y.toFloat(), (item.x + item.width).toFloat(), (item.y + item.height).toFloat())
+        val radius = px(Spacing.CodeRadius.value)
+        val renderer = images
+        val alt = if (block.alt.isBlank()) null else altLayout(block.alt, item.width)
+        images?.warm(block, item.width, item.height)
+        return PaintOp { canvas, _ ->
+            val bitmap = renderer?.bitmapFor(block, item.width, item.height)
+            if (bitmap != null) {
+                canvas.drawBitmap(bitmap, null, rect, bitmapPaint)
+            } else {
+                canvas.drawRoundRect(rect, radius, radius, fill)
+                canvas.drawRoundRect(rect, radius, radius, ruleStroke)
+                if (alt != null && (renderer == null || renderer.showsAlt(block, item.width, item.height))) {
+                    canvas.save()
+                    canvas.clipRect(rect)
+                    canvas.translate(rect.left + cellPadding, rect.top + cellPadding)
+                    alt.draw(canvas)
+                    canvas.restore()
+                }
+            }
+        }
+    }
+
+    private fun atomicOrImageOp(item: DrawAtomic): PaintOp =
+        (item.block as? ImageBlock)?.let { imageOp(item, it) } ?: atomicOp(item)
+
+    private fun altLayout(
+        alt: String,
+        boxWidth: Int,
+    ): Layout =
+        factory.layout(
+            alt,
+            TextRole.TABLE_CELL,
+            (boxWidth - 2 * cellPadding).toInt().coerceAtLeast(1),
+            TextStyles.NONE,
+            textPalette,
+        )
 
     private fun titleOp(item: DrawCalloutTitle): PaintOp {
         val text = labels[item.kind]

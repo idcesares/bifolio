@@ -40,6 +40,16 @@ public fun createRecentsRepository(context: Context): RecentsRepository {
     return RecentsRepository(app.bifolioDataStore, AndroidUriGrants(app.contentResolver))
 }
 
+/** Folder grants for relative images (UI-14), on the same DataStore file as [createRecentsRepository]. */
+public fun createFolderGrants(context: Context): FolderGrantRepository {
+    val app = context.applicationContext
+    return FolderGrantRepository(
+        app.bifolioDataStore,
+        AndroidUriGrants(app.contentResolver),
+        AndroidFolderDocuments(app.contentResolver),
+    )
+}
+
 /** The app-wide reading profile, on the same DataStore file as [createRecentsRepository]. */
 public fun createReadingPreferences(context: Context): ReadingPreferences =
     ReadingPreferences(context.applicationContext.bifolioDataStore)
