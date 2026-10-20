@@ -62,6 +62,25 @@ class ContrastTest {
     }
 
     @Test
+    fun everyCodeTokenColorMeetsFourPointFiveOnTheCodeSurface() {
+        all.forEach {
+            val t = it.codeTokens
+            mapOf(
+                "keyword" to t.keyword,
+                "string" to t.string,
+                "number" to t.number,
+                "comment" to t.comment,
+                "type" to t.type,
+                "function" to t.function,
+                "operator" to t.operator,
+                "punctuation" to t.punctuation,
+            ).forEach { (name, color) ->
+                assertTrue(ratio(color, it.codeSurface) >= 4.5, "${it.id} $name on code surface")
+            }
+        }
+    }
+
+    @Test
     fun typographyScaleFollowsDesignTable() {
         val t = readingTypography(ReadingPalettes.Paper)
         assertTrue(t.heading(1).fontSize.value > t.heading(2).fontSize.value)

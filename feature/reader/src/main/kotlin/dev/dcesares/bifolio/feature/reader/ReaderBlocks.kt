@@ -199,6 +199,10 @@ private fun CodeView(
     /** The block whose search hits are painted in the code, or null for blocks the search does not read. */
     block: Block? = null,
 ) {
+    val language = (block as? CodeBlock)?.takeIf { it.fenced }?.language
+    val tokens = BifolioTheme.palette.codeTokens
+    val spans = rememberTokenSpans(code, language)
+    val text = remember(code, spans, tokens) { spans?.let { codeAnnotated(code, it, tokens) } ?: AnnotatedString(code) }
     Box(
         modifier
             .fillMaxWidth()
@@ -206,7 +210,7 @@ private fun CodeView(
             .background(BifolioTheme.palette.codeSurface),
     ) {
         Box(Modifier.horizontalScroll(rememberScrollState()).padding(Spacing.M)) {
-            HighlightedText(AnnotatedString(code), block, BifolioTheme.typography.code, softWrap = false)
+            HighlightedText(text, block, BifolioTheme.typography.code, softWrap = false)
         }
     }
 }

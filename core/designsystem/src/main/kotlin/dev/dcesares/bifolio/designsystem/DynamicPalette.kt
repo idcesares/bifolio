@@ -35,6 +35,7 @@ public object DynamicPalette {
             codeSurface = tone(if (dark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_100),
             rule = muted.copy(alpha = RULE_ALPHA),
             isDark = dark,
+            codeTokens = (if (dark) ReadingPalettes.Night else ReadingPalettes.Paper).codeTokens,
         )
     }
 

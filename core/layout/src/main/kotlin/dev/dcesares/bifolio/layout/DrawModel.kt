@@ -19,6 +19,11 @@ public class TextLeaf(
     public val sourceStart: Int = -1,
     /** Source offset where the text ends (half open), or -1 when the text has no source mapping. */
     public val sourceEnd: Int = -1,
+    /**
+     * Info string of a fenced code block whose text this is, for syntax coloring at draw time (SYN-11). Null for
+     * everything else, including indented code, math, front matter and diagrams, which stay plain.
+     */
+    public val language: String? = null,
 )
 
 public enum class MarkerKind { BULLET, NUMBER, TASK_UNCHECKED, TASK_CHECKED }

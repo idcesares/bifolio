@@ -200,7 +200,8 @@ internal class BlockFlattener(
         val map = CodeSourceMap.build(text, document.source, from, block.range.end)
         val pad = metrics.codePadding
         val inner = Place(maxOf(place.width - 2 * pad, 1), place.x + pad, place.top)
-        leaf(Rendered(text, map), TextRole.CODE, inner, out, keep = false, free = true)
+        val language = (block as? CodeBlock)?.takeIf { it.fenced }?.language
+        leaf(Rendered(text, map), TextRole.CODE, inner, out, keep = false, free = true, language = language)
     }
 
     private fun leaf(
@@ -210,6 +211,7 @@ internal class BlockFlattener(
         out: BlockLayoutBuilder,
         keep: Boolean,
         free: Boolean = false,
+        language: String? = null,
     ) {
         val map = rendered.map
         val w = maxOf(place.width, 1)
@@ -225,6 +227,7 @@ internal class BlockFlattener(
                 w,
                 sourceStart = if (mapped) map[0] else -1,
                 sourceEnd = if (mapped) map[rendered.text.length] else -1,
+                language = language,
             )
         val kind = if (role == TextRole.CODE) LineKind.CODE else LineKind.TEXT
         out.beginRun()

@@ -33,6 +33,19 @@ Fixed palettes for the reading surface (TYP-08, TYP-09). Contrast ratios are com
 
 Derived tokens (computed in code from the above, documented here when fixed in M4): `rule` (hairlines, quote bars), `selection`, `searchHit`, `searchHitFocused`, callout tints for note, tip, important, warning, caution (each must keep `ink` at 7:1 or more on the tint), and syntax colors for the token types in ADR-0007 (each at 4.5:1 or more on `codeSurface`).
 
+Syntax colors (`codeTokens`, ADR-0007), color only, never weight or slant, so highlighted code keeps the plain advance. Ratios against `codeSurface` are all 4.5:1 or more (ContrastTest).
+
+| Token | Paper | Sepia | Dusk | Night |
+|---|---|---|---|---|
+| `keyword` | `#8A2F5C` | `#7A2650` | `#E58FB8` | `#E085B0` |
+| `string` | `#2F6B2A` | `#2A5E24` | `#9BCB85` | `#93C47D` |
+| `number` | `#1F5F8A` | `#1B5278` | `#86BDE8` | `#7FB6E2` |
+| `comment` | `#6A6354` | `#5C4C36` | `#A09A8E` | `#9A9488` |
+| `type` | `#6B4E00` | `#5E4300` | `#E0C06A` | `#D9B960` |
+| `function` | `#6A3F96` | `#5E3585` | `#C3A6EE` | `#BC9FE8` |
+| `operator` | `#7A3F22` | `#6B3316` | `#E2B38F` | `#D8AA86` |
+| `punctuation` | `#5E574B` | `#5A4A34` | `#B5AEA2` | `#ADA79B` |
+
 Night is true black for OLED; its ink is deliberately dimmed to reduce halation.
 
 **Chrome colors.** Chrome surfaces derive from the active reading theme (a slightly elevated `page` tone with `ink` content), so opening the chrome never flashes a different palette. Dynamic color applies to the library and settings only when the user enables it (off by default).

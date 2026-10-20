@@ -24,6 +24,7 @@ import dev.dcesares.bifolio.layout.TextLeaf
 import dev.dcesares.bifolio.layout.TextRole
 import dev.dcesares.bifolio.model.CalloutKind
 import dev.dcesares.bifolio.model.ColumnAlignment
+import dev.dcesares.bifolio.text.ColorRuns
 import dev.dcesares.bifolio.text.TextLayoutFactory
 import dev.dcesares.bifolio.text.TextPalette
 
@@ -146,7 +147,16 @@ internal class ColumnPainter(
 
     @Synchronized
     private fun layoutOf(leaf: TextLeaf): Layout =
-        leafLayouts.getOrPut(leaf) { factory.layout(leaf.text, leaf.role, leaf.width, leaf.styles, textPalette) }
+        leafLayouts.getOrPut(leaf) {
+            factory.layout(leaf.text, leaf.role, leaf.width, leaf.styles, textPalette, codeRunsOf(leaf))
+        }
+
+    /** Syntax colors of a fenced code leaf (SYN-11); null leaves the text in `ink`. Runs off the main thread. */
+    private fun codeRunsOf(leaf: TextLeaf): ColorRuns? {
+        if (leaf.role != TextRole.CODE) return null
+        val spans = CodeTokenCache.spansOf(leaf.text, leaf.language) ?: return null
+        return colorRunsOf(spans, palette.codeTokens)
+    }
 
     /** Ops for one column of [draw], in paint order, plus the end ornament when the page ends the document (PAG-12). */
     fun prepare(

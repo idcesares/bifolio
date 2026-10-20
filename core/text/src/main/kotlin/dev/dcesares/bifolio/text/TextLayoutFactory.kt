@@ -30,6 +30,19 @@ public class TextPalette(
 )
 
 /**
+ * Foreground colors for ranges of a text, parallel arrays of half-open `[starts, ends)` and ARGB colors. Paint
+ * only: they are applied as `ForegroundColorSpan`, which never changes advance, so line breaks stay the same as
+ * for the plain text (ADR-0013). Used for syntax coloring (SYN-11).
+ */
+public class ColorRuns(
+    public val starts: IntArray,
+    public val ends: IntArray,
+    public val colors: IntArray,
+) {
+    public val count: Int get() = starts.size
+}
+
+/**
  * The one place that turns text, a [TextRole] and [TextStyles] into a `StaticLayout`. The measurer calls it to
  * count lines; the reader calls it with the same arguments (plus a [TextPalette]) to draw those lines. Same
  * inputs, same line breaks (ADR-0013). Holds no mutable state; any thread may call it.
@@ -44,6 +57,7 @@ public class TextLayoutFactory(
         width: Int,
         styles: TextStyles = TextStyles.NONE,
         palette: TextPalette? = null,
+        runs: ColorRuns? = null,
     ): StaticLayout {
         val w = maxOf(1, width)
         val paint = paintOf(role, palette)
@@ -52,7 +66,7 @@ public class TextLayoutFactory(
         val fm = paint.fontMetrics
         val extra = lineHeightOf(role) * size - (fm.descent - fm.ascent)
         return StaticLayout.Builder
-            .obtain(spanned(text, styles, palette), 0, text.length, paint, w)
+            .obtain(spanned(text, styles, palette, runs), 0, text.length, paint, w)
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setLineSpacing(extra, 1f)
             .setIncludePad(false)
@@ -105,13 +119,24 @@ public class TextLayoutFactory(
         text: String,
         styles: TextStyles,
         palette: TextPalette?,
+        runs: ColorRuns?,
     ): CharSequence {
-        if (styles.count == 0) return text
+        val colored = runs != null && palette != null && runs.count > 0
+        if (styles.count == 0 && !colored) return text
         val s = SpannableString(text)
         for (i in 0 until styles.count) {
             val from = styles.starts[i].coerceIn(0, text.length)
             val to = styles.ends[i].coerceIn(from, text.length)
             if (to > from) apply(s, from, to, styles.flags[i], palette)
+        }
+        if (colored && runs != null) {
+            for (i in 0 until runs.count) {
+                val from = runs.starts[i].coerceIn(0, text.length)
+                val to = runs.ends[i].coerceIn(from, text.length)
+                if (to > from) {
+                    s.setSpan(ForegroundColorSpan(runs.colors[i]), from, to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
         }
         return s
     }
