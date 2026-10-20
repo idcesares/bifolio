@@ -85,6 +85,8 @@ Paragraph separation: 0.6 lines of space, no first-line indent (Markdown readers
 
 On a spread, panes slide over the page on the side of the button that opened them and never cross the fold.
 
+External link confirmation (NAV-08) follows the same rule as the notes sheet: bottom sheet below 840dp, floating sheet from 840dp. It shows the full URL, a warning line when the URL carries userinfo, and two actions: Open and Cancel. Overlays on the reading surface (TOC, search, notes, link confirmation) carry a thin border in the theme rule color so they stay legible on Night.
+
 ## 6. Motion tokens
 
 | Token | Use | Specification |

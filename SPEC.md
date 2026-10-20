@@ -117,7 +117,7 @@ Normative words: **MUST** is required for v1.0. **SHOULD** is expected unless an
 | SYN-08 | Images (local, relative or content URI; data URIs up to 2 MB) | Atomic block; alt text shown when unavailable |
 | SYN-09 | Footnotes | Superscript marker; tap opens a popover (UI-09). Definitions are blocks at their source position; the UI may also gather them into a notes list at document end |
 | SYN-10 | GitHub alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) | Callout block with Lucide icon and tinted rule |
-| SYN-11 | Code highlighting for at least: kotlin, java, python, javascript, typescript, json, yaml, toml, bash/shell, sql, html, css, markdown, c, cpp, go, rust, swift, diff | Via the highlighter adapter (ADR-0007); unknown languages render unhighlighted |
+| SYN-11 | Code highlighting for at least: kotlin, java, python, javascript, typescript, json, yaml, toml, bash/shell, sql, html, css, markdown, c, cpp, go, rust, swift, diff | Via the highlighter adapter (ADR-0007); unknown languages render unhighlighted. Aliases: `xml` and `svg` use the html rules, `jsonc` uses json |
 | SYN-12 | Math: `$...$` inline, `$$...$$` and fenced `math` display | Native renderer (ADR-0006); on parse failure show the TeX source in monospace with a subtle error mark |
 | SYN-13 | YAML front matter | Metadata card at top; `title` overrides the first H1 as document title; `lang` (alias `language`, a BCP 47 tag) sets hyphenation locale |
 | SYN-14 | Mermaid fences | Source shown as code with a "Diagram (not rendered)" label |
@@ -216,7 +216,7 @@ All values in px at the current density; `W` is the usable window width after in
 | NAV-05 | Scroll mode: standard fling, plus the same keyboard shortcuts scrolling by 90% of the viewport |
 | NAV-06 | Predictive back: from reader to library animates the reader shrinking toward its library item; from overlays closes the overlay |
 | NAV-07 | Internal links jump to the target heading or footnote and trigger ANC-06 |
-| NAV-08 | External links show a small confirmation sheet with the full URL, then open in a Custom Tab or the default browser. Bifolio itself performs no network request |
+| NAV-08 | External links show a small confirmation sheet with the full URL, then open in the default browser through a plain `ACTION_VIEW` intent. Bifolio itself performs no network request |
 | NAV-09 | Long press selects text; selection supports copy and share. Cross-page selection is NOT required in v1 |
 
 ---
@@ -249,7 +249,7 @@ All values in px at the current density; `W` is the usable window width after in
 | UI-05 | **Progress hairline**: a 2dp line at the foot of the spread showing document progress; can be turned off |
 | UI-06 | **Time remaining**: words remaining in document and in current section divided by reading speed (default 230 words per minute, calibrated from the user's actual page-turn pace after 10 pages, clamped 120 to 450) |
 | UI-07 | **Table of contents**: sheet on compact widths, side pane over the reading surface at 840dp and wider. Current section highlighted. Levels H1 to H3 shown, deeper collapsed |
-| UI-08 | **Search**: query field, result list with context snippets, highlights in text, next and previous. Results computed off the main thread over the source text and mapped to anchors |
+| UI-08 | **Search**: query field, result list with context snippets, highlights in text, next and previous. Results computed off the main thread over the source text and mapped to anchors. YAML front matter (SYN-13) is not searched |
 | UI-09 | **Footnote popover**: anchored to the marker, scrollable if long, with a "go to note" action |
 | UI-10 | **Appearance sheet**: font, size, line height, margins, justification, hyphenation, theme, reading mode (paged or scroll), columns (Auto, 1, 2, 3, with a note when the current window limits the choice), page turn animation (Slide, Fade, None), progress hairline, volume keys |
 | UI-11 | **About**: version, license (Apache-2.0), open source licenses screen generated from dependencies, link text for the source repository and `bifolio@dcesares.dev` |
