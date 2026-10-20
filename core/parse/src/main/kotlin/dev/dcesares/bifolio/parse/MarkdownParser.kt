@@ -32,15 +32,17 @@ public object MarkdownParser {
      * block range refer to the normalized text. Pure CPU work: call it off the main thread.
      */
     public fun parse(text: String): Document {
-        val source = TextDecoder.normalizeLineEndings(text)
-        val root = parser.parse(source)
+        val source = TextDecoder.normalizeLineEndings(text).removePrefix("﻿")
+        val front = FrontMatterScanner.scan(source)
+        val root = parser.parse(if (front == null) source else FrontMatterScanner.blank(source, front))
         val converter = BlockConverter(source, ::summaryInlines)
-        val blocks = converter.convertChildren(root, 0)
+        val blocks = listOfNotNull(front) + converter.convertChildren(root, 0)
         val title =
-            blocks
-                .firstNotNullOfOrNull { (it as? Heading)?.takeIf { h -> h.level == 1 } }
-                ?.let { plainText(it.content).trim() }
-        return Document(title, source, blocks)
+            front?.title
+                ?: blocks
+                    .firstNotNullOfOrNull { (it as? Heading)?.takeIf { h -> h.level == 1 } }
+                    ?.let { plainText(it.content).trim() }
+        return Document(title, source, blocks, front?.language)
     }
 
     private fun summaryInlines(markdown: String): List<Inline> {

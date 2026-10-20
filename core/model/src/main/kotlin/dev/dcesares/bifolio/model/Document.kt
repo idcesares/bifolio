@@ -19,6 +19,8 @@ public data class Document(
     val title: String?,
     val source: String,
     val blocks: List<Block>,
+    /** Document language from front matter `lang` (SYN-13, TYP-05); null when unspecified. */
+    val language: String? = null,
 ) {
     /**
      * Anchor of the source character at [sourceOffset] (clamped to the source). An offset between blocks

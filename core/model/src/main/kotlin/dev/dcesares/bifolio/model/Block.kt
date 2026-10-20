@@ -127,12 +127,13 @@ public data class MathBlock(
     override val range: SourceRange,
 ) : Block
 
-/** Reserved for M5 (SYN-13). Atomic metadata card. */
+/** SYN-13. Atomic metadata card; [entries] are the flat `key: value` pairs in source order, unknown keys kept. */
 public data class FrontMatter(
     val raw: String,
     val title: String?,
     val language: String?,
     override val range: SourceRange,
+    val entries: List<Pair<String, String>> = emptyList(),
 ) : Block
 
 /** Reserved for M5 (SYN-14). Source shown as code with a "Diagram (not rendered)" label. */
