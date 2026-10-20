@@ -16,6 +16,7 @@ import org.commonmark.node.Node
 import org.commonmark.node.SoftLineBreak
 import org.commonmark.node.StrongEmphasis
 import org.commonmark.node.Text
+import org.commonmark.ext.footnotes.FootnoteReference as CmFootnoteReference
 
 /** One recognized inline HTML tag of the DOC-09 safe subset. */
 internal sealed interface HtmlTag {
@@ -176,6 +177,7 @@ internal class InlineConverter(
             is Image -> out.add(Inline.Image(node.destination, node.title, plainText(convert(node)), spanOf(node)))
             is SoftLineBreak -> out.add(Inline.SoftBreak)
             is HardLineBreak -> out.add(Inline.HardBreak)
+            is CmFootnoteReference -> out.add(Inline.FootnoteReference(node.label))
             is TaskListItemMarker -> Unit
             else -> out.addAll(convert(node))
         }

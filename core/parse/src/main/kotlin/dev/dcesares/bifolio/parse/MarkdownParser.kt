@@ -5,6 +5,7 @@ import dev.dcesares.bifolio.model.Heading
 import dev.dcesares.bifolio.model.Inline
 import dev.dcesares.bifolio.model.Paragraph
 import dev.dcesares.bifolio.model.plainText
+import org.commonmark.ext.footnotes.FootnotesExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.ext.task.list.items.TaskListItemsExtension
@@ -21,6 +22,7 @@ public object MarkdownParser {
                     TablesExtension.create(),
                     StrikethroughExtension.create(),
                     TaskListItemsExtension.create(),
+                    FootnotesExtension.create(),
                 ),
             ).includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
             .build()

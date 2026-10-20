@@ -5,6 +5,7 @@ import dev.dcesares.bifolio.model.BlockQuote
 import dev.dcesares.bifolio.model.Callout
 import dev.dcesares.bifolio.model.CodeBlock
 import dev.dcesares.bifolio.model.ColumnAlignment
+import dev.dcesares.bifolio.model.FootnoteDefinition
 import dev.dcesares.bifolio.model.Heading
 import dev.dcesares.bifolio.model.HtmlDetails
 import dev.dcesares.bifolio.model.Inline
@@ -27,6 +28,7 @@ import org.commonmark.node.HtmlBlock
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Node
 import org.commonmark.node.OrderedList
+import org.commonmark.ext.footnotes.FootnoteDefinition as CmFootnoteDefinition
 import org.commonmark.ext.gfm.tables.TableCell as CmTableCell
 import org.commonmark.ext.gfm.tables.TableRow as CmTableRow
 import org.commonmark.node.BlockQuote as CmBlockQuote
@@ -88,37 +90,30 @@ internal class BlockConverter(
             }
             is CmParagraph -> out.add(Paragraph(inlines.convert(node), range))
             is CmListBlock -> convertList(node, depth, range, out)
-            is CmBlockQuote -> {
-                val kind = AlertMarker.kind(node)
-                if (kind != null) {
-                    AlertMarker.strip(node)
-                    if (depth >= MAX_NESTING) {
-                        out.addAll(convertChildren(node, depth))
-                    } else {
-                        out.add(Callout(kind, convertChildren(node, depth + 1), range))
-                    }
-                } else if (depth >=
-                    MAX_NESTING
-                ) {
-                    out.addAll(convertChildren(node, depth))
-                } else {
-                    out.add(
-                        BlockQuote(
-                            convertChildren(
-                                node,
-                                depth + 1,
-                            ),
-                            range,
-                        ),
-                    )
-                }
-            }
+            is CmBlockQuote -> convertQuote(node, depth, range, out)
             is FencedCodeBlock -> out.add(CodeBlock(languageOf(node.info), trimOneNewline(node.literal), true, range))
             is IndentedCodeBlock -> out.add(CodeBlock(null, trimOneNewline(node.literal), false, range))
             is CmThematicBreak -> out.add(ThematicBreak(range))
             is HtmlBlock -> out.add(Paragraph(inlines.plainLines(node.literal.trimEnd('\n'), range), range))
+            is CmFootnoteDefinition -> out.add(FootnoteDefinition(node.label, convertChildren(node, depth), range))
             is TableBlock -> out.add(TableConverter.convert(node, range, inlines))
             else -> Unit
+        }
+    }
+
+    private fun convertQuote(
+        node: CmBlockQuote,
+        depth: Int,
+        range: SourceRange,
+        out: MutableList<Block>,
+    ) {
+        val kind = AlertMarker.kind(node)
+        if (kind != null) AlertMarker.strip(node)
+        if (depth >= MAX_NESTING) {
+            out.addAll(convertChildren(node, depth))
+        } else {
+            val inner = convertChildren(node, depth + 1)
+            out.add(if (kind != null) Callout(kind, inner, range) else BlockQuote(inner, range))
         }
     }
 
@@ -144,14 +139,6 @@ internal class BlockConverter(
     ): ListItem {
         val task = taskStateOf(item)
         return ListItem(task, convertChildren(item, depth), rangeOf(item))
-    }
-
-    private fun taskStateOf(item: CmListItem): TaskState? {
-        val marker =
-            item.firstChild as? TaskListItemMarker
-                ?: item.firstChild?.firstChild as? TaskListItemMarker
-                ?: return null
-        return if (marker.isChecked) TaskState.CHECKED else TaskState.UNCHECKED
     }
 
     /** Builds a [HtmlDetails] starting at nodes[index]; returns the index after the last consumed node. */
@@ -341,6 +328,14 @@ internal object TableConverter {
             CmTableCell.Alignment.RIGHT -> ColumnAlignment.RIGHT
             null -> ColumnAlignment.NONE
         }
+}
+
+private fun taskStateOf(item: CmListItem): TaskState? {
+    val marker =
+        item.firstChild as? TaskListItemMarker
+            ?: item.firstChild?.firstChild as? TaskListItemMarker
+            ?: return null
+    return if (marker.isChecked) TaskState.CHECKED else TaskState.UNCHECKED
 }
 
 private fun languageOf(info: String?): String? {
