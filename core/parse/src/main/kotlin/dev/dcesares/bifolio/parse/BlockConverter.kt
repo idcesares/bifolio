@@ -11,6 +11,7 @@ import dev.dcesares.bifolio.model.HtmlDetails
 import dev.dcesares.bifolio.model.Inline
 import dev.dcesares.bifolio.model.ListBlock
 import dev.dcesares.bifolio.model.ListItem
+import dev.dcesares.bifolio.model.MermaidFence
 import dev.dcesares.bifolio.model.Paragraph
 import dev.dcesares.bifolio.model.SourceRange
 import dev.dcesares.bifolio.model.Table
@@ -91,7 +92,17 @@ internal class BlockConverter(
             is CmParagraph -> out.add(Paragraph(inlines.convert(node), range))
             is CmListBlock -> convertList(node, depth, range, out)
             is CmBlockQuote -> convertQuote(node, depth, range, out)
-            is FencedCodeBlock -> out.add(CodeBlock(languageOf(node.info), trimOneNewline(node.literal), true, range))
+            is FencedCodeBlock -> {
+                val language = languageOf(node.info)
+                val code = trimOneNewline(node.literal)
+                out.add(
+                    if (language == "mermaid") {
+                        MermaidFence(code, range)
+                    } else {
+                        CodeBlock(language, code, true, range)
+                    },
+                )
+            }
             is IndentedCodeBlock -> out.add(CodeBlock(null, trimOneNewline(node.literal), false, range))
             is CmThematicBreak -> out.add(ThematicBreak(range))
             is HtmlBlock -> out.add(Paragraph(inlines.plainLines(node.literal.trimEnd('\n'), range), range))
