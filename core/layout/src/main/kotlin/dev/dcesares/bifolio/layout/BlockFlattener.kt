@@ -28,6 +28,7 @@ internal class BlockFlattener(
     private val document: Document,
     private val measurer: BlockMeasurer,
     private val geometry: Geometry,
+    private val images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
 ) {
     private val metrics = geometry.metrics
     private val cache = HashMap<Long, BlockLayout>()
@@ -295,18 +296,24 @@ internal class BlockFlattener(
     ) {
         flushTitle(place, out)
         val width = maxOf(place.width, 1)
-        val size = measurer.measureAtomic(block, width)
         val maxHeight = maxOf(geometry.columnHeight * metrics.atomicMaxHeightPercent / PERCENT, 1)
-        var scale = 1.0
-        if (size.width > width) scale = width.toDouble() / size.width
-        if (size.height * scale > maxHeight) scale = maxHeight.toDouble() / size.height
-        val h = maxOf(kotlin.math.ceil(size.height * scale).toInt(), 1)
-        val w = minOf(maxOf(kotlin.math.ceil(size.width * scale).toInt(), 1), width)
+        val fitted = AtomicFit.fit(naturalSize(block, width), width, maxHeight)
+        val h = fitted.height
+        val w = fitted.width
         out.beginRun()
         out.beginUnit(true)
         out.line(0, h, block.range.start - place.top, block.range.end - place.top, 0)
-        out.draw(LineKind.ATOMIC, place.x + (width - w) / 2, w)
+        out.draw(LineKind.ATOMIC, place.x + (width - w) / 2, w, atom = block)
         out.advance(h)
+    }
+
+    /** An image with a known size uses it; everything else, placeholders included, comes from the measurer. */
+    private fun naturalSize(
+        block: Block,
+        width: Int,
+    ): AtomicSize {
+        val known = (block as? ImageBlock)?.let { images.sizeOf(it) } as? ImageSize.Known
+        return if (known != null) AtomicSize(known.width, known.height) else measurer.measureAtomic(block, width)
     }
 
     private companion object {

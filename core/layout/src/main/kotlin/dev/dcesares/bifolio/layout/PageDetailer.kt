@@ -17,8 +17,9 @@ public class PageDetailer(
     private val document: Document,
     measurer: BlockMeasurer,
     private val geometry: Geometry,
+    images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
 ) {
-    private val flattener = BlockFlattener(document, measurer, geometry)
+    private val flattener = BlockFlattener(document, measurer, geometry, images)
 
     /** Drawing instructions of [page] placed in column [column] (its width decides the line breaks). */
     @Synchronized
@@ -126,9 +127,7 @@ public class PageDetailer(
                     i++
                 }
                 else -> {
-                    val block = document.blocks[slice.blockIndex]
-                    val y = layout.tops[i] + offset
-                    items.add(DrawAtomic(block, d.x[i], d.width[i], y, layout.bottoms[i] - layout.tops[i]))
+                    items.add(atomic(slice, layout, i, offset))
                     i++
                 }
             }
@@ -146,6 +145,19 @@ public class PageDetailer(
                 ),
             )
         }
+    }
+
+    /** The atomic box of [line]; the block is the nested one when the image or table sits in a list or a quote. */
+    private fun atomic(
+        slice: Slice,
+        layout: BlockLayout,
+        line: Int,
+        offset: Int,
+    ): DrawAtomic {
+        val d = layout.draw
+        val block = d.atom[line] ?: document.blocks[slice.blockIndex]
+        val y = layout.tops[line] + offset
+        return DrawAtomic(block, d.x[line], d.width[line], y, layout.bottoms[line] - layout.tops[line])
     }
 
     /** Emits one [DrawText] for consecutive lines of the same leaf starting at [from]; returns the next line. */

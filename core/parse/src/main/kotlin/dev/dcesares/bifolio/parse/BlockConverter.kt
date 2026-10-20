@@ -8,6 +8,7 @@ import dev.dcesares.bifolio.model.ColumnAlignment
 import dev.dcesares.bifolio.model.FootnoteDefinition
 import dev.dcesares.bifolio.model.Heading
 import dev.dcesares.bifolio.model.HtmlDetails
+import dev.dcesares.bifolio.model.ImageBlock
 import dev.dcesares.bifolio.model.Inline
 import dev.dcesares.bifolio.model.ListBlock
 import dev.dcesares.bifolio.model.ListItem
@@ -89,7 +90,7 @@ internal class BlockConverter(
                 val content = inlines.convert(node)
                 out.add(Heading(node.level, content, slugs.next(plainText(content)), range))
             }
-            is CmParagraph -> out.add(Paragraph(inlines.convert(node), range))
+            is CmParagraph -> out.add(paragraph(inlines.convert(node), range))
             is CmListBlock -> convertList(node, depth, range, out)
             is CmBlockQuote -> convertQuote(node, depth, range, out)
             is FencedCodeBlock -> {
@@ -360,3 +361,18 @@ private fun languageOf(info: String?): String? {
 }
 
 private fun trimOneNewline(literal: String): String = literal.removeSuffix("\n")
+
+private fun Inline.isBlankText(): Boolean = this is Inline.Text && text.isBlank()
+
+/**
+ * A paragraph that holds one image and nothing else becomes an atomic [ImageBlock] (SYN-08); the block count
+ * and order are unchanged. Text with an image, several images and linked images stay paragraphs.
+ */
+private fun paragraph(
+    content: List<Inline>,
+    range: SourceRange,
+): Block {
+    val visible = content.filterNot { it == Inline.SoftBreak || it == Inline.HardBreak || it.isBlankText() }
+    val image = visible.singleOrNull() as? Inline.Image ?: return Paragraph(content, range)
+    return ImageBlock(image.source, image.title, image.alt, range)
+}

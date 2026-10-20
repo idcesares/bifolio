@@ -1,5 +1,7 @@
 package dev.dcesares.bifolio.layout
 
+import dev.dcesares.bifolio.model.Block
+
 /** Unit table of a [BlockLayout]: for each line its unit, and for each unit its first line, length and keep flag. */
 internal class Units(
     val of: IntArray,
@@ -110,6 +112,7 @@ internal class BlockLayoutBuilder {
     private var leafBottoms = IntArray(INITIAL)
     private var tables = arrayOfNulls<TableDraw>(INITIAL)
     private var callouts = IntArray(INITIAL)
+    private var atoms = arrayOfNulls<Block>(INITIAL)
     private val markers = ArrayList<MarkerRec>()
     private val bars = ArrayList<BarRec>()
     var lineCount = 0
@@ -178,6 +181,7 @@ internal class BlockLayoutBuilder {
         leafBottom: Int = 0,
         table: TableDraw? = null,
         callout: Int = 0,
+        atom: Block? = null,
     ) {
         val i = lineCount - 1
         kinds[i] = kind
@@ -188,6 +192,7 @@ internal class BlockLayoutBuilder {
         leafBottoms[i] = leafBottom
         tables[i] = table
         callouts[i] = callout
+        atoms[i] = atom
     }
 
     fun marker(rec: MarkerRec) {
@@ -219,6 +224,7 @@ internal class BlockLayoutBuilder {
         leafBottoms = leafBottoms.copyOf(n)
         tables = tables.copyOf(n)
         callouts = callouts.copyOf(n)
+        atoms = atoms.copyOf(n)
     }
 
     fun build(keepWithNext: Boolean): BlockLayout =
@@ -248,6 +254,7 @@ internal class BlockLayoutBuilder {
                     leafBottoms.copyOf(lineCount),
                     tables.copyOf(lineCount),
                     callouts.copyOf(lineCount),
+                    atoms.copyOf(lineCount),
                     markers.toList(),
                     bars.toList(),
                 ),
@@ -304,6 +311,8 @@ internal class LineDraws(
     val table: Array<TableDraw?>,
     /** Ordinal of the callout kind for [LineKind.TITLE] lines. */
     val callout: IntArray,
+    /** The atomic block drawn on a [LineKind.ATOMIC] line: the image itself, also when nested in a list or quote. */
+    val atom: Array<Block?>,
     val markers: List<MarkerRec>,
     val bars: List<BarRec>,
 )

@@ -7,6 +7,8 @@ import dev.dcesares.bifolio.model.Document
 public data class LayoutKey(
     val contentHash: String,
     val geometry: Geometry,
+    /** Changes whenever the image sizes the pagination used change, so a flow made without them is not reused. */
+    val imageKey: Int = 0,
 )
 
 /**
@@ -55,14 +57,17 @@ public class PaginationService(
         geometry: Geometry,
         anchor: Anchor,
         cancel: CancellationSignal = CancellationSignal.NEVER,
+        images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
+        imageKey: Int = 0,
         onProgress: (PageFlow) -> Unit = {},
     ): PageFlow? {
-        val key = LayoutKey(contentHash, geometry)
+        val key = LayoutKey(contentHash, geometry, imageKey)
         cache[key]?.let {
             onProgress(it)
             return it
         }
-        val flow = Paginator(document, measurer, geometry).paginateAround(anchor, cancel, onProgress) ?: return null
+        val paginator = Paginator(document, measurer, geometry, images)
+        val flow = paginator.paginateAround(anchor, cancel, onProgress) ?: return null
         cache.put(key, flow)
         return flow
     }

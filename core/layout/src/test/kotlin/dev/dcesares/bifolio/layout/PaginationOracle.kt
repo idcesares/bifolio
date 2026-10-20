@@ -34,8 +34,9 @@ internal class PaginationOracle(
     measurer: BlockMeasurer,
     private val geometry: Geometry,
     private val label: String,
+    images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
 ) {
-    private val flattener = BlockFlattener(doc, measurer, geometry)
+    private val flattener = BlockFlattener(doc, measurer, geometry, images)
     private val widths = geometry.columnWidths
     private val minWidth = widths.min()
     private val mixed = widths.any { it != minWidth }
