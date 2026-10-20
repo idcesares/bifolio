@@ -2,6 +2,7 @@ package dev.dcesares.bifolio.parse
 
 import dev.dcesares.bifolio.model.Block
 import dev.dcesares.bifolio.model.BlockQuote
+import dev.dcesares.bifolio.model.Callout
 import dev.dcesares.bifolio.model.CodeBlock
 import dev.dcesares.bifolio.model.ColumnAlignment
 import dev.dcesares.bifolio.model.Heading
@@ -87,8 +88,16 @@ internal class BlockConverter(
             }
             is CmParagraph -> out.add(Paragraph(inlines.convert(node), range))
             is CmListBlock -> convertList(node, depth, range, out)
-            is CmBlockQuote ->
-                if (depth >=
+            is CmBlockQuote -> {
+                val kind = AlertMarker.kind(node)
+                if (kind != null) {
+                    AlertMarker.strip(node)
+                    if (depth >= MAX_NESTING) {
+                        out.addAll(convertChildren(node, depth))
+                    } else {
+                        out.add(Callout(kind, convertChildren(node, depth + 1), range))
+                    }
+                } else if (depth >=
                     MAX_NESTING
                 ) {
                     out.addAll(convertChildren(node, depth))
@@ -103,6 +112,7 @@ internal class BlockConverter(
                         ),
                     )
                 }
+            }
             is FencedCodeBlock -> out.add(CodeBlock(languageOf(node.info), trimOneNewline(node.literal), true, range))
             is IndentedCodeBlock -> out.add(CodeBlock(null, trimOneNewline(node.literal), false, range))
             is CmThematicBreak -> out.add(ThematicBreak(range))
