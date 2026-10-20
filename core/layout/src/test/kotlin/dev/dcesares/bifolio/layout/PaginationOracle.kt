@@ -8,6 +8,7 @@ import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.model.FootnoteDefinition
 import dev.dcesares.bifolio.model.Heading
 import dev.dcesares.bifolio.model.HtmlDetails
+import dev.dcesares.bifolio.model.Inline
 import dev.dcesares.bifolio.model.ListBlock
 import dev.dcesares.bifolio.model.MermaidFence
 import dev.dcesares.bifolio.model.Paragraph
@@ -269,8 +270,8 @@ internal class PaginationOracle(
 
     private fun renderedLength(b: Block): Int =
         when (b) {
-            is Heading -> plainText(b.content).length
-            is Paragraph -> plainText(b.content).length
+            is Heading -> pageTextLength(b.content)
+            is Paragraph -> pageTextLength(b.content)
             is CodeBlock -> b.code.length
             is MermaidFence -> b.source.length
             is Table -> tableLength(b)
@@ -278,8 +279,24 @@ internal class PaginationOracle(
             is BlockQuote -> b.blocks.sumOf { renderedLength(it) }
             is Callout -> b.blocks.sumOf { renderedLength(it) }
             is FootnoteDefinition -> b.blocks.sumOf { renderedLength(it) }
-            is HtmlDetails -> plainText(b.summary).length + if (b.open) b.blocks.sumOf { renderedLength(it) } else 0
+            is HtmlDetails -> pageTextLength(b.summary) + if (b.open) b.blocks.sumOf { renderedLength(it) } else 0
             else -> 0
+        }
+
+    /** Text the page draws: the plain text plus the labels of footnote markers, which are drawn (SYN-09, UI-09). */
+    private fun pageTextLength(inlines: List<Inline>): Int = plainText(inlines).length + markerLabels(inlines)
+
+    private fun markerLabels(inlines: List<Inline>): Int =
+        inlines.sumOf { inline ->
+            when (inline) {
+                is Inline.FootnoteReference -> inline.label.length
+                is Inline.Emphasis -> markerLabels(inline.children)
+                is Inline.Strong -> markerLabels(inline.children)
+                is Inline.Strikethrough -> markerLabels(inline.children)
+                is Inline.Link -> markerLabels(inline.children)
+                is Inline.Styled -> markerLabels(inline.children)
+                else -> 0
+            }
         }
 
     private fun tableLength(t: Table): Int =
