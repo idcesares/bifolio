@@ -179,7 +179,7 @@ public class ReaderViewModel(
 
     private val mutableJumps = MutableSharedFlow<Anchor>(extraBufferCapacity = 1)
 
-    /** Asks the surface on screen to show an anchor. Today only the return chip sends it. */
+    /** Asks the surface on screen to show an anchor. Sent by the return chip and by the table of contents. */
     public val jumps: SharedFlow<Anchor> = mutableJumps
 
     private var returnExpiry: Job? = null
@@ -229,6 +229,15 @@ public class ReaderViewModel(
                 delay(RETURN_CHIP_MILLIS)
                 mutableReturnAnchor.value = null
             }
+    }
+
+    /**
+     * Jumps to [target] from the table of contents (UI-07): remembers where the reader is for the return chip, then
+     * asks the surface on screen to show the anchor (ANC-06). The target is an anchor, never a page (ANC-01).
+     */
+    public fun jumpTo(target: Anchor) {
+        onJump()
+        mutableJumps.tryEmit(target)
     }
 
     /** The chip was tapped: go back to the pre-jump anchor. The chip is gone afterwards. */

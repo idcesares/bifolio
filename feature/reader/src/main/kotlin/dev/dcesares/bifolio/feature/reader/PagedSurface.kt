@@ -127,7 +127,8 @@ internal class SpreadStore(
  *
  * In tabletop (POS-04) pages are painted and hit-tested only inside the text region, and the control deck fills
  * the deck region of the same surface. The deck seeks through [document] by anchor, never by page number.
- * [onOpenToc] is null until the table of contents exists (M5), which leaves its button disabled.
+ * [onOpenToc] opens the table of contents (UI-07); [showToc] is false when the document has no headings, which
+ * removes the deck button.
  */
 @Composable
 internal fun PagedSurface(
@@ -143,6 +144,7 @@ internal fun PagedSurface(
     requestDebounceMillis: Long = REQUEST_DEBOUNCE_MILLIS,
     document: Document? = null,
     onOpenToc: (() -> Unit)? = null,
+    showToc: Boolean = true,
     volumeKeysTurn: Boolean = false,
     jumps: Flow<Anchor> = emptyFlow(),
     appearance: AppearanceProfile = AppearanceProfile(),
@@ -396,6 +398,7 @@ internal fun PagedSurface(
                     onSeek = seek::seekTo,
                     onSeekFinished = seek::finish,
                     onOpenToc = onOpenToc,
+                    showToc = showToc,
                 )
             }
         }

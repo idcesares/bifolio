@@ -18,30 +18,13 @@ internal class SlugIndex(
     blocks: List<Block>,
 ) {
     private val byslug: Map<String, Int> =
-        buildMap {
-            blocks.forEachIndexed { index, block -> collect(block) { slug -> putIfAbsent(slug, index) } }
-        }
+        buildMap { forEachHeading(blocks) { index, heading -> putIfAbsent(heading.slug, index) } }
 
     /** Block index for a link destination such as `#my-heading` or `#caf%C3%A9`; null if not found. */
     fun blockIndexOf(destination: String): Int? {
         if (!destination.startsWith('#')) return null
         val raw = destination.substring(1)
         return byslug[raw] ?: byslug[decode(raw)] ?: byslug[decode(raw).lowercase()]
-    }
-
-    private fun collect(
-        block: Block,
-        add: (String) -> Unit,
-    ) {
-        when (block) {
-            is Heading -> add(block.slug)
-            is BlockQuote -> block.blocks.forEach { collect(it, add) }
-            is ListBlock -> block.items.forEach { item -> item.blocks.forEach { collect(it, add) } }
-            is HtmlDetails -> block.blocks.forEach { collect(it, add) }
-            is Callout -> block.blocks.forEach { collect(it, add) }
-            is FootnoteDefinition -> block.blocks.forEach { collect(it, add) }
-            else -> Unit
-        }
     }
 
     private fun decode(text: String): String =
@@ -51,4 +34,31 @@ internal class SlugIndex(
         } catch (_: IllegalArgumentException) {
             text
         }
+}
+
+/**
+ * Visits every heading in document order, including those nested in quotes, lists, details, callouts and
+ * footnote definitions, with the index of the top-level block that holds it. The one place that knows which
+ * containers can hold headings: the slug index and the table of contents both read it.
+ */
+internal fun forEachHeading(
+    blocks: List<Block>,
+    action: (topLevelIndex: Int, heading: Heading) -> Unit,
+) {
+    blocks.forEachIndexed { index, block -> visitHeadings(block) { action(index, it) } }
+}
+
+private fun visitHeadings(
+    block: Block,
+    action: (Heading) -> Unit,
+) {
+    when (block) {
+        is Heading -> action(block)
+        is BlockQuote -> block.blocks.forEach { visitHeadings(it, action) }
+        is ListBlock -> block.items.forEach { item -> item.blocks.forEach { visitHeadings(it, action) } }
+        is HtmlDetails -> block.blocks.forEach { visitHeadings(it, action) }
+        is Callout -> block.blocks.forEach { visitHeadings(it, action) }
+        is FootnoteDefinition -> block.blocks.forEach { visitHeadings(it, action) }
+        else -> Unit
+    }
 }

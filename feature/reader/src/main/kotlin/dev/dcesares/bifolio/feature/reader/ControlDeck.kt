@@ -59,7 +59,8 @@ private const val DISABLED_ALPHA = 0.4f
  * [progress] is the reading progress, 0 to 1. The scrubber reports a fraction through [onSeek] while it is
  * dragged and calls [onSeekFinished] when the finger leaves; the caller turns the fraction into an anchor.
  *
- * TEMPORARY: the table of contents is M5. While [onOpenToc] is null the button is shown disabled and opens nothing.
+ * The table of contents button is shown only when the document has headings ([showToc], UI-07). While [onOpenToc]
+ * is null it is shown disabled and opens nothing.
  */
 @Composable
 internal fun ControlDeck(
@@ -70,6 +71,7 @@ internal fun ControlDeck(
     onSeekFinished: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenToc: (() -> Unit)? = null,
+    showToc: Boolean = true,
 ) {
     val palette = BifolioTheme.palette
     Column(modifier.fillMaxSize().background(palette.page)) {
@@ -95,7 +97,7 @@ internal fun ControlDeck(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DeckScrubber(progress, onSeek, onSeekFinished, Modifier.weight(1f))
-            TocButton(onOpenToc)
+            if (showToc) TocButton(onOpenToc)
         }
     }
 }
@@ -124,7 +126,7 @@ private fun DeckZone(
     }
 }
 
-/** TEMPORARY (M5): the contents list does not exist yet, so without [onOpen] the button is disabled. */
+/** Opens the table of contents (UI-07). Without [onOpen] (previews and harnesses) the button is disabled. */
 @Composable
 private fun TocButton(onOpen: (() -> Unit)?) {
     val enabled = onOpen != null

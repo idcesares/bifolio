@@ -14,6 +14,7 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -131,11 +132,40 @@ class ControlDeckTest {
         compose.onNodeWithContentDescription("Table of contents").assertHeightIsAtLeast(Spacing.TouchTarget)
     }
 
-    /** TEMPORARY (M5): the contents button shows but is disabled. */
+    /** A harness without a contents opener (previews) shows the button disabled. */
     @Test
-    fun tableOfContentsButtonIsDisabledUntilM5() {
+    fun tableOfContentsButtonIsDisabledWithoutAnOpener() {
         deck(Calls())
         compose.onNodeWithContentDescription("Table of contents").assertIsDisplayed().assertIsNotEnabled()
+    }
+
+    /** UI-07: no headings, no button. */
+    @Test
+    fun tableOfContentsButtonIsAbsentWhenTheDocumentHasNoHeadings() {
+        RuntimeEnvironment.setQualifiers("+$DECK_QUALIFIERS")
+        compose.setContent {
+            BifolioTheme {
+                Box(Modifier.size(400.dp, DECK_HEIGHT_DP.dp)) {
+                    ControlDeck(0.5f, {}, {}, {}, {}, onOpenToc = {}, showToc = false)
+                }
+            }
+        }
+        assertEquals(0, compose.onAllNodesWithContentDescription("Table of contents").fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun tableOfContentsButtonOpensTheContents() {
+        var opened = 0
+        RuntimeEnvironment.setQualifiers("+$DECK_QUALIFIERS")
+        compose.setContent {
+            BifolioTheme {
+                Box(Modifier.size(400.dp, DECK_HEIGHT_DP.dp)) {
+                    ControlDeck(0.5f, {}, {}, {}, {}, onOpenToc = { opened++ })
+                }
+            }
+        }
+        compose.onNodeWithContentDescription("Table of contents").performClick()
+        assertEquals(1, opened)
     }
 
     private val tabletopFold = { win: Win ->

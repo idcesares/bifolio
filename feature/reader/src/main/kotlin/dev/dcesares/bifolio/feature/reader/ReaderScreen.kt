@@ -98,12 +98,27 @@ public fun ReaderRoute(
     val returnAnchor by viewModel.returnAnchor.collectAsStateWithLifecycle()
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
+    var tocOpen by rememberSaveable { mutableStateOf(false) }
+    var tocCurrent by rememberSaveable { mutableStateOf<Int?>(null) }
+    val foldSource = rememberFoldSource()
     var footerHeight by remember { mutableIntStateOf(0) }
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val timeLeft by viewModel.timeLeft.collectAsStateWithLifecycle()
     when (val current = state) {
         is ReaderUiState.Ready ->
             Box(modifier.fillMaxSize()) {
+                val contents = remember(current.document) { TableOfContents(current.document.blocks) }
+                // UI-07: no headings, no way in.
+                val openToc: (() -> Unit)? =
+                    if (contents.isEmpty) {
+                        null
+                    } else {
+                        {
+                            viewModel.keepChrome()
+                            tocCurrent = contents.currentIndex(viewModel.anchor.value)
+                            tocOpen = true
+                        }
+                    }
                 // A new surface per document and mode; the anchor carries the place across (ANC-04).
                 key(current.contentHash, mode) {
                     // Read once per surface: the surface owns the anchor while it is shown.
@@ -118,8 +133,10 @@ public fun ReaderRoute(
                             onFirstDrawn = viewModel::onFirstSpreadDrawn,
                             onToggleChrome = viewModel::toggleChrome,
                             notices = current.notices,
-                            foldSource = rememberFoldSource(),
+                            foldSource = foldSource,
                             document = current.document,
+                            onOpenToc = openToc,
+                            showToc = !contents.isEmpty,
                             volumeKeysTurn = volumeKeysTurn,
                             appearance = appearance,
                             jumps = viewModel.jumps,
@@ -130,6 +147,7 @@ public fun ReaderRoute(
                             onAnchorSettled = viewModel::onAnchorSettled,
                             startAnchor = start,
                             onToggleChrome = viewModel::toggleChrome,
+                            onOpenToc = openToc,
                             volumeKeysTurn = volumeKeysTurn,
                             onJump = viewModel::onJump,
                             jumps = viewModel.jumps,
@@ -173,6 +191,25 @@ public fun ReaderRoute(
                 if (sheetOpen) {
                     BackHandler { sheetOpen = false }
                     appearanceSheet { sheetOpen = false }
+                }
+                if (!contents.isEmpty) {
+                    if (tocOpen) BackHandler { tocOpen = false }
+                    val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
+                    val density = LocalDensity.current
+                    TocSheet(
+                        state =
+                            TocState(
+                                contents = contents,
+                                current = tocCurrent,
+                                onSelect = { entry ->
+                                    tocOpen = false
+                                    viewModel.jumpTo(entry.anchor)
+                                },
+                                onDismiss = { tocOpen = false },
+                            ),
+                        visible = tocOpen,
+                        clearance = with(density) { fold.tocClearance { it.toDp() } },
+                    )
                 }
             }
         is ReaderUiState.Failed -> ReaderFailure(current.reason, onBack, modifier)

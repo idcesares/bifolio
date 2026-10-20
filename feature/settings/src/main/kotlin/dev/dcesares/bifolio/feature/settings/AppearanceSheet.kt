@@ -40,12 +40,12 @@ import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.DynamicPalette
 import dev.dcesares.bifolio.designsystem.Spacing
 
-private val SheetRadius = 12.dp
-private val SheetMaxWidth = 560.dp
-private val SidePaneMinWindow = 840.dp
-private val SidePaneWidth = 400.dp
+private val SheetRadius = Spacing.SheetRadius
+private val SheetMaxWidth = Spacing.SheetMaxWidth
+private val SidePaneMinWindow = Spacing.SidePaneMinWindow
+private val SidePaneWidth = Spacing.SidePaneWidth
 private val SizeValueMinWidth = 56.dp
-private const val SCRIM_ALPHA = 0.32f
+private const val SCRIM_ALPHA = Spacing.SCRIM_ALPHA
 private const val SHEET_MAX_HEIGHT = 0.85f
 
 /** What the sheet edits besides the profile: the reading mode and the volume keys live in other stores. */

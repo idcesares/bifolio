@@ -103,6 +103,21 @@ class ReturnChipViewModelTest {
         }
 
     @Test
+    fun `a contents jump shows the target, offers the way back and the way back works`() =
+        runTest {
+            val vm = viewModel()
+            val received = mutableListOf<Anchor>()
+            val job = CoroutineScope(UnconfinedTestDispatcher(testScheduler)).launch { vm.jumps.toList(received) }
+            vm.onAnchorSettled(Anchor(1, 5))
+            vm.jumpTo(Anchor(7, 12))
+            assertEquals(listOf(Anchor(7, 12)), received)
+            assertEquals(Anchor(1, 5), vm.returnAnchor.value)
+            vm.returnToJump()
+            assertEquals(listOf(Anchor(7, 12), Anchor(1, 5)), received)
+            job.cancel()
+        }
+
+    @Test
     fun `opening another document drops the chip`() {
         val vm = viewModel()
         vm.onJump()

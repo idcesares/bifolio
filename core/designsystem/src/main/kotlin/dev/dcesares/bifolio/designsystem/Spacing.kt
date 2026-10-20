@@ -31,6 +31,21 @@ public object Spacing {
     /** Fraction of the usable width taken by each outer margin (LAY-05). */
     public const val PAGE_MARGIN_FRACTION: Float = 0.06f
 
+    /** Window width from which sheets (appearance, contents) become side panes (UI-02, UI-07). */
+    public val SidePaneMinWindow: Dp = 840.dp
+
+    /** Width of a side pane. */
+    public val SidePaneWidth: Dp = 400.dp
+
+    /** Widest a bottom sheet grows on medium windows. */
+    public val SheetMaxWidth: Dp = 560.dp
+
+    /** Corner radius of sheets and popovers. */
+    public val SheetRadius: Dp = 12.dp
+
+    /** Opacity of the scrim behind a sheet or pane. */
+    public const val SCRIM_ALPHA: Float = 0.32f
+
     /** Longest comfortable line in scroll mode, in dp (about 66 characters of the body face, LAY-04 and LAY-09). */
     public val MaxMeasure: Dp = 640.dp
 }

@@ -44,4 +44,15 @@
     <string name="reader_deck_progress">Reading progress</string>
     <string name="reader_deck_progress_value">%1$d%%</string>
     <string name="reader_deck_toc">Table of contents</string>
+    <string name="reader_toc_title">Contents</string>
+    <string name="reader_toc_close">Close contents</string>
+    <string name="reader_toc_current">Current section</string>
+    <plurals name="reader_toc_show_deeper">
+        <item quantity="one">Show %1$d deeper heading</item>
+        <item quantity="other">Show %1$d deeper headings</item>
+    </plurals>
+    <plurals name="reader_toc_hide_deeper">
+        <item quantity="one">Hide %1$d deeper heading</item>
+        <item quantity="other">Hide %1$d deeper headings</item>
+    </plurals>
 </resources>
