@@ -76,4 +76,20 @@
     <string name="reader_footnote_title">Footnote %1$s</string>
     <string name="reader_footnote_go_to">Go to note</string>
     <string name="reader_footnote_close">Close footnote</string>
+    <string name="reader_link_title">Open this link?</string>
+    <string name="reader_link_note">It opens outside Bifolio. Bifolio itself never connects to the internet.</string>
+    <string name="reader_link_open">Open</string>
+    <string name="reader_link_cancel">Cancel</string>
+    <string name="reader_link_user_info">The text before the @ is a user name, not the site. The site is %1$s.</string>
+    <string name="reader_link_international">This host name uses international characters. It is shown in its ASCII form; it reads %1$s.</string>
+    <string name="reader_link_no_app">No app on this device can open this link.</string>
+    <string name="reader_selection_copy">Copy</string>
+    <string name="reader_selection_share">Share</string>
+    <string name="reader_selection_title">Text selected</string>
+    <string name="reader_selection_clear">Clear selection</string>
+    <string name="reader_selection_start_handle">Selection start handle</string>
+    <string name="reader_selection_end_handle">Selection end handle</string>
+    <string name="reader_selection_copied">Copied</string>
+    <string name="reader_selection_clip_label">Excerpt</string>
+    <string name="reader_selection_share_title">Share excerpt</string>
 </resources>

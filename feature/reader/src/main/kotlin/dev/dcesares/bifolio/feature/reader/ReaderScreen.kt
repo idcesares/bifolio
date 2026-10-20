@@ -28,6 +28,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -68,6 +72,7 @@ import dev.dcesares.bifolio.designsystem.BifolioIcons
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
 import dev.dcesares.bifolio.designsystem.rememberReducedMotion
+import dev.dcesares.bifolio.designsystem.selection
 import dev.dcesares.bifolio.layout.FoldOrientation
 import dev.dcesares.bifolio.layout.SearchHighlighter
 import dev.dcesares.bifolio.model.Anchor
@@ -94,7 +99,6 @@ public fun ReaderRoute(
     viewModel: ReaderViewModel,
     onBack: () -> Unit,
     appearanceSheet: @Composable (onDismiss: () -> Unit) -> Unit = {},
-    onExternalLink: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -107,6 +111,9 @@ public fun ReaderRoute(
     var tocOpen by rememberSaveable { mutableStateOf(false) }
     var tocCurrent by rememberSaveable { mutableStateOf<Int?>(null) }
     var openNote by remember { mutableStateOf<NoteTap?>(null) }
+    // NAV-08: the external link waiting for the reader's confirmation, and whether Open found no app.
+    var pendingLink by rememberSaveable { mutableStateOf<String?>(null) }
+    var linkNoApp by remember { mutableStateOf(false) }
     val foldSource = rememberFoldSource()
     var footerHeight by remember { mutableIntStateOf(0) }
     var searchBarHeight by remember { mutableIntStateOf(0) }
@@ -138,6 +145,10 @@ public fun ReaderRoute(
                 val inTabletop = fold?.let { it.isSeparating && it.orientation == FoldOrientation.Horizontal } == true
                 val closeOverlay: () -> Boolean = {
                     when {
+                        pendingLink != null -> {
+                            pendingLink = null
+                            true
+                        }
                         openNote != null -> {
                             openNote = null
                             true
@@ -162,7 +173,10 @@ public fun ReaderRoute(
                             openNote = null
                             viewModel.jumpTo(action.anchor)
                         }
-                        is LinkAction.External -> onExternalLink(action.url)
+                        is LinkAction.External -> {
+                            linkNoApp = false
+                            pendingLink = action.url
+                        }
                         LinkAction.None -> Unit
                     }
                 }
@@ -178,6 +192,8 @@ public fun ReaderRoute(
                             tocOpen = true
                         }
                     }
+                val anyOverlay =
+                    searchState.panel == SearchPanel.List || tocOpen || openNote != null || pendingLink != null
                 // A new surface per document and mode; the anchor carries the place across (ANC-04).
                 key(current.contentHash, mode) {
                     // Read once per surface: the surface owns the anchor while it is shown.
@@ -203,7 +219,7 @@ public fun ReaderRoute(
                             onCloseOverlay = closeOverlay,
                             onLink = onLink,
                             onNote = onNote,
-                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen || openNote != null,
+                            overlayOpen = anyOverlay,
                             searchHighlighter = searchHighlighter,
                         )
                     } else {
@@ -219,7 +235,7 @@ public fun ReaderRoute(
                             onCloseOverlay = closeOverlay,
                             onLink = onLink,
                             onNote = onNote,
-                            overlayOpen = searchState.panel == SearchPanel.List || tocOpen || openNote != null,
+                            overlayOpen = anyOverlay,
                             searchHighlighter = searchHighlighter,
                         )
                     }
@@ -352,6 +368,24 @@ public fun ReaderRoute(
                         },
                     fold = fold,
                 )
+                // NAV-08: above everything, so a link tapped inside a footnote card is confirmed on top of it.
+                val context = LocalContext.current
+                val link = pendingLink?.let(::parseExternalLink)
+                if (link != null) BackHandler { pendingLink = null }
+                ExternalLinkSheet(
+                    prompt =
+                        link?.let { checked ->
+                            ExternalLinkPrompt(
+                                link = checked,
+                                noApp = linkNoApp,
+                                onOpen = {
+                                    if (context.openExternalLink(checked)) pendingLink = null else linkNoApp = true
+                                },
+                                onCancel = { pendingLink = null },
+                            )
+                        },
+                    fold = fold,
+                )
             }
         is ReaderUiState.Failed -> ReaderFailure(current.reason, onBack, modifier)
         ReaderUiState.Idle, ReaderUiState.Loading ->
@@ -427,6 +461,7 @@ internal fun ReaderScreen(
         remember {
             { tap -> latestNote.value(NoteTap(tap.label, tap.bounds.translate(-origin[0]))) }
         }
+    val selectionColors = TextSelectionColors(handleColor = palette.accent, backgroundColor = palette.selection)
     BoxWithConstraints(
         modifier
             .fillMaxSize()
@@ -494,21 +529,26 @@ internal fun ReaderScreen(
                 LocalNoteHandler provides noteHere,
                 LocalSearchHighlighter provides searchHighlighter,
             ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding =
-                        PaddingValues(
-                            start = insetStart + side,
-                            end = insetEnd + side,
-                            top = if (showNotices) Spacing.L else insets.calculateTopPadding() + Spacing.Xl,
-                            bottom = insets.calculateBottomPadding() + Spacing.Xl,
-                        ),
-                ) {
-                    itemsIndexed(blocks, key = { index, _ -> index }) { index, block ->
-                        val top = if (block is Heading && index > 0) headingTop(block.level, gap) else 0.dp
-                        val bottom = if (block is Heading) gap * HEADING_AFTER_GAP else gap
-                        BlockContent(block, Modifier.padding(top = top, bottom = bottom))
+                // NAV-09: a long press selects text and the platform bar offers Copy, in reading palette colors.
+                CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
+                    SelectionContainer {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding =
+                                PaddingValues(
+                                    start = insetStart + side,
+                                    end = insetEnd + side,
+                                    top = if (showNotices) Spacing.L else insets.calculateTopPadding() + Spacing.Xl,
+                                    bottom = insets.calculateBottomPadding() + Spacing.Xl,
+                                ),
+                        ) {
+                            itemsIndexed(blocks, key = { index, _ -> index }) { index, block ->
+                                val top = if (block is Heading && index > 0) headingTop(block.level, gap) else 0.dp
+                                val bottom = if (block is Heading) gap * HEADING_AFTER_GAP else gap
+                                BlockContent(block, Modifier.padding(top = top, bottom = bottom))
+                            }
+                        }
                     }
                 }
             }

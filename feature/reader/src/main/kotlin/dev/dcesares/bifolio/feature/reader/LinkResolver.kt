@@ -20,7 +20,6 @@ internal sealed interface LinkAction {
     data object None : LinkAction
 }
 
-private val Schemes = setOf("http", "https", "mailto")
 private val NotePrefixes = listOf("", "^", "fn:", "fn-", "fn_")
 
 /**
@@ -39,9 +38,8 @@ internal class LinkResolver(
         val text = destination.trim()
         if (text.isEmpty()) return LinkAction.None
         if (text.startsWith('#')) return internal(text)
-        val colon = text.indexOf(':')
-        val scheme = if (colon > 0) text.substring(0, colon).lowercase() else null
-        return if (scheme != null && scheme in Schemes) LinkAction.External(text) else LinkAction.None
+        // The check that guards opening (NAV-08): no host, or hidden characters, means it is not a link.
+        return if (parseExternalLink(text) != null) LinkAction.External(text) else LinkAction.None
     }
 
     private fun internal(fragment: String): LinkAction {

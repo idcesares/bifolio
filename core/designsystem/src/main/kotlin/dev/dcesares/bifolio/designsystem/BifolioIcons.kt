@@ -182,6 +182,31 @@ public object BifolioIcons {
             "M5 12h14",
             "m12 5 7 7-7 7",
         )
+
+    public val ExternalLink: ImageVector =
+        icon(
+            "external-link",
+            "M15 3h6v6",
+            "M10 14 21 3",
+            "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6",
+        )
+
+    public val Copy: ImageVector =
+        icon(
+            "copy",
+            "M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z",
+            "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2",
+        )
+
+    public val Share2: ImageVector =
+        icon(
+            "share-2",
+            "M21 5A3 3 0 0 1 18 8A3 3 0 0 1 15 5A3 3 0 0 1 18 2A3 3 0 0 1 21 5z",
+            "M9 12A3 3 0 0 1 6 15A3 3 0 0 1 3 12A3 3 0 0 1 6 9A3 3 0 0 1 9 12z",
+            "M21 19A3 3 0 0 1 18 22A3 3 0 0 1 15 19A3 3 0 0 1 18 16A3 3 0 0 1 21 19z",
+            "M8.59 13.51 15.42 17.49",
+            "M15.41 6.51 8.59 10.49",
+        )
 }
 
 /** Draws [icon] at 24dp in [tint]. Decorative when [contentDescription] is null. */

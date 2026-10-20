@@ -61,6 +61,7 @@ import dev.dcesares.bifolio.designsystem.BifolioMotion
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.Spacing
 import dev.dcesares.bifolio.designsystem.rememberReducedMotion
+import dev.dcesares.bifolio.designsystem.selection
 import dev.dcesares.bifolio.layout.AnchorMapper
 import dev.dcesares.bifolio.layout.Page
 import dev.dcesares.bifolio.layout.PageFlow
@@ -76,6 +77,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -202,6 +204,8 @@ internal fun PagedSurface(
             }
         }
 
+    // NAV-09: a selection belongs to one spread of one layout; turning, jumping or relayout drops it.
+    val picked = remember(layout, store, index) { PagedSelection() }
     val turnStyle = turnStyleOf(appearance.turn)
     turn.style = if (reduced && turnStyle == PageTurnStyle.SLIDE) PageTurnStyle.FADE else turnStyle
     SideEffect {
@@ -256,7 +260,12 @@ internal fun PagedSurface(
                         true
                     } ?: false
                 } else if (command == ReaderCommand.CLOSE) {
-                    onCloseOverlay?.invoke() ?: false
+                    if (picked.selection != null) {
+                        picked.clear()
+                        true
+                    } else {
+                        onCloseOverlay?.invoke() ?: false
+                    }
                 } else {
                     val handled = flow != null && command.isHandledBySpreads(onOpenToc)
                     if (handled && flow != null) {
@@ -322,7 +331,32 @@ internal fun PagedSurface(
         }
         turn.width = constraints.maxWidth.toFloat()
 
+        val runsNow = { pageRunsOf(layout, store, index, startPx, topPx) }
         val env = remember { PagedGesture() }
+        env.hasSelection = { picked.selection != null }
+        env.clearSelection = picked::clear
+        env.beginSelection = { position ->
+            val runs = runsNow()
+            val word =
+                SelectionMath
+                    .positionAt(
+                        runs,
+                        position.x,
+                        position.y,
+                        strict = true,
+                    )?.let { SelectionMath.wordAt(runs, it) }
+            picked.selection = word
+            if (word != null) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            word != null
+        }
+        env.extendSelection = { position ->
+            val current = picked.selection
+            if (current !=
+                null
+            ) {
+                SelectionMath.drag(current.anchor, runsNow(), position.x, position.y)?.let { picked.selection = it }
+            }
+        }
         env.turn = turn
         env.continuity = continuity
         env.width = constraints.maxWidth.toFloat()
@@ -351,6 +385,7 @@ internal fun PagedSurface(
             remember(searchHighlighter, palette, density.density) {
                 searchHighlighter?.let { PageHighlights(it, palette, density.density) }
             }
+        val washPaint = remember(palette) { Paint().apply { color = palette.selection.toArgb() } }
         val pagePaint = remember(palette) { Paint().apply { color = palette.page.toArgb() } }
         val glowPaint = remember(palette) { Paint().apply { color = palette.accent.toArgb() } }
         val deckRegion = layout?.geometry?.deckRegion
@@ -367,6 +402,7 @@ internal fun PagedSurface(
                 .pointerInput(Unit) { awaitEachGesture { readGesture(env) } }
                 .drawBehind {
                     drawIntoCanvas { c ->
+                        val wash = picked.selection?.let { SelectionWash(it, runsNow(), washPaint) }
                         val live =
                             SpreadFrame(
                                 layout,
@@ -377,7 +413,7 @@ internal fun PagedSurface(
                                 topPx,
                                 size.width,
                                 size.height,
-                                FramePaints(pagePaint, glowPaint, continuity, highlights),
+                                FramePaints(pagePaint, glowPaint, continuity, highlights, wash),
                             )
                         val scroll = { block: Int -> tableScroll[block] ?: 0 }
                         val painted = live.complete()
@@ -400,6 +436,13 @@ internal fun PagedSurface(
                 },
         )
         if (layout != null && store != null) PagedNoteSemantics(layout, store, index, startPx, topPx, onNote)
+        PagedSelectionOverlay(
+            state = picked,
+            runs = runsNow,
+            fold = usableFold,
+            windowWidth = constraints.maxWidth,
+            windowHeight = constraints.maxHeight,
+        )
         if (layout != null && deckRegion != null) {
             val seek = remember { DeckSeek() }
             seek.document = document
@@ -450,6 +493,7 @@ private class FramePaints(
     val glow: Paint,
     val continuity: ContinuityMotion,
     val search: PageHighlights? = null,
+    val wash: SelectionWash? = null,
 )
 
 /** What one frame needs to paint: the shown spread and, during a turn, the one coming in. */
@@ -543,6 +587,7 @@ private class SpreadFrame(
             for (op in prepared.ops) {
                 if (op is HighlightingOp) op.draw(canvas, tableScroll, paints.search) else op.draw(canvas, tableScroll)
             }
+            if (spread == index && dx == 0f && turn.progress == 0f) paints.wash?.paint(canvas, column)
             canvas.restore()
         }
         canvas.restore()
@@ -641,12 +686,21 @@ private class PagedGesture {
     lateinit var tableScroll: SnapshotStateMap<Int, Int>
     var targets: (Offset) -> TargetBox? = { null }
     var onTarget: (TargetBox) -> Unit = {}
+    var hasSelection: () -> Boolean = { false }
+    var clearSelection: () -> Unit = {}
+    var beginSelection: (Offset) -> Boolean = { false }
+    var extendSelection: (Offset) -> Unit = {}
 
     fun tap(
         position: Offset,
         heading: Int,
     ) {
         if (heading != 0) turn.commitNow(heading) else turn.reset()
+        // With a selection, the first tap only lets go of it (NAV-09).
+        if (hasSelection()) {
+            clearSelection()
+            return
+        }
         // A link or a footnote marker under the finger is theirs; a tap that stops a running turn is not.
         val target = if (heading == 0) targets(position) else null
         if (target != null) {
@@ -696,16 +750,44 @@ private suspend fun AwaitPointerEventScope.readGesture(env: PagedGesture) {
     val slop = viewConfiguration.touchSlop
     val tracker = VelocityTracker()
     tracker.addPosition(down.uptimeMillis, down.position)
+    // A long press may start a selection only on a still page, away from tables (their drag is a scroll).
+    var pressing = touch.heading == 0 && touch.table == null
+    var elapsed = 0L
     while (true) {
-        val event = awaitPointerEvent()
+        val timeout = viewConfiguration.longPressTimeoutMillis - elapsed
+        val event =
+            if (pressing && timeout > 0L) withTimeoutOrNull(timeout) { awaitPointerEvent() } else awaitPointerEvent()
+        if (event == null) {
+            pressing = false
+            if (env.beginSelection(down.position)) {
+                selectByDrag(env, down)
+                return
+            }
+            continue
+        }
         val change = event.changes.firstOrNull { it.id == down.id }
         if (change == null || change.isConsumed) return
+        elapsed = change.uptimeMillis - down.uptimeMillis
         tracker.addPosition(change.uptimeMillis, change.position)
         if (change.changedToUpIgnoreConsumed()) {
             env.finish(touch, tracker.calculateVelocity().x, slop)
             return
         }
         if (!env.move(touch, change, slop)) return
+        if (touch.dragging || touch.total.getDistance() > slop) pressing = false
+    }
+}
+
+/** After a long press selected a word, the same finger extends the selection until it lifts. */
+private suspend fun AwaitPointerEventScope.selectByDrag(
+    env: PagedGesture,
+    down: PointerInputChange,
+) {
+    while (true) {
+        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: return
+        change.consume()
+        if (change.changedToUpIgnoreConsumed() || !change.pressed) return
+        env.extendSelection(change.position)
     }
 }
 
@@ -731,6 +813,7 @@ private fun PagedGesture.move(
     val table = touch.table
     if (!touch.dragging && abs(touch.total.x) > slop && abs(touch.total.x) > abs(touch.total.y)) {
         touch.dragging = true
+        clearSelection()
         touch.scrollingTable = table != null && canScroll(table, touch.total.x)
     }
     if (!touch.dragging) return abs(touch.total.y) <= slop

@@ -3,6 +3,7 @@ package dev.dcesares.bifolio.feature.reader
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import dev.dcesares.bifolio.designsystem.BifolioTheme
@@ -84,5 +85,50 @@ class ReaderTapZonesTest {
         assertEquals(1, count)
         tapAt(0.31f)
         assertEquals(2, count)
+    }
+
+    private fun scrollWithLink(
+        toggles: () -> Unit,
+        links: (String) -> Unit,
+        linkOnly: Boolean = false,
+    ) {
+        RuntimeEnvironment.setQualifiers("+$PHONE")
+        val text =
+            if (linkOnly) {
+                "# T\n\n[the archive](https://example.org/a)"
+            } else {
+                "# T\n\nA long paragraph of plain words that runs across the middle of the screen, then " +
+                    "[the archive](https://example.org/a) follows it, and more words close the line."
+            }
+        val ready = ReaderUiState.Ready(MarkdownParser.parse(text), "T", "h", emptySet(), Anchor(0, 0))
+        compose.setContent {
+            BifolioTheme { ReaderScreen(ready, {}, onToggleChrome = toggles, onLink = links) }
+        }
+    }
+
+    /** NAV-09 on the scroll surface: holding a finger down selects, it never toggles the chrome or follows a link. */
+    @Test
+    fun scrollLongPressNeitherTogglesChromeNorOpensLinks() {
+        var toggles = 0
+        val links = mutableListOf<String>()
+        scrollWithLink({ toggles++ }, { links += it })
+        // Held down, never lifted: Robolectric has no surface for the platform magnifier that a lift dismisses.
+        compose.onRoot().performTouchInput {
+            down(Offset(width * 0.5f, 260f))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+        }
+        compose.waitForIdle()
+        assertEquals(0, toggles)
+        assertEquals(emptyList<String>(), links)
+    }
+
+    @Test
+    fun scrollTapOnALinkStillFollowsItWithSelectionInstalled() {
+        var toggles = 0
+        val links = mutableListOf<String>()
+        scrollWithLink({ toggles++ }, { links += it }, linkOnly = true)
+        compose.onNodeWithText("the archive", substring = true, useUnmergedTree = true).performTouchInput { click() }
+        compose.waitForIdle()
+        assertEquals(listOf("https://example.org/a"), links)
     }
 }

@@ -20,6 +20,7 @@ import dev.dcesares.bifolio.layout.DrawTableRow
 import dev.dcesares.bifolio.layout.DrawText
 import dev.dcesares.bifolio.layout.MarkerKind
 import dev.dcesares.bifolio.layout.PageDraw
+import dev.dcesares.bifolio.layout.TargetKind
 import dev.dcesares.bifolio.layout.TextLeaf
 import dev.dcesares.bifolio.layout.TextRole
 import dev.dcesares.bifolio.model.CalloutKind
@@ -53,6 +54,25 @@ internal class PreparedColumn(
     val tables: List<TableHit>,
     /** Links and footnote markers of the column, in px from the column origin (UI-09, NAV-07). */
     val targets: List<TargetBox> = emptyList(),
+    /** The text of the column that can be selected (NAV-09), in reading order. Table cells are not part of it. */
+    val texts: List<ColumnText> = emptyList(),
+)
+
+/**
+ * One text of a column that can be selected: its platform layout, where it sits (px from the column origin) and
+ * which characters are on this page. Kept from the layout the page is painted with, so nothing is measured again.
+ */
+internal class ColumnText(
+    val layout: Layout,
+    /** Left edge of the text, and top of the whole leaf (above the first visible line when the leaf is split). */
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val clipTop: Float,
+    val clipBottom: Float,
+    val visibleStart: Int,
+    val visibleEnd: Int,
+    val hidden: List<IntRange>,
 )
 
 /** Callout labels resolved from string resources on the main thread (UI-13). */
@@ -169,10 +189,12 @@ internal class ColumnPainter(
         val tableRects = LinkedHashMap<Int, IntArray>()
         val marks = ArrayList<PaintOp>(1)
         val targets = ArrayList<TargetBox>(0)
+        val texts = ArrayList<ColumnText>()
         for (item in draw.items) {
             when (item) {
                 is DrawText -> {
                     ops.add(textOp(item))
+                    columnText(item)?.let(texts::add)
                     if (item.leaf.targets.isNotEmpty()) targetBoxes(item, targets)
                 }
                 is DrawMarker -> ops.add(markerOp(item))
@@ -208,7 +230,7 @@ internal class ColumnPainter(
             tableRects.map { (block, r) ->
                 TableHit(block, r[X], r[TOP], r[WIDTH], r[BOTTOM] - r[TOP], r[SCROLL])
             }
-        return PreparedColumn(ops, hits, targets)
+        return PreparedColumn(ops, hits, targets, texts)
     }
 
     /**
@@ -245,6 +267,33 @@ internal class ColumnPainter(
                 )
             }
         }
+    }
+
+    /** The selectable slice of [item]: the lines on this page, with the footnote marker labels marked as hidden. */
+    private fun columnText(item: DrawText): ColumnText? {
+        val layout = layoutOf(item.leaf)
+        val length = layout.text.length
+        if (length == 0 || layout.lineCount == 0) return null
+        val first = layout.getLineForVertical(item.clipTop)
+        val last = layout.getLineForVertical((item.clipBottom - 1).coerceAtLeast(item.clipTop))
+        val from = layout.getLineStart(first)
+        val to = layout.getLineEnd(last)
+        if (to <= from) return null
+        val hidden =
+            item.leaf.targets
+                .filter { it.kind == TargetKind.NOTE && it.end > it.start }
+                .map { it.start.coerceIn(0, length) until it.end.coerceIn(0, length) }
+        return ColumnText(
+            layout = layout,
+            x = item.x.toFloat(),
+            y = (item.y - item.clipTop).toFloat(),
+            width = item.leaf.width.toFloat(),
+            clipTop = item.clipTop.toFloat(),
+            clipBottom = item.clipBottom.toFloat(),
+            visibleStart = from,
+            visibleEnd = to,
+            hidden = hidden,
+        )
     }
 
     private fun textOp(item: DrawText): PaintOp {

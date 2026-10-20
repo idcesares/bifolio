@@ -5,7 +5,7 @@ Allowed by ADR-0001 (ISC). Satisfies UI-12 and OPN-04.
 
 Path data in `BifolioIcons` is copied from the official SVGs, unmodified. Stroke is 1.5 (Lucide default is 2), round caps and joins, 24 viewport.
 
-Icons in use: book-open, folder-open, trash, info, chevron-right, chevron-down, chevron-left, chevrons-up-down, undo-2, list, type, search, x, arrow-right.
+Icons in use: book-open, folder-open, trash, info, chevron-right, chevron-down, chevron-left, chevrons-up-down, undo-2, list, type, search, x, arrow-right, external-link, copy, share-2.
 
 The ISC notice must appear on the licenses screen (M6).
 

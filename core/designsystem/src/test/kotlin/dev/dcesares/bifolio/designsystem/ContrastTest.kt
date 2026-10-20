@@ -62,6 +62,15 @@ class ContrastTest {
     }
 
     @Test
+    fun selectionKeepsInkAtFourPointFiveAndShowsAgainstThePage() {
+        all.forEach {
+            val wash = it.selection.compositeOver(it.page)
+            assertTrue(ratio(it.ink, wash) >= 4.5, "${it.id} ink on selection")
+            assertTrue(ratio(wash, it.page) >= 1.3, "${it.id} selection against page")
+        }
+    }
+
+    @Test
     fun everyCodeTokenColorMeetsFourPointFiveOnTheCodeSurface() {
         all.forEach {
             val t = it.codeTokens

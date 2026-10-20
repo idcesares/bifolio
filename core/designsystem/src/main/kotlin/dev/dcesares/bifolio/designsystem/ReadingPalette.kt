@@ -44,6 +44,7 @@ private const val RULE_ALPHA = 0.35f
 private const val HIT_ALPHA_LIGHT = 0.14f
 private const val HIT_ALPHA_DARK = 0.28f
 private const val HIT_FOCUSED_ALPHA = 0.4f
+private const val SELECTION_ALPHA = 0.35f
 
 /**
  * Other search hits (UI-08, DESIGN.md section 2): `ink` as a neutral wash, stronger on dark pages where a light
@@ -55,6 +56,13 @@ public val ReadingPalette.searchHit: Color
 /** The current search hit: `accent` wash. Painted with an outline too, so it never relies on color alone. */
 public val ReadingPalette.searchHitFocused: Color
     get() = accent.copy(alpha = HIT_FOCUSED_ALPHA)
+
+/**
+ * Selected text (NAV-09, DESIGN.md section 2): `accent` wash painted over the text, with `ink` still at 4.5:1 or
+ * more on it. The handles use `accent` itself. Never the system dynamic color (the reading surface is themed here).
+ */
+public val ReadingPalette.selection: Color
+    get() = accent.copy(alpha = SELECTION_ALPHA)
 
 private fun palette(
     id: ReadingThemeId,
