@@ -59,6 +59,7 @@
         <item quantity="one">Hide %1$d deeper heading</item>
         <item quantity="other">Hide %1$d deeper headings</item>
     </plurals>
+    <string name="reader_toc_open">Table of contents</string>
     <string name="reader_search_open">Search in document</string>
     <string name="reader_search_title">Search</string>
     <string name="reader_search_hint">Search this document</string>

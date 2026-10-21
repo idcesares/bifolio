@@ -8,6 +8,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -68,6 +70,7 @@ import dev.dcesares.bifolio.layout.FoldSpec
 
 internal const val TOC_SHEET_TAG = "toc-sheet"
 internal const val TOC_ROW_TAG = "toc-row"
+internal const val TOC_BUTTON_TAG = "toc-button"
 
 internal const val SHEET_MAX_HEIGHT = 0.85f
 private const val MAX_INDENT_STEPS = 5
@@ -194,6 +197,8 @@ private fun TocPanel(
         }
     Column(
         sizing
+            // The edge in the rule color keeps the panel legible on Night (DESIGN section 5), like the notes sheet.
+            .border(Spacing.Rule, palette.rule, shape)
             .clip(shape)
             .background(palette.page)
             .testTag(TOC_SHEET_TAG)
@@ -327,6 +332,43 @@ private fun TocRowItem(
                     tint = palette.inkMuted,
                 )
             }
+        }
+    }
+}
+
+/**
+ * The way into the table of contents on a phone (UI-07): shown with the chrome, over the page at the start edge,
+ * the mirror of [SearchButton]. It sits outside the toolbar panel because eight equal slots would fall under the
+ * 48dp touch target on a 360dp window. Shown only when the document has headings; the caller decides.
+ */
+@Composable
+internal fun TocButton(
+    visible: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = BifolioTheme.palette
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn(BifolioMotion.fade()),
+        exit = fadeOut(BifolioMotion.fade()),
+    ) {
+        Box(
+            Modifier
+                .defaultMinSize(Spacing.TouchTarget, Spacing.TouchTarget)
+                .clip(CircleShape)
+                .background(palette.page)
+                .border(Spacing.Rule, palette.rule, CircleShape)
+                .testTag(TOC_BUTTON_TAG)
+                .clickable(role = Role.Button, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            BifolioIcon(
+                BifolioIcons.List,
+                contentDescription = stringResource(R.string.reader_toc_open),
+                tint = palette.inkMuted,
+            )
         }
     }
 }

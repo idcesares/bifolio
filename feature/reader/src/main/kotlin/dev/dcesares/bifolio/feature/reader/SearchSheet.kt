@@ -197,6 +197,8 @@ private fun SearchPanel(
         }
     Column(
         sizing
+            // The edge in the rule color keeps the panel legible on Night (DESIGN section 5), like the notes sheet.
+            .border(Spacing.Rule, palette.rule, shape)
             .clip(shape)
             .background(palette.page)
             .testTag(SEARCH_SHEET_TAG)

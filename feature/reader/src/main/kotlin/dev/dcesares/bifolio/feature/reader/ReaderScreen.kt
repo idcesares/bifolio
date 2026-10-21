@@ -305,6 +305,20 @@ public fun ReaderRoute(
                                 bottom = with(LocalDensity.current) { footerHeight.toDp() } + Spacing.M,
                             ),
                 )
+                // UI-07: the mirror of the search button, at the start edge; only when the document has headings.
+                val deckInstead = mode == ReadingMode.PAGED && inTabletop
+                val tocButtonVisible = chromeVisible && !contents.isEmpty && !searchOpen && !tocOpen && !deckInstead
+                TocButton(
+                    visible = tocButtonVisible,
+                    onClick = { openToc?.invoke() },
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(
+                                start = Spacing.L,
+                                bottom = with(LocalDensity.current) { footerHeight.toDp() } + Spacing.M,
+                            ),
+                )
                 if (sheetOpen) {
                     BackHandler { sheetOpen = false }
                     appearanceSheet { sheetOpen = false }
