@@ -67,3 +67,28 @@ Isaac's answers. All are ideas, not requirements: each needs a SPEC ID and an AD
 
 ### Still not discussed
 - Anything else beyond the reader. Ask again at the start of M5.
+
+## 2026-10-21: handoff after M5 (math adapter, commit f475d8e)
+
+State: M5 code is complete and checked on the foldable (SM-F976B): images, folder grant, TOC, search, footnotes, math (ADR-0006 Accepted). Gate green: `./gradlew --offline :core:model:test :core:parse:test :core:layout:test ktlintCheck detekt lintDebug testDebugUnitTest :app:assembleDebug checkPolicy verifyRoborazziDebug --continue`. Use `--rerun-tasks` when the corpus changes. `checkPolicy` needs the network once per new dependency (POM licenses).
+
+### Next, in order
+1. PRF-06 size: release APK is 12.3 MB universal (9.7 MB before math), budget 8 MB per ABI. R8 and minify are not configured. Set them up, then measure per ABI and decide on the KaTeX font payload. Also unlocks M6 measurements.
+2. M6 device checks: TalkBack on paged semantics nodes (math, notes, links), 200% font scale, real timings and warm-up, thread safety of the math measurer, release build with R8.
+3. Wire `Document.language` to the hyphenation locale (TYP-05).
+4. Front matter metadata card (still shown as a code block).
+
+### Known gaps
+- Math: the per-call time budget checks after the call returns and cannot interrupt a runaway formula (the validator is the defense, see ADR-0006). The paged ellipsis for an over-tall failure source has no test or screenshot. Inline math shows as TeX text, not rendered.
+- Scroll surface: Share, table-cell selection, TalkBack for paged links, cold-cache code-highlight pixel test. Text shifts if an image grows inside the viewport.
+- `findDocumentPath` for opaque providers untested on a real device; Downloads provider folder grant untested.
+- Possible 1 px AtomicFit rounding shift on old atomic blocks.
+- CI does not run `verifyRoborazziDebug`; `docs/TESTING.md` lacks the reference platform for baselines (propose an edit). Re-record baselines only in a separate explained commit.
+
+### Spec wording still open (propose before editing SPEC)
+- PAG-07: 60% floor for math. `|` in a table cell needs `\|`. Macros are rejected. Paged semantics for math and images.
+
+### Isaac's pending decisions and checks
+- Freeze tokens in DESIGN.md at the end of M4 (still marked pending).
+- M4 and M5 owner checkpoints on the device.
+- Structure talk "anything else beyond the reader": ask at the start of M6 (M5 is closed).
