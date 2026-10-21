@@ -73,6 +73,14 @@ public object BifolioIcons {
             "M12 8h.01",
         )
 
+    public val CircleAlert: ImageVector =
+        icon(
+            "circle-alert",
+            "M22 12A10 10 0 0 1 12 22A10 10 0 0 1 2 12A10 10 0 0 1 12 2A10 10 0 0 1 22 12z",
+            "M12 8v4",
+            "M12 16h.01",
+        )
+
     public val ChevronRight: ImageVector =
         icon(
             "chevron-right",

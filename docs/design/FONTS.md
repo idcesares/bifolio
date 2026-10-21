@@ -26,3 +26,9 @@ not redistributed outside the app, which the OFL allows for embedding.
 - Paged mode: `AssetFontSet` (`core:text`) loads the files with `Typeface.Builder` and a `wght` variation.
 - Scroll mode and UI: `ReadingFont.family` (`core:designsystem`) builds the Compose `FontFamily`.
 - The user picks the body family in the appearance sheet; code is always JetBrains Mono.
+
+## Math fonts (ADR-0006)
+
+The KaTeX math fonts come with `io.github.huarangmeng:latex-fonts-katex:1.6.1` and are loaded by `:core:math` from the
+library asset path, not from `core/designsystem`. They are SIL Open Font License 1.1 (the font metadata; upstream
+labels the package MIT) and are listed in NOTICE. The license text and the copyright holders (Design Science, Inc. and Khan Academy, read from the name tables of the font files) are in `core/designsystem/src/main/assets/fonts/OFL-katex.txt`, next to the other `OFL-*.txt`. The in-app licenses screen is M6 and is still pending; until then NOTICE and that file carry the attribution. They draw formulas only and are never used for text.

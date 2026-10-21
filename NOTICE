@@ -8,3 +8,7 @@ Bifolio is an independent implementation. See PROVENANCE.md.
 Third-party components and fonts bundled with the application are listed,
 with their licenses, in the in-app "Open source licenses" screen and in
 docs/design/FONTS.md.
+
+KaTeX fonts, SIL Open Font License 1.1, bundled through
+io.github.huarangmeng:latex-fonts-katex (math rendering, ADR-0006). The
+renderer code, io.github.huarangmeng:latex-renderer, is MIT licensed.

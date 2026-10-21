@@ -9,7 +9,7 @@ Each ADR records one decision, its context and its consequences. ADRs are immuta
 | [0003](0003-parser-commonmark-java.md) | Parser: commonmark-java | Accepted |
 | [0004](0004-own-paginator.md) | Own paginator over a text-measuring interface | Accepted |
 | [0005](0005-anchor-position-model.md) | Reading position as an anchor | Accepted |
-| [0006](0006-math-renderer-adapter.md) | Math rendering behind an adapter | Accepted, library pending OPN-02 |
+| [0006](0006-math-renderer-adapter.md) | Math rendering behind an adapter | Accepted, huarangmeng/latex 1.6.1 (OPN-02) |
 | [0007](0007-code-highlighting-adapter.md) | Code highlighting behind an adapter | Accepted |
 | [0008](0008-no-network-v1.md) | No network access in v1 | Accepted |
 | [0009](0009-fonts-and-icons.md) | Bundled OFL fonts and Lucide icons | Accepted, licenses pending OPN-03, OPN-04 |

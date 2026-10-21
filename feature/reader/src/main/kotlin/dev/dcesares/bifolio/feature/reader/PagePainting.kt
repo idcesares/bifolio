@@ -3,9 +3,15 @@ package dev.dcesares.bifolio.feature.reader
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.text.Layout
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.VectorPath
+import androidx.compose.ui.graphics.vector.toPath
+import dev.dcesares.bifolio.designsystem.BifolioIcons
 import dev.dcesares.bifolio.designsystem.ReadingPalette
 import dev.dcesares.bifolio.designsystem.Spacing
 import dev.dcesares.bifolio.layout.BarKind
@@ -19,6 +25,7 @@ import dev.dcesares.bifolio.layout.DrawRule
 import dev.dcesares.bifolio.layout.DrawTableRow
 import dev.dcesares.bifolio.layout.DrawText
 import dev.dcesares.bifolio.layout.MarkerKind
+import dev.dcesares.bifolio.layout.MathSize
 import dev.dcesares.bifolio.layout.PageDraw
 import dev.dcesares.bifolio.layout.TargetKind
 import dev.dcesares.bifolio.layout.TextLeaf
@@ -27,6 +34,7 @@ import dev.dcesares.bifolio.layout.TextStyles
 import dev.dcesares.bifolio.model.CalloutKind
 import dev.dcesares.bifolio.model.ColumnAlignment
 import dev.dcesares.bifolio.model.ImageBlock
+import dev.dcesares.bifolio.model.MathBlock
 import dev.dcesares.bifolio.text.ColorRuns
 import dev.dcesares.bifolio.text.TextLayoutFactory
 import dev.dcesares.bifolio.text.TextPalette
@@ -58,6 +66,17 @@ internal class PreparedColumn(
     val targets: List<TargetBox> = emptyList(),
     /** The text of the column that can be selected (NAV-09), in reading order. Table cells are not part of it. */
     val texts: List<ColumnText> = emptyList(),
+    /** The display formulas of the column (A11Y-04): TalkBack nodes are made from them. */
+    val maths: List<MathBox> = emptyList(),
+)
+
+/** One display formula in a column, in px from the column origin. */
+internal class MathBox(
+    val block: MathBlock,
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float,
 )
 
 /**
@@ -94,6 +113,9 @@ private const val ORNAMENT_SPACING_EM = 0.6f
 private const val ORNAMENT_DROP_EM = 2f
 private const val ORNAMENT_DOTS = 3
 private const val DOT_STEP = 3f
+private const val MARK_EM = 0.9f
+private const val MARK_GRID = 24f
+private const val MARK_PADDINGS = 3
 
 // Slots of the int array that tracks the extent of a scrollable table in a column.
 private const val X = 0
@@ -123,6 +145,8 @@ internal class ColumnPainter(
     private val labels: CalloutLabels,
     /** Where image pixels come from (SYN-08); null paints every image as a frame. */
     private val images: ImageRenderer? = null,
+    /** Where display formulas come from (SYN-12); null paints every formula as its source. */
+    private val math: MathRenderer? = null,
 ) {
     private val textPalette =
         TextPalette(
@@ -159,6 +183,13 @@ internal class ColumnPainter(
             isFakeBoldText = true
         }
     private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+    private val markStroke =
+        paint(palette.inkMuted.toArgb(), Paint.Style.STROKE).apply {
+            // In icon grid units: the canvas is scaled to the mark, so this is the icon's own 1.5 stroke.
+            strokeWidth = STROKE_CHECK
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
     private val markerPaint = factory.paintOf(TextRole.BODY, textPalette).apply { color = palette.inkMuted.toArgb() }
 
     private fun px(dp: Float): Float = dp * density
@@ -195,6 +226,7 @@ internal class ColumnPainter(
         val marks = ArrayList<PaintOp>(1)
         val targets = ArrayList<TargetBox>(0)
         val texts = ArrayList<ColumnText>()
+        val maths = ArrayList<MathBox>(0)
         for (item in draw.items) {
             when (item) {
                 is DrawText -> {
@@ -206,7 +238,10 @@ internal class ColumnPainter(
                 is DrawBar -> ops.add(barOp(item))
                 is DrawCodeSurface -> ops.add(codeSurfaceOp(item))
                 is DrawRule -> ops.add(ruleOp(item))
-                is DrawAtomic -> ops.add(atomicOrImageOp(item))
+                is DrawAtomic -> {
+                    ops.add(atomicOrMediaOp(item))
+                    mathBoxOf(item)?.let(maths::add)
+                }
                 is DrawCalloutTitle -> ops.add(titleOp(item))
                 is DrawContinuation -> marks.add(continuationOp(item))
                 is DrawTableRow -> {
@@ -235,8 +270,13 @@ internal class ColumnPainter(
             tableRects.map { (block, r) ->
                 TableHit(block, r[X], r[TOP], r[WIDTH], r[BOTTOM] - r[TOP], r[SCROLL])
             }
-        return PreparedColumn(ops, hits, targets, texts)
+        return PreparedColumn(ops, hits, targets, texts, maths)
     }
+
+    private fun mathBoxOf(item: DrawAtomic): MathBox? =
+        (item.block as? MathBlock)?.let {
+            MathBox(it, item.x.toFloat(), item.y.toFloat(), item.width.toFloat(), item.height.toFloat())
+        }
 
     /**
      * One box per line a link or marker of [item] covers, in px from the column origin and only where the text is
@@ -395,7 +435,7 @@ internal class ColumnPainter(
         return PaintOp { canvas, _ -> canvas.drawLine(x0, y, x1, y, ruleStroke) }
     }
 
-    /** Placeholder frame until images, math and front matter render (M5). */
+    /** Placeholder frame until front matter renders (M5). */
     private fun atomicOp(item: DrawAtomic): PaintOp {
         val rect =
             RectF(item.x.toFloat(), item.y.toFloat(), (item.x + item.width).toFloat(), (item.y + item.height).toFloat())
@@ -439,8 +479,95 @@ internal class ColumnPainter(
         }
     }
 
-    private fun atomicOrImageOp(item: DrawAtomic): PaintOp =
-        (item.block as? ImageBlock)?.let { imageOp(item, it) } ?: atomicOp(item)
+    private fun atomicOrMediaOp(item: DrawAtomic): PaintOp =
+        when (val block = item.block) {
+            is ImageBlock -> imageOp(item, block)
+            is MathBlock -> mathOp(item, block)
+            else -> atomicOp(item)
+        }
+
+    private val mathPaint =
+        Paint(Paint.FILTER_BITMAP_FLAG).apply {
+            colorFilter = PorterDuffColorFilter(palette.ink.toArgb(), PorterDuff.Mode.SRC_IN)
+        }
+
+    /**
+     * Display math (SYN-12, PAG-07): the formula as an alpha mask the size of its box, tinted with the theme
+     * ink, so it is centered by the layout and legible on every theme. Where the formula fails the box shows the TeX
+     * source in the code style with a quiet error mark. While it is still being measured an unsized box keeps the
+     * frame (the same box for every formula, so a late result moves nothing) and a sized one stays blank.
+     */
+    private fun mathOp(
+        item: DrawAtomic,
+        block: MathBlock,
+    ): PaintOp {
+        val rect =
+            RectF(item.x.toFloat(), item.y.toFloat(), (item.x + item.width).toFloat(), (item.y + item.height).toFloat())
+        val radius = px(Spacing.CodeRadius.value)
+        val renderer = math
+        renderer?.warm(block, item.width, item.height)
+        val mark = bodyPx * MARK_EM
+        val source =
+            lazy {
+                val room = (item.width - MARK_PADDINGS * cellPadding - mark).toInt().coerceAtLeast(1)
+                factory.layout(block.tex, TextRole.CODE, room, TextStyles.NONE, textPalette)
+            }
+        return PaintOp { canvas, _ ->
+            val bitmap = renderer?.bitmapFor(block, item.width, item.height)
+            val failed = renderer == null || renderer.hasFailed(block)
+            val measured = renderer?.sizes?.value?.sizeOf(block) is MathSize.Known
+            if (bitmap != null) {
+                canvas.drawBitmap(bitmap, null, rect, mathPaint)
+            } else if (failed || !measured) {
+                canvas.drawRoundRect(rect, radius, radius, fill)
+                canvas.drawRoundRect(rect, radius, radius, ruleStroke)
+                if (failed) {
+                    canvas.save()
+                    canvas.clipRect(rect)
+                    canvas.translate(rect.left + cellPadding, rect.top + cellPadding)
+                    source.value.draw(canvas)
+                    canvas.restore()
+                    // The box is the layout's and cannot grow, so a source that does not fit says so (A11Y-04
+                    // still reads all of it): an ellipsis over the last visible line.
+                    if (source.value.height > rect.height() - 2 * cellPadding) ellipsis(canvas, rect, source.value)
+                    if (renderer != null) {
+                        errorMark(canvas, rect.right - cellPadding - mark, rect.top + cellPadding, mark)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun ellipsis(
+        canvas: Canvas,
+        rect: RectF,
+        source: Layout,
+    ) {
+        val text = source.paint
+        val dots = "…"
+        val width = text.measureText(dots)
+        val right = rect.right - cellPadding
+        val baseline = rect.bottom - cellPadding - text.descent()
+        canvas.drawRect(right - width - cellPadding, baseline + text.ascent(), right, baseline + text.descent(), fill)
+        canvas.drawText(dots, right - width, baseline, text)
+    }
+
+    /** The design system's `circle-alert` (24 grid, its own path data) in muted ink: one icon, not a copy of it. */
+    private val errorMarkPaths: List<Path> =
+        BifolioIcons.CircleAlert.root.mapNotNull { (it as? VectorPath)?.pathData?.toPath()?.asAndroidPath() }
+
+    private fun errorMark(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        size: Float,
+    ) {
+        canvas.save()
+        canvas.translate(left, top)
+        canvas.scale(size / MARK_GRID, size / MARK_GRID)
+        for (path in errorMarkPaths) canvas.drawPath(path, markStroke)
+        canvas.restore()
+    }
 
     private fun altLayout(
         alt: String,

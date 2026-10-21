@@ -55,6 +55,55 @@ internal fun targetAt(
     return pickTarget(targetsOf(layout, store, index, originX, originY), position.x, position.y, minSide)
 }
 
+/** The display formulas of the columns of spread [index], in px from the top-left of the surface. */
+internal fun mathBoxesOf(
+    layout: PagedLayout,
+    store: SpreadStore,
+    index: Int,
+    originX: Float,
+    originY: Float,
+): List<MathBox> {
+    val geometry = layout.geometry
+    val all = ArrayList<MathBox>(0)
+    for ((column, page) in layout.flow.pagesOfSpread(index).withIndex()) {
+        val prepared = store.columns[page] ?: continue
+        val dx = originX + geometry.columnLefts[column]
+        val dy = originY + geometry.verticalMargin
+        for (box in prepared.maths) all.add(MathBox(box.block, box.x + dx, box.y + dy, box.width, box.height))
+    }
+    return all
+}
+
+/**
+ * TalkBack nodes for the formulas of the shown spread (A11Y-04). The page is a canvas, so a formula has no node of
+ * its own; each gets an empty node over its box whose description is the TeX source, or the failure text and the
+ * source where the formula could not be drawn. Like the footnote nodes, they take no pointer input.
+ */
+@Composable
+internal fun PagedMathSemantics(
+    layout: PagedLayout,
+    store: SpreadStore,
+    index: Int,
+    originX: Float,
+    originY: Float,
+    renderer: MathRenderer?,
+) {
+    if (index < 0) return
+    val density = LocalDensity.current
+    // Read so a formula found to fail while it is shown changes its description.
+    renderer?.observe()
+    val failedText = stringResource(R.string.reader_math_failed)
+    for (box in mathBoxesOf(layout, store, index, originX, originY)) {
+        val description = if (renderer?.hasFailed(box.block) == true) "$failedText ${box.block.tex}" else box.block.tex
+        Box(
+            Modifier
+                .offset { IntOffset(box.x.roundToInt(), box.y.roundToInt()) }
+                .size(with(density) { box.width.toDp() }, with(density) { box.height.toDp() })
+                .semantics { contentDescription = description },
+        )
+    }
+}
+
 /** The tap a marker box stands for. */
 internal fun TargetBox.toNoteTap(): NoteTap = NoteTap(value, Rect(left, top, right, bottom))
 

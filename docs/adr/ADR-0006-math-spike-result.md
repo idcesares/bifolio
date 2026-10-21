@@ -1,6 +1,6 @@
 # ADR-0006 update: math renderer spike result (OPN-02)
 
-Status: Proposed (draft, awaiting owner approval; no dependency is added until approved)
+Status: Accepted 2026-10-21 (owner approved the library and the known defects; see ADR-0006)
 Date: 2026-10-21
 Spec IDs: OPN-02, SYN-12, PAG-07, A11Y-04
 Updates: ADR-0006 (math rendering behind an adapter)

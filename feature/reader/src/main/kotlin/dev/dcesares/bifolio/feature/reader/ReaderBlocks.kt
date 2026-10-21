@@ -132,7 +132,7 @@ internal fun BlockContent(
         is Callout -> BarredBlocks(block.blocks, BifolioTheme.palette.accent, calloutLabel(block.kind), modifier)
         is FootnoteDefinition -> BlockStack(block.blocks, modifier)
         is ImageBlock -> ImageView(block, modifier)
-        is MathBlock -> CodeView(block.tex, modifier)
+        is MathBlock -> MathView(block, modifier)
         is FrontMatter -> CodeView(block.raw, modifier)
         is MermaidFence ->
             Column(modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
@@ -191,7 +191,7 @@ private fun BarredBlocks(
 }
 
 @Composable
-private fun CodeView(
+internal fun CodeView(
     code: String,
     modifier: Modifier = Modifier,
     /** The block whose search hits are painted in the code, or null for blocks the search does not read. */

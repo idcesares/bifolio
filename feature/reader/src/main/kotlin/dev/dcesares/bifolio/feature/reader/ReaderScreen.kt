@@ -75,6 +75,7 @@ import dev.dcesares.bifolio.designsystem.rememberReducedMotion
 import dev.dcesares.bifolio.designsystem.selection
 import dev.dcesares.bifolio.layout.FoldOrientation
 import dev.dcesares.bifolio.layout.SearchHighlighter
+import dev.dcesares.bifolio.math.rememberMathEngineOrNull
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.Block
 import dev.dcesares.bifolio.model.Heading
@@ -119,6 +120,12 @@ public fun ReaderRoute(
     var searchBarHeight by remember { mutableIntStateOf(0) }
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val images by viewModel.imageSession.collectAsStateWithLifecycle()
+    val math by viewModel.mathSession.collectAsStateWithLifecycle()
+    // A document without display math builds no engine and loads no font (SYN-12, PRF).
+    val openDocument = (state as? ReaderUiState.Ready)?.document
+    val hasMath = remember(openDocument) { openDocument != null && mathBlocksOf(openDocument.blocks).isNotEmpty() }
+    val mathEngine = rememberMathEngineOrNull(hasMath)
+    val mathSp = BifolioTheme.typography.body.fontSize.value
     val banner by viewModel.imageBanner.collectAsStateWithLifecycle()
     val timeLeft by viewModel.timeLeft.collectAsStateWithLifecycle()
     when (val current = state) {
@@ -126,6 +133,12 @@ public fun ReaderRoute(
             BoxWithConstraints(modifier.fillMaxSize()) {
                 // UI-08: the sheet or pane rule is the TOC's, from the window width only (LAY-01).
                 val compact = !isSidePane(maxWidth)
+                // SYN-12: formulas are measured off the main thread for this density and text scale, then repaginated.
+                LaunchedEffect(
+                    mathEngine,
+                    mathSp,
+                    current.contentHash,
+                ) { mathEngine?.let { viewModel.bindMath(it, mathSp) } }
                 val searchState by viewModel.search.collectAsStateWithLifecycle()
                 val searchOpen = searchState.panel != SearchPanel.Closed
                 val searchHighlighter =
@@ -224,6 +237,7 @@ public fun ReaderRoute(
                             overlayOpen = anyOverlay,
                             searchHighlighter = searchHighlighter,
                             images = images?.renderer,
+                            math = math?.renderer,
                             imageBanner = banner,
                             onPickFolder = viewModel::onFolderPicked,
                             onDismissImageBanner = viewModel::dismissImageBanner,
@@ -244,6 +258,7 @@ public fun ReaderRoute(
                             overlayOpen = anyOverlay,
                             searchHighlighter = searchHighlighter,
                             images = images?.renderer,
+                            math = math?.renderer,
                             imageBanner = banner,
                             onPickFolder = viewModel::onFolderPicked,
                             onDismissImageBanner = viewModel::dismissImageBanner,
@@ -438,6 +453,7 @@ internal fun ReaderScreen(
     overlayOpen: Boolean = false,
     searchHighlighter: SearchHighlighter? = null,
     images: ImageRenderer? = null,
+    math: MathRenderer? = null,
     imageBanner: ImageBanner = ImageBanner.Hidden,
     onPickFolder: (String?) -> Unit = {},
     onDismissImageBanner: () -> Unit = {},
@@ -558,6 +574,7 @@ internal fun ReaderScreen(
                 LocalNoteHandler provides noteHere,
                 LocalSearchHighlighter provides searchHighlighter,
                 LocalImageRenderer provides images,
+                LocalMathRenderer provides math,
             ) {
                 // NAV-09: a long press selects text and the platform bar offers Copy, in reading palette colors.
                 CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {

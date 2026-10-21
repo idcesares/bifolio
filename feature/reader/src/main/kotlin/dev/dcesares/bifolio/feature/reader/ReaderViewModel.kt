@@ -18,6 +18,7 @@ import dev.dcesares.bifolio.layout.LayoutCache
 import dev.dcesares.bifolio.layout.PageDetailer
 import dev.dcesares.bifolio.layout.PaginationService
 import dev.dcesares.bifolio.layout.SearchResult
+import dev.dcesares.bifolio.math.MathService
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.model.Document
 import dev.dcesares.bifolio.model.Paragraph
@@ -202,6 +203,7 @@ public class ReaderViewModel(
     private var paginating: Job? = null
     private var lastRequest: PageRequest? = null
     private var lastImageKey = 0
+    private var lastMathKey = 0
     private var requestedAt = 0L
     private var firstDrawReported = false
 
@@ -373,6 +375,7 @@ public class ReaderViewModel(
         pending = null
         resetPaging()
         stopImages()
+        stopMath()
         loading =
             viewModelScope.launch {
                 val loaded = load(request)
@@ -391,6 +394,7 @@ public class ReaderViewModel(
         currentUri = null
         resetPaging()
         stopImages()
+        stopMath()
         mutableState.value = ReaderUiState.Idle
     }
 
@@ -398,6 +402,7 @@ public class ReaderViewModel(
         paginating?.cancel()
         lastRequest = null
         lastImageKey = 0
+        lastMathKey = 0
         mutablePaged.value = null
     }
 
@@ -464,9 +469,12 @@ public class ReaderViewModel(
         val ready = mutableState.value as? ReaderUiState.Ready ?: return
         // One snapshot per run: the paginator and the detailer see the sizes the key stands for (PAG-07).
         val snapshot = imageSession.value?.sizes?.value ?: ImageSizeSnapshot.EMPTY
-        if (ready.scrollOnly || (request == lastRequest && snapshot.key == lastImageKey)) return
+        val (math, mathKey) = (mathSession.value?.sizes?.value ?: MathSizeSnapshot.EMPTY).forRequest(request)
+        val unchanged = request == lastRequest && snapshot.key == lastImageKey && mathKey == lastMathKey
+        if (ready.scrollOnly || unchanged) return
         lastRequest = request
         lastImageKey = snapshot.key
+        lastMathKey = mathKey
         val images = snapshot.scaledBy(request.density)
         paginating?.cancel()
         // The previous layout stays up until the new one has its first stage, so a change never blanks the page.
@@ -478,7 +486,7 @@ public class ReaderViewModel(
             viewModelScope.launch(computeDispatcher) {
                 val text = engine.prepare(request)
                 val geometry = GeometryCalculator.compute(text.spec)
-                val detailer = PageDetailer(ready.document, text.measurer, geometry, images)
+                val detailer = PageDetailer(ready.document, text.measurer, geometry, images, math)
                 val cancel = CancellationSignal { !isActive }
                 pagination.paginate(
                     ready.contentHash,
@@ -489,9 +497,11 @@ public class ReaderViewModel(
                     cancel,
                     images,
                     snapshot.key,
+                    math,
+                    mathKey,
                 ) { flow ->
                     if (!isActive) return@paginate
-                    val layout = PagedLayout(request, geometry, text.config, flow, detailer, snapshot.key)
+                    val layout = PagedLayout(request, geometry, text.config, flow, detailer, snapshot.key, mathKey)
                     perf.record(
                         "pagination.${layout.stage.name.lowercase()}",
                         (nanoClock() - started) / NANOS_PER_MILLI,
@@ -499,6 +509,54 @@ public class ReaderViewModel(
                     mutablePaged.value = layout
                 }
             }
+    }
+
+    private val mutableMath = MutableStateFlow<MathSession?>(null)
+
+    /** The display formulas of the open document: sizes, pixels and failures (SYN-12, PAG-07). */
+    internal val mathSession: StateFlow<MathSession?> = mutableMath
+
+    private var mathScope: CoroutineScope? = null
+    private var mathWatcher: Job? = null
+    private var mathHash: String? = null
+
+    private fun stopMath() {
+        mathWatcher?.cancel()
+        mathScope?.cancel()
+        mathWatcher = null
+        mathScope = null
+        mathHash = null
+        mutableMath.value = null
+    }
+
+    /**
+     * Gives the open document the math engine of the window's density and text scale, and the body size the
+     * formulas are measured at. Measuring happens off the main thread; each batch of sizes is a new snapshot and so
+     * a new pagination from the reading anchor (ANC-03). Called again when the engine or the size changes.
+     */
+    internal fun bindMath(
+        engine: MathService,
+        fontSp: Float,
+    ) {
+        val ready = mutableState.value as? ReaderUiState.Ready ?: return
+        var session = mutableMath.value
+        if (session == null || mathHash != ready.contentHash) {
+            stopMath()
+            val scope = CoroutineScope(SupervisorJob() + computeDispatcher)
+            mathScope = scope
+            mathHash = ready.contentHash
+            session = MathSession(ready.document, scope)
+            mutableMath.value = session
+            val watched = session
+            mathWatcher =
+                viewModelScope.launch {
+                    watched.sizes.collect { snapshot ->
+                        val request = lastRequest
+                        if (request != null && snapshot.key != lastMathKey) paginate(request)
+                    }
+                }
+        }
+        session.bind(engine, fontSp)
     }
 
     private val mutableImages = MutableStateFlow<ImageSession?>(null)

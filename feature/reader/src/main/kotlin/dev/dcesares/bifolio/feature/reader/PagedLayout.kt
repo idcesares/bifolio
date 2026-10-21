@@ -132,6 +132,8 @@ public class PagedLayout(
     public val detailer: PageDetailer,
     /** Which snapshot of image sizes this layout was made from; a new one means different boxes (PAG-07). */
     public val imageKey: Int = 0,
+    /** Which snapshot of formula sizes this layout was made from (SYN-12, PAG-07). */
+    public val mathKey: Int = 0,
 ) {
     public val stage: PaginationStage
         get() =

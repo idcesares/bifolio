@@ -170,6 +170,7 @@ internal fun PagedSurface(
     onLink: (String) -> Unit = {},
     onNote: (NoteTap) -> Unit = {},
     images: ImageRenderer? = null,
+    math: MathRenderer? = null,
     imageBanner: ImageBanner = ImageBanner.Hidden,
     onPickFolder: (String?) -> Unit = {},
     onDismissImageBanner: () -> Unit = {},
@@ -199,7 +200,7 @@ internal fun PagedSurface(
     val flow = layout?.flow
     val index = remember(flow, shown) { flow?.spreadIndexOf(shown) ?: -1 }
     val store =
-        remember(layout?.request, layout?.imageKey, palette, labels, images) {
+        remember(layout?.request, layout?.imageKey, layout?.mathKey, palette, labels, images, math) {
             layout?.let {
                 val metrics = it.geometry.metrics
                 val painter =
@@ -211,6 +212,7 @@ internal fun PagedSurface(
                         factory = TextLayoutFactory(it.config),
                         labels = labels,
                         images = images,
+                        math = math,
                     )
                 SpreadStore(painter)
             }
@@ -416,6 +418,7 @@ internal fun PagedSurface(
                 .drawBehind {
                     // Redraw when a decoded bitmap lands (SYN-08).
                     images?.observe()
+                    math?.observe()
                     drawIntoCanvas { c ->
                         val wash = picked.selection?.let { SelectionWash(it, runsNow(), washPaint) }
                         val live =
@@ -450,7 +453,10 @@ internal fun PagedSurface(
                     }
                 },
         )
-        if (layout != null && store != null) PagedNoteSemantics(layout, store, index, startPx, topPx, onNote)
+        if (layout != null && store != null) {
+            PagedNoteSemantics(layout, store, index, startPx, topPx, onNote)
+            PagedMathSemantics(layout, store, index, startPx, topPx, math)
+        }
         PagedSelectionOverlay(
             state = picked,
             runs = runsNow,
