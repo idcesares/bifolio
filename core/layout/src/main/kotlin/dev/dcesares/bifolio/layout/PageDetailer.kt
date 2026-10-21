@@ -18,8 +18,9 @@ public class PageDetailer(
     measurer: BlockMeasurer,
     private val geometry: Geometry,
     images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
+    math: MathSizeProvider = MathSizeProvider.UNKNOWN,
 ) {
-    private val flattener = BlockFlattener(document, measurer, geometry, images)
+    private val flattener = BlockFlattener(document, measurer, geometry, images, math)
 
     /** Drawing instructions of [page] placed in column [column] (its width decides the line breaks). */
     @Synchronized

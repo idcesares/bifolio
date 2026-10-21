@@ -12,6 +12,7 @@ import dev.dcesares.bifolio.model.ImageBlock
 import dev.dcesares.bifolio.model.Inline
 import dev.dcesares.bifolio.model.ListBlock
 import dev.dcesares.bifolio.model.ListItem
+import dev.dcesares.bifolio.model.MathBlock
 import dev.dcesares.bifolio.model.MermaidFence
 import dev.dcesares.bifolio.model.Paragraph
 import dev.dcesares.bifolio.model.SourceRange
@@ -26,10 +27,13 @@ import org.commonmark.ext.gfm.tables.TableBody
 import org.commonmark.ext.gfm.tables.TableHead
 import org.commonmark.ext.task.list.items.TaskListItemMarker
 import org.commonmark.node.FencedCodeBlock
+import org.commonmark.node.HardLineBreak
 import org.commonmark.node.HtmlBlock
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Node
 import org.commonmark.node.OrderedList
+import org.commonmark.node.SoftLineBreak
+import org.commonmark.node.Text
 import org.commonmark.ext.footnotes.FootnoteDefinition as CmFootnoteDefinition
 import org.commonmark.ext.gfm.tables.TableCell as CmTableCell
 import org.commonmark.ext.gfm.tables.TableRow as CmTableRow
@@ -90,20 +94,10 @@ internal class BlockConverter(
                 val content = inlines.convert(node)
                 out.add(Heading(node.level, content, slugs.next(plainText(content)), range))
             }
-            is CmParagraph -> out.add(paragraph(inlines.convert(node), range))
+            is CmParagraph -> out.add(displayMath(node, range) ?: paragraph(inlines.convert(node), range))
             is CmListBlock -> convertList(node, depth, range, out)
             is CmBlockQuote -> convertQuote(node, depth, range, out)
-            is FencedCodeBlock -> {
-                val language = languageOf(node.info)
-                val code = trimOneNewline(node.literal)
-                out.add(
-                    if (language == "mermaid") {
-                        MermaidFence(code, range)
-                    } else {
-                        CodeBlock(language, code, true, range)
-                    },
-                )
-            }
+            is FencedCodeBlock -> out.add(fenced(node, range))
             is IndentedCodeBlock -> out.add(CodeBlock(null, trimOneNewline(node.literal), false, range))
             is CmThematicBreak -> out.add(ThematicBreak(range))
             is HtmlBlock -> out.add(Paragraph(inlines.plainLines(node.literal.trimEnd('\n'), range), range))
@@ -361,6 +355,42 @@ private fun languageOf(info: String?): String? {
 }
 
 private fun trimOneNewline(literal: String): String = literal.removeSuffix("\n")
+
+/** Fenced code; `mermaid` and `math` fences are diagrams and display formulas (SYN-12). */
+private fun fenced(
+    node: FencedCodeBlock,
+    range: SourceRange,
+): Block {
+    val language = languageOf(node.info)
+    val code = trimOneNewline(node.literal)
+    return when (language) {
+        "mermaid" -> MermaidFence(code, range)
+        "math" -> MathBlock(code, range)
+        else -> CodeBlock(language, code, true, range)
+    }
+}
+
+/**
+ * A paragraph whose only visible content is one `$$...$$` pair becomes an atomic [MathBlock] (SYN-12, PAG-07);
+ * the block count, order and range are those of the paragraph. A pair inside text stays inline math.
+ */
+private fun displayMath(
+    paragraph: CmParagraph,
+    range: SourceRange,
+): Block? {
+    var math: MathNode? = null
+    var child = paragraph.firstChild
+    while (child != null) {
+        val ignorable = child is SoftLineBreak || child is HardLineBreak || (child is Text && child.literal.isBlank())
+        if (child is MathNode && child.display && math == null) {
+            math = child
+        } else if (!ignorable) {
+            return null
+        }
+        child = child.next
+    }
+    return math?.let { MathBlock(it.tex.trim(), range) }
+}
 
 private fun Inline.isBlankText(): Boolean = this is Inline.Text && text.isBlank()
 

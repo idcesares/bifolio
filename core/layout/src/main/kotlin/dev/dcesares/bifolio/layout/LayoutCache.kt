@@ -9,6 +9,8 @@ public data class LayoutKey(
     val geometry: Geometry,
     /** Changes whenever the image sizes the pagination used change, so a flow made without them is not reused. */
     val imageKey: Int = 0,
+    /** Same for the display formula sizes (SYN-12, PAG-07). */
+    val mathKey: Int = 0,
 )
 
 /**
@@ -59,14 +61,16 @@ public class PaginationService(
         cancel: CancellationSignal = CancellationSignal.NEVER,
         images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
         imageKey: Int = 0,
+        math: MathSizeProvider = MathSizeProvider.UNKNOWN,
+        mathKey: Int = 0,
         onProgress: (PageFlow) -> Unit = {},
     ): PageFlow? {
-        val key = LayoutKey(contentHash, geometry, imageKey)
+        val key = LayoutKey(contentHash, geometry, imageKey, mathKey)
         cache[key]?.let {
             onProgress(it)
             return it
         }
-        val paginator = Paginator(document, measurer, geometry, images)
+        val paginator = Paginator(document, measurer, geometry, images, math)
         val flow = paginator.paginateAround(anchor, cancel, onProgress) ?: return null
         cache.put(key, flow)
         return flow

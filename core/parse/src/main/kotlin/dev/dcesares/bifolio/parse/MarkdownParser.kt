@@ -24,7 +24,8 @@ public object MarkdownParser {
                     TaskListItemsExtension.create(),
                     FootnotesExtension.create(),
                 ),
-            ).includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
+            ).customInlineContentParserFactory(MathInlineParserFactory())
+            .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
             .build()
 
     /**

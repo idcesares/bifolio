@@ -13,8 +13,9 @@ public class Paginator(
     measurer: BlockMeasurer,
     private val geometry: Geometry,
     images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
+    math: MathSizeProvider = MathSizeProvider.UNKNOWN,
 ) {
-    private val flattener = BlockFlattener(document, measurer, geometry, images)
+    private val flattener = BlockFlattener(document, measurer, geometry, images, math)
     private val columns = geometry.columnCount
 
     /** The whole document from its first character. Null when [cancel] fired. */

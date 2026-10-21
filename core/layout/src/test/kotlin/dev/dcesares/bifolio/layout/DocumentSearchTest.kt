@@ -34,6 +34,20 @@ class DocumentSearchTest {
         Normalizer.normalize(s, Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").lowercase()
 
     @Test
+    fun `SYN-12 text before and after inline and display math is found with anchors into the source`() {
+        val md =
+            "Alpha \$x^2\$ omega and \$\$\\frac{1}{2}\$\$ zeta.\n\n\$\$\ny = mc\n\$\$\n\n" +
+                "final omega\n\n```math\nomega\n```\n"
+        val (doc, r) = search(md, "omega")
+        assertEquals(listOf("omega", "omega"), r.matches.map { sourceAt(doc, it) })
+        assertEquals(listOf(0, 2), r.matches.map { it.blockIndex })
+        val (d2, r2) = search(md, "alpha")
+        assertEquals("Alpha", sourceAt(d2, r2.matches.single()))
+        val (d3, r3) = search(md, "zeta")
+        assertEquals("zeta", sourceAt(d3, r3.matches.single()))
+    }
+
+    @Test
     fun `empty and blank queries return nothing`() {
         for (q in listOf("", " ", "\t\n  ", "́")) {
             val (_, r) = search("alpha beta\n", q)

@@ -2,6 +2,11 @@
 
 Documents listed in `docs/TESTING.md` section 3 (C-01 to C-30). Every file here is written for Bifolio from scratch. Do not copy test files from other projects.
 
+## Math (C-14, C-15)
+
+- `math-inline-display.md` (C-14) holds the 20 formulas of ADR-0006 appendix A: each one as display math (`$$...$$`, over several lines for `cases`, `aligned` and `vmatrix`, and once as a fenced `math` block) and twelve of them again inline in prose, plus a list item, a quote, an escaped dollar sign and a `$$` pair in the middle of a sentence. The multi-line displays avoid lines that Markdown reads as a block start (SYN-12).
+- `math-errors.md` (C-15) holds the failure inputs of appendix B, each in its own fenced `math` block so the TeX is passed on untouched, short stand-ins for the three very long ones (the tests generate the 10,000 braces, the 500 superscripts and the 5,000-term sum), and a section of delimiters that must stay plain text: currency (`$5 and $10`, `$5-$10`, `$20,000 and $30,000`), unclosed pairs, `$x$5`, escaped dollars, code spans and a code fence.
+
 ## Image fixtures (C-16, C-17)
 
 - `images-relative/images.md` references the files in `images-relative/img/` by relative paths, plus references that must be refused or shown as alt text (`../`, absolute, `https:`, `file:`).

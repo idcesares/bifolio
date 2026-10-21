@@ -29,6 +29,7 @@ internal class BlockFlattener(
     private val measurer: BlockMeasurer,
     private val geometry: Geometry,
     private val images: ImageSizeProvider = ImageSizeProvider.UNKNOWN,
+    private val math: MathSizeProvider = MathSizeProvider.UNKNOWN,
 ) {
     private val metrics = geometry.metrics
     private val cache = HashMap<Long, BlockLayout>()
@@ -307,13 +308,18 @@ internal class BlockFlattener(
         out.advance(h)
     }
 
-    /** An image with a known size uses it; everything else, placeholders included, comes from the measurer. */
+    /** An image or formula with a known size uses it; everything else, placeholders too, comes from the measurer. */
     private fun naturalSize(
         block: Block,
         width: Int,
     ): AtomicSize {
-        val known = (block as? ImageBlock)?.let { images.sizeOf(it) } as? ImageSize.Known
-        return if (known != null) AtomicSize(known.width, known.height) else measurer.measureAtomic(block, width)
+        val known: AtomicSize? =
+            when (block) {
+                is ImageBlock -> (images.sizeOf(block) as? ImageSize.Known)?.let { AtomicSize(it.width, it.height) }
+                is MathBlock -> (math.sizeOf(block) as? MathSize.Known)?.let { AtomicSize(it.width, it.height) }
+                else -> null
+            }
+        return known ?: measurer.measureAtomic(block, width)
     }
 
     private companion object {

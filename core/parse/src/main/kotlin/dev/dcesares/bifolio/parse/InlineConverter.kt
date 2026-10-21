@@ -179,6 +179,7 @@ internal class InlineConverter(
             is HardLineBreak -> out.add(Inline.HardBreak)
             is CmFootnoteReference -> out.add(Inline.FootnoteReference(node.label))
             is TaskListItemMarker -> Unit
+            is MathNode -> out.add(Inline.InlineMath(node.tex, node.sourceRange(source.length)))
             else -> out.addAll(convert(node))
         }
     }
