@@ -4,13 +4,15 @@ import dev.dcesares.bifolio.model.FrontMatter
 import dev.dcesares.bifolio.model.SourceRange
 
 /**
- * Detects a leading YAML front matter block (SYN-13) in line-ending-normalized text. Only flat `key: value`
- * pairs are read; nested YAML lines are ignored but stay in [FrontMatter.raw]. No dependency (ADR-0003).
+ * Detects a leading YAML front matter block (SYN-13) in line-ending-normalized text. Flat `key: value` pairs and
+ * simple lists are read; other nested YAML lines are ignored but stay in [FrontMatter.raw]. No dependency (ADR-0003).
  */
 internal object FrontMatterScanner {
     private const val FENCE = "---"
     private const val ALT_CLOSE = "..."
     private const val MIN_QUOTED = 2
+    private const val LIST_SEPARATOR = ", "
+    private val PLAIN_KEYS = setOf("title", "lang", "language")
 
     /** The front matter at the very start of [source], or null when absent or unclosed. */
     fun scan(source: String): FrontMatter? {
@@ -58,8 +60,47 @@ internal object FrontMatterScanner {
         vararg keys: String,
     ): String? = entries.firstOrNull { it.first.lowercase() in keys }?.second?.ifBlank { null }
 
-    private fun parseEntries(body: String): List<Pair<String, String>> =
-        body.lineSequence().mapNotNull(::parseLine).toList()
+    /**
+     * Flat `key: value` lines. A key with no value followed by `- item` lines takes the items as a comma list, and
+     * an inline `[a, b]` list reads the same way (tags, authors). Other nested YAML is ignored.
+     */
+    private fun parseEntries(body: String): List<Pair<String, String>> {
+        val lines = body.lines()
+        val out = ArrayList<Pair<String, String>>()
+        var i = 0
+        while (i < lines.size) {
+            val entry = parseLine(lines[i++])
+            if (entry != null) {
+                val items = if (entry.second.isEmpty()) itemsFrom(lines, i) else emptyList()
+                i += items.size
+                val value = if (items.isEmpty()) flowList(entry) else items.joinToString(LIST_SEPARATOR)
+                out += entry.first to value
+            }
+        }
+        return out
+    }
+
+    /** The unquoted `- item` lines that start at [from], one entry per line. */
+    private fun itemsFrom(
+        lines: List<String>,
+        from: Int,
+    ): List<String> =
+        lines
+            .subList(from, lines.size)
+            .takeWhile { line -> line.trimStart().let { it.startsWith("- ") || it == "-" } }
+            .map { unquote(it.trim().drop(1).trim()) }
+
+    /** `[a, "b"]` as `a, b`; scalars, and the title and language values, are left as written. */
+    private fun flowList(entry: Pair<String, String>): String {
+        val (key, value) = entry
+        if (key.lowercase() in PLAIN_KEYS || !value.startsWith('[') || !value.endsWith(']')) return value
+        return value
+            .substring(1, value.length - 1)
+            .split(',')
+            .map { unquote(it.trim()) }
+            .filter { it.isNotEmpty() }
+            .joinToString(LIST_SEPARATOR)
+    }
 
     private fun parseLine(line: String): Pair<String, String>? {
         if (line.isEmpty() || line[0].isWhitespace() || line[0] == '#') return null

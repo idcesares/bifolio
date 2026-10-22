@@ -52,10 +52,25 @@ class FrontMatterParseTest {
     }
 
     @Test
-    fun `SYN-13 unknown keys are kept in order and nested lines are ignored`() {
-        val fm = fm("---\nz: 1\ntags:\n  - a\n  - b\na: 2\n---\n")
-        assertEquals(listOf("z" to "1", "tags" to "", "a" to "2"), fm.entries)
+    fun `SYN-13 unknown keys are kept in order and a dash list becomes a comma list`() {
+        val fm = fm("---\nz: 1\ntags:\n  - a\n  - \"b c\"\na: 2\n---\n")
+        assertEquals(listOf("z" to "1", "tags" to "a, b c", "a" to "2"), fm.entries)
         assertNull(fm.title)
+    }
+
+    @Test
+    fun `SYN-13 an unindented dash list and an inline list read the same way`() {
+        val fm = fm("---\ntags:\n- a\n- b\nauthors: [Ana, 'Bo Li']\ntitle: [WIP] Notes [v2]\n---\n")
+        assertEquals(
+            listOf("tags" to "a, b", "authors" to "Ana, Bo Li", "title" to "[WIP] Notes [v2]"),
+            fm.entries,
+        )
+    }
+
+    @Test
+    fun `SYN-13 a nested map is ignored but keeps its key`() {
+        val fm = fm("---\nmeta:\n  x: 1\n  y: 2\nz: 3\n---\n")
+        assertEquals(listOf("meta" to "", "z" to "3"), fm.entries)
     }
 
     @Test
