@@ -317,6 +317,8 @@ internal class BlockFlattener(
             when (block) {
                 is ImageBlock -> (images.sizeOf(block) as? ImageSize.Known)?.let { AtomicSize(it.width, it.height) }
                 is MathBlock -> (math.sizeOf(block) as? MathSize.Known)?.let { AtomicSize(it.width, it.height) }
+                is FrontMatter ->
+                    AtomicSize(width, FrontMatterCard.height(block, width, metrics.tableCellPadding, measurer))
                 else -> null
             }
         return known ?: measurer.measureAtomic(block, width)

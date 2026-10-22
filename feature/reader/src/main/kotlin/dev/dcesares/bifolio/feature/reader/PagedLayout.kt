@@ -55,6 +55,19 @@ public fun interface TextEngine {
     public fun prepare(request: PageRequest): PreparedText
 }
 
+/**
+ * Hyphenation locale (TYP-05): the document's front matter `lang` when it is a valid BCP 47 tag, else [appTag].
+ * An underscore form such as `pt_BR` is read as `pt-BR`.
+ */
+internal fun hyphenationTag(
+    documentLanguage: String?,
+    appTag: String,
+): String {
+    val tag = documentLanguage?.trim()?.replace('_', '-').orEmpty()
+    val locale = Locale.forLanguageTag(tag)
+    return if (tag.isEmpty() || locale.language.isEmpty()) appTag else locale.toLanguageTag()
+}
+
 /** Spacing in the flow is a multiple of the body size, so it follows the user's text scale. */
 internal fun flowMetricsFor(request: PageRequest): FlowMetrics {
     val body = request.bodyPx

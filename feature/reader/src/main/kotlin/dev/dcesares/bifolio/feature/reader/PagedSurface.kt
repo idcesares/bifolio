@@ -181,7 +181,8 @@ internal fun PagedSurface(
     val direction = LocalLayoutDirection.current
     val insets = ReaderInsets.asPaddingValues()
     val bodySp = BifolioTheme.typography.body.fontSize.value
-    val language = LocalConfiguration.current.locales[0].toLanguageTag()
+    val appTag = LocalConfiguration.current.locales[0].toLanguageTag()
+    val language = hyphenationTag(document?.language, appTag)
     val labels = CalloutLabels(CalloutKind.entries.associateWith { calloutLabel(it) })
     val reduced = rememberReducedMotion()
     val scope = rememberCoroutineScope()

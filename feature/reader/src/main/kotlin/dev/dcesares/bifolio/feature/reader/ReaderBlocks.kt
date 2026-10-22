@@ -133,7 +133,7 @@ internal fun BlockContent(
         is FootnoteDefinition -> BlockStack(block.blocks, modifier)
         is ImageBlock -> ImageView(block, modifier)
         is MathBlock -> MathView(block, modifier)
-        is FrontMatter -> CodeView(block.raw, modifier)
+        is FrontMatter -> FrontMatterView(block, modifier)
         is MermaidFence ->
             Column(modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 BasicText(stringResource(R.string.reader_diagram_not_rendered), style = type.caption)

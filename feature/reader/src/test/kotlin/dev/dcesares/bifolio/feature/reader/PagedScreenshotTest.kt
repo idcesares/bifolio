@@ -258,6 +258,16 @@ class PagedScreenshotTest {
     @Test
     fun c22TabletSpread() = paged("widows-orphans", "paged-c22-widows-paper-tablet", qualifiers = TABLET)
 
+    /** SYN-13, PAG-07: the metadata card above the first heading, title and flat rows. */
+    @Test
+    fun frontMatterPhonePaper() = paged("front-matter", "paged-front-matter-paper-phone")
+
+    @Test
+    fun frontMatterCoverNight() = paged("front-matter", "paged-front-matter-night-cover", ReadingThemeId.Night, COVER)
+
+    @Test
+    fun frontMatterPhoneFont200() = paged("front-matter", "paged-front-matter-paper-font200", fontScale = 2f)
+
     private fun verticalFold(
         halfOpened: Boolean,
         occluding: Boolean,

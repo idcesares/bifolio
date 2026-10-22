@@ -24,6 +24,7 @@ import dev.dcesares.bifolio.layout.DrawMarker
 import dev.dcesares.bifolio.layout.DrawRule
 import dev.dcesares.bifolio.layout.DrawTableRow
 import dev.dcesares.bifolio.layout.DrawText
+import dev.dcesares.bifolio.layout.FrontMatterCard
 import dev.dcesares.bifolio.layout.MarkerKind
 import dev.dcesares.bifolio.layout.MathSize
 import dev.dcesares.bifolio.layout.PageDraw
@@ -33,6 +34,7 @@ import dev.dcesares.bifolio.layout.TextRole
 import dev.dcesares.bifolio.layout.TextStyles
 import dev.dcesares.bifolio.model.CalloutKind
 import dev.dcesares.bifolio.model.ColumnAlignment
+import dev.dcesares.bifolio.model.FrontMatter
 import dev.dcesares.bifolio.model.ImageBlock
 import dev.dcesares.bifolio.model.MathBlock
 import dev.dcesares.bifolio.text.ColorRuns
@@ -435,7 +437,7 @@ internal class ColumnPainter(
         return PaintOp { canvas, _ -> canvas.drawLine(x0, y, x1, y, ruleStroke) }
     }
 
-    /** Placeholder frame until front matter renders (M5). */
+    /** Frame for an atomic block with no renderer of its own. */
     private fun atomicOp(item: DrawAtomic): PaintOp {
         val rect =
             RectF(item.x.toFloat(), item.y.toFloat(), (item.x + item.width).toFloat(), (item.y + item.height).toFloat())
@@ -483,8 +485,45 @@ internal class ColumnPainter(
         when (val block = item.block) {
             is ImageBlock -> imageOp(item, block)
             is MathBlock -> mathOp(item, block)
+            is FrontMatter -> frontMatterOp(item, block)
             else -> atomicOp(item)
         }
+
+    /**
+     * The metadata card (SYN-13, PAG-07): the surface frame with the title and then the rows, laid out at the width
+     * and with the roles [FrontMatterCard.height] measured, so they fill the box the layout reserved. A box the
+     * layout had to cap (85% of the page) clips what does not fit.
+     */
+    private fun frontMatterOp(
+        item: DrawAtomic,
+        block: FrontMatter,
+    ): PaintOp {
+        val rect =
+            RectF(item.x.toFloat(), item.y.toFloat(), (item.x + item.width).toFloat(), (item.y + item.height).toFloat())
+        val radius = px(Spacing.CodeRadius.value)
+        val inner = (item.width - 2 * cellPadding).toInt().coerceAtLeast(1)
+        val title =
+            FrontMatterCard.title(block)?.let {
+                factory.layout(it, FrontMatterCard.TITLE_ROLE, inner, TextStyles.NONE, textPalette)
+            }
+        val rows =
+            FrontMatterCard.rows(block).takeIf { it.isNotEmpty() }?.let {
+                factory.layout(it, FrontMatterCard.ROWS_ROLE, inner, TextStyles.NONE, textPalette)
+            }
+        return PaintOp { canvas, _ ->
+            canvas.drawRoundRect(rect, radius, radius, fill)
+            canvas.drawRoundRect(rect, radius, radius, ruleStroke)
+            canvas.save()
+            canvas.clipRect(rect)
+            canvas.translate(rect.left + cellPadding, rect.top + cellPadding)
+            if (title != null) {
+                title.draw(canvas)
+                canvas.translate(0f, title.height + cellPadding)
+            }
+            rows?.draw(canvas)
+            canvas.restore()
+        }
+    }
 
     private val mathPaint =
         Paint(Paint.FILTER_BITMAP_FLAG).apply {

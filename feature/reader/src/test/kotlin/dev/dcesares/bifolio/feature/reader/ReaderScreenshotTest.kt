@@ -85,6 +85,10 @@ class ReaderScreenshotTest {
     @Test
     fun tasksPaperPhone() = doc("tasks", "reader-tasks-paper-phone")
 
+    /** SYN-13: the metadata card on the scroll surface. */
+    @Test
+    fun frontMatterPaperPhone() = doc("front-matter", "reader-front-matter-paper-phone")
+
     @Test
     fun tablesSimplePaperPhone() = doc("tables-simple", "reader-c11-tables-paper-phone")
 
