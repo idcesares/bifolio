@@ -1,6 +1,6 @@
 # Bifolio Design System
 
-Status: v1 direction, tokens frozen at the end of M4
+Status: v1, tokens frozen at M6 (2026-10-22). A token change after this needs an ADR.
 Spec IDs: TYP-01 to TYP-10, UI-01 to UI-16, MOT-01 to MOT-09, A11Y-02 to A11Y-06
 
 ## 1. Identity
@@ -73,6 +73,7 @@ Paragraph separation: 0.6 lines of space, no first-line indent (Markdown readers
 - Page margins and gutters come from SPEC section 4 formulas, not from this scale.
 - Corner radius: 12dp sheets and popovers, 8dp code blocks and callouts, 20dp chips. Expressive shape morphing is allowed on chrome buttons only.
 - Elevation: chrome uses tonal elevation (surface tone), no drop shadows on the reading surface.
+- Front matter card (SYN-13): `codeSurface` fill, code block radius, hairline rule stroke in paged mode. Title in heading 4, then up to 8 `key: value` rows in the table cell style. Atomic block in paged mode (PAG-07).
 
 ## 5. Layout of chrome
 
