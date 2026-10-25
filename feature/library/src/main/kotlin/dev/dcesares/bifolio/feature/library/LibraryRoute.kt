@@ -25,6 +25,7 @@ public fun LibraryRoute(
     onOpenRecent: (RecentDocument) -> Unit,
     modifier: Modifier = Modifier,
     onRecentBounds: (Rect) -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val launcher =
@@ -41,5 +42,6 @@ public fun LibraryRoute(
         onDismissNotice = viewModel::dismissNotice,
         modifier = modifier,
         onRecentBounds = onRecentBounds,
+        onOpenAbout = onOpenAbout,
     )
 }

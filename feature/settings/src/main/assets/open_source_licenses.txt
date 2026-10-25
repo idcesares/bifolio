@@ -1,0 +1,40 @@
+Bifolio is licensed under the Apache License 2.0.
+
+Libraries
+
+AndroidX (Compose, Activity, Lifecycle, DataStore, Window)
+Apache License 2.0
+
+Kotlin and kotlinx.coroutines
+Apache License 2.0
+
+Coil
+Apache License 2.0
+
+commonmark-java (core, GFM tables, strikethrough, task lists, footnotes)
+BSD 2-Clause License. Copyright Atlassian Pty Ltd
+
+huarangmeng latex-renderer
+MIT License
+
+Fonts
+
+Literata. Copyright 2017 The Literata Project Authors
+SIL Open Font License 1.1
+
+Source Serif 4. Copyright Adobe
+SIL Open Font License 1.1
+
+Atkinson Hyperlegible Next. Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors
+SIL Open Font License 1.1
+
+JetBrains Mono. Copyright The JetBrains Mono Project Authors
+SIL Open Font License 1.1
+
+KaTeX math fonts (via huarangmeng latex-fonts-katex). Copyright Design Science, Inc. and Khan Academy
+SIL Open Font License 1.1
+
+Icons
+
+Lucide
+ISC License

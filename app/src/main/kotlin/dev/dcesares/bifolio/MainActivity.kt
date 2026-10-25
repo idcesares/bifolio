@@ -2,6 +2,7 @@ package dev.dcesares.bifolio
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -17,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.core.content.IntentCompat
@@ -45,6 +47,7 @@ import dev.dcesares.bifolio.feature.reader.ReaderRoute
 import dev.dcesares.bifolio.feature.reader.ReaderUiState
 import dev.dcesares.bifolio.feature.reader.ReaderViewModel
 import dev.dcesares.bifolio.feature.reader.toReadingFont
+import dev.dcesares.bifolio.feature.settings.AboutScreen
 import dev.dcesares.bifolio.feature.settings.AppearanceSheet
 import dev.dcesares.bifolio.feature.settings.SheetActions
 import dev.dcesares.bifolio.feature.settings.SheetState
@@ -52,6 +55,9 @@ import dev.dcesares.bifolio.feature.settings.SheetState
 private const val KEY_URI = "open.uri"
 private const val KEY_MIME = "open.mime"
 private const val KEY_EXTERNAL = "open.external"
+
+private fun PackageManager.versionNameOf(packageName: String): String =
+    getPackageInfo(packageName, 0).versionName.orEmpty()
 
 /** Library and reader behind one Activity. Opens from the picker, recents and VIEW or SEND intents (DOC-01). */
 class MainActivity : ComponentActivity() {
@@ -134,6 +140,8 @@ class MainActivity : ComponentActivity() {
         val profile by reader.appearance.collectAsStateWithLifecycle()
         // MOT-04: where the reader grows from; null for the picker and external opens.
         var origin by remember { mutableStateOf<Rect?>(null) }
+        // UI-11: About sits over the library; opening a document from elsewhere closes it.
+        var showAbout by rememberSaveable { mutableStateOf(false) }
         ProfiledTheme(profile, library = state is ReaderUiState.Idle) {
             // UI-04: immersive reading hides the system bars; they come back with the chrome and in the library.
             LaunchedEffect(state is ReaderUiState.Idle, chromeVisible) {
@@ -179,6 +187,7 @@ class MainActivity : ComponentActivity() {
                             open(Uri.parse(recent.uri), mime = null, persist = false, external = false)
                         },
                         onRecentBounds = { origin = it },
+                        onOpenAbout = { showAbout = true },
                     )
                 },
                 detail = {
@@ -189,6 +198,9 @@ class MainActivity : ComponentActivity() {
                     )
                 },
             )
+            if (showAbout && state is ReaderUiState.Idle) {
+                AboutScreen(versionName = packageManager.versionNameOf(packageName), onBack = { showAbout = false })
+            }
         }
     }
 

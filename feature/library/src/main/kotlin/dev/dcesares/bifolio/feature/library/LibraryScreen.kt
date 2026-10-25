@@ -59,6 +59,7 @@ public fun LibraryScreen(
     onDismissNotice: () -> Unit,
     modifier: Modifier = Modifier,
     onRecentBounds: (Rect) -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     val palette = BifolioTheme.palette
     val type = BifolioTheme.typography
@@ -72,11 +73,19 @@ public fun LibraryScreen(
             contentPadding = safeDrawingPadding(horizontal = Spacing.PageMarginMin, vertical = 0.dp),
         ) {
             item(key = "title") {
-                BasicText(
-                    text = stringResource(R.string.library_title),
-                    style = type.heading(1),
-                    modifier = Modifier.padding(top = Spacing.Xl, bottom = Spacing.L),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.Xl, bottom = Spacing.L),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    BasicText(text = stringResource(R.string.library_title), style = type.heading(1))
+                    // UI-11: the way to the About screen.
+                    BifolioIconButton(
+                        icon = BifolioIcons.Info,
+                        description = stringResource(R.string.library_about_description),
+                        onClick = onOpenAbout,
+                    )
+                }
             }
             val notice = state.notice
             if (notice != null) {

@@ -11,4 +11,5 @@
     <string name="library_meta_separator">%1$s · %2$s</string>
     <string name="library_notice_unreadable">Could not open that file. If it moved or was deleted, remove it from recents.</string>
     <string name="library_notice_dismiss">Dismiss</string>
+    <string name="library_about_description">About Bifolio</string>
 </resources>

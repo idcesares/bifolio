@@ -42,4 +42,12 @@
     <string name="appearance_dynamic_color">System colors in the library (Android 12+)</string>
     <string name="appearance_on">On</string>
     <string name="appearance_off">Off</string>
+    <string name="about_title">About</string>
+    <string name="about_back">Back</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_license">Licensed under the Apache License 2.0</string>
+    <string name="about_source">Source code: github.com/idcesares/bifolio</string>
+    <string name="about_contact">Contact: bifolio@dcesares.dev</string>
+    <string name="about_licenses_heading">Open source licenses</string>
+    <string name="about_licenses_unavailable">The license list could not be loaded.</string>
 </resources>
