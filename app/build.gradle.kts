@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("bifolio.android.application")
 }
@@ -13,7 +15,25 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 }
 
+// Upload key: BIFOLIO_KEYSTORE, BIFOLIO_KEYSTORE_PASSWORD, BIFOLIO_KEY_ALIAS and BIFOLIO_KEY_PASSWORD, read from
+// the environment or local.properties. Without them the release APK stays unsigned. Nothing is committed.
+fun releaseSecret(name: String): String? =
+    System.getenv(name) ?: rootProject.file("local.properties").takeIf { it.exists() }?.let { file ->
+        Properties().apply { file.inputStream().use(::load) }.getProperty(name)
+    }
+
 android {
+    signingConfigs {
+        val store = releaseSecret("BIFOLIO_KEYSTORE")
+        if (store != null) {
+            create("release") {
+                storeFile = file(store)
+                storePassword = releaseSecret("BIFOLIO_KEYSTORE_PASSWORD")
+                keyAlias = releaseSecret("BIFOLIO_KEY_ALIAS")
+                keyPassword = releaseSecret("BIFOLIO_KEY_PASSWORD")
+            }
+        }
+    }
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -22,6 +42,7 @@ android {
             // PRF-07: R8 full mode (the AGP default) with resource shrinking.
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
