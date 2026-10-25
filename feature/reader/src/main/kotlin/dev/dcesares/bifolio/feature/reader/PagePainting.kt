@@ -123,17 +123,9 @@ internal class ColumnText(
     val role: TextRole = TextRole.BODY,
     /** Info string of a fenced code block this text belongs to (A11Y-04). */
     val language: String? = null,
+    /** What TalkBack reads: the visible lines without the footnote marker labels (they are nodes). Made once. */
+    val spoken: String = "",
 ) {
-    /** The characters TalkBack reads: the visible lines, without the footnote marker labels (they are nodes). */
-    val spoken: String
-        get() =
-            buildString {
-                val text = layout.text
-                for (i in visibleStart until visibleEnd.coerceAtMost(text.length)) {
-                    if (hidden.none { i in it }) append(text[i])
-                }
-            }.trim()
-
     val top: Float get() = y + clipTop
     val height: Float get() = clipBottom - clipTop
 }
@@ -141,6 +133,8 @@ internal class ColumnText(
 /** Callout labels resolved from string resources on the main thread (UI-13). */
 internal data class CalloutLabels(
     private val labels: Map<CalloutKind, String>,
+    /** Between the cells of a table row when TalkBack reads it. */
+    val cellSeparator: String,
 ) {
     operator fun get(kind: CalloutKind): String = labels.getValue(kind)
 }
@@ -329,7 +323,7 @@ internal class ColumnPainter(
                 row.cells
                     .mapNotNull { it.leaf?.text?.trim() }
                     .filter { it.isNotEmpty() }
-                    .joinToString(", "),
+                    .joinToString(labels.cellSeparator),
             header = row.header,
         )
 
@@ -405,8 +399,21 @@ internal class ColumnPainter(
             hidden = hidden,
             role = item.leaf.role,
             language = item.leaf.language,
+            spoken = spokenText(layout.text, from, to, hidden),
         )
     }
+
+    private fun spokenText(
+        text: CharSequence,
+        from: Int,
+        to: Int,
+        hidden: List<IntRange>,
+    ): String =
+        buildString {
+            for (i in from until to.coerceAtMost(text.length)) {
+                if (hidden.none { i in it }) append(text[i])
+            }
+        }.trim()
 
     private fun textOp(item: DrawText): PaintOp {
         val layout = layoutOf(item.leaf)

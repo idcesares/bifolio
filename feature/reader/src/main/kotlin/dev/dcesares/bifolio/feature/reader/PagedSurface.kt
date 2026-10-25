@@ -57,6 +57,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.dcesares.bifolio.data.AppearanceProfile
@@ -174,6 +175,10 @@ internal fun PagedSurface(
     imageBanner: ImageBanner = ImageBanner.Hidden,
     onPickFolder: (String?) -> Unit = {},
     onDismissImageBanner: () -> Unit = {},
+    /** Tab: shows the chrome and moves the keyboard focus into it; null leaves Tab alone (A11Y-06). */
+    onFocusChrome: (() -> Unit)? = null,
+    /** Changes when the keyboard focus should come back to the surface (Escape in the chrome). */
+    focusTick: Int = 0,
 ) {
     val fold by foldSource.fold.collectAsStateWithLifecycle(initialValue = foldSource.initialFold)
     val palette = BifolioTheme.palette
@@ -183,7 +188,11 @@ internal fun PagedSurface(
     val bodySp = BifolioTheme.typography.body.fontSize.value
     val appTag = LocalConfiguration.current.locales[0].toLanguageTag()
     val language = hyphenationTag(document?.language, appTag)
-    val labels = CalloutLabels(CalloutKind.entries.associateWith { calloutLabel(it) })
+    val labels =
+        CalloutLabels(
+            CalloutKind.entries.associateWith { calloutLabel(it) },
+            cellSeparator = stringResource(R.string.reader_table_cell_separator),
+        )
     val reduced = rememberReducedMotion()
     val scope = rememberCoroutineScope()
     val turn = remember { PageTurnController(scope) }
@@ -192,6 +201,9 @@ internal fun PagedSurface(
     val continuity = remember { ContinuityMotion(scope) }
     val tableScroll = remember { mutableStateMapOf<Int, Int>() }
     var shown by remember { mutableStateOf(initialAnchor) }
+    // A11Y-01: "Read from here" stays on until the reader turns by hand; scroll forward from TalkBack keeps it.
+    var reading by remember { mutableStateOf(false) }
+    val turnedByAccessibility = remember { BooleanArray(1) }
     var noticesDismissed by rememberSaveable { mutableStateOf(false) }
     // UI-14: the folder banner takes its height from the page area, so it never covers text. The page is laid out
     // again for the shorter area and keeps the reading anchor like any other change of geometry.
@@ -228,6 +240,7 @@ internal fun PagedSurface(
             // ANC-01: the settled anchor is the first visible character of the leading column of the spread.
             val settled = flow?.let { AnchorMapper.leftmostVisibleAnchor(it, index - dir) }
             if (settled != null) {
+                if (!turnedByAccessibility[0]) reading = false
                 continuity.cancel()
                 shown = settled
                 onSettled(settled)
@@ -255,7 +268,7 @@ internal fun PagedSurface(
 
     // NAV-03, NAV-04: keys act on the surface, which asks for focus so they arrive without a tap first.
     val focus = remember { FocusRequester() }
-    LaunchedEffect(overlayOpen) { if (!overlayOpen) focus.requestFocus() }
+    LaunchedEffect(overlayOpen, focusTick) { if (!overlayOpen) focus.requestFocus() }
     val keys = rememberUpdatedState(volumeKeysTurn)
     val assets = LocalContext.current.assets
     val fonts = remember(appearance.font, assets) { fontSetOf(appearance.font, assets) }
@@ -270,6 +283,11 @@ internal fun PagedSurface(
                     false
                 } else if (command == ReaderCommand.SEARCH) {
                     onOpenSearch?.let {
+                        it()
+                        true
+                    } ?: false
+                } else if (command == ReaderCommand.CHROME) {
+                    onFocusChrome?.let {
                         it()
                         true
                     } ?: false
@@ -454,7 +472,24 @@ internal fun PagedSurface(
                 },
         )
         if (layout != null && store != null) {
-            PagedPageSemantics(layout, store, index, startPx, topPx, math, onNote)
+            val spreads = layout.flow.spreadCount
+            val readingState =
+                PagedReading(
+                    active = reading,
+                    spreadCount = spreads,
+                    onStart = { reading = true },
+                    onTurn = { forward ->
+                        val dir = if (forward) -1 else 1
+                        val can = turn.canTurn(dir)
+                        if (can) {
+                            turnedByAccessibility[0] = true
+                            turn.commitNow(dir)
+                            turnedByAccessibility[0] = false
+                        }
+                        can
+                    },
+                )
+            PagedPageSemantics(layout, store, index, startPx, topPx, math, onNote, readingState)
         }
         PagedSelectionOverlay(
             state = picked,
@@ -851,5 +886,5 @@ private fun ReaderCommand.isHandledBySpreads(onOpenToc: (() -> Unit)?): Boolean 
     when (this) {
         ReaderCommand.NEXT, ReaderCommand.PREVIOUS, ReaderCommand.FIRST, ReaderCommand.LAST -> true
         ReaderCommand.TOC -> onOpenToc != null
-        ReaderCommand.SEARCH, ReaderCommand.CLOSE -> false
+        ReaderCommand.SEARCH, ReaderCommand.CLOSE, ReaderCommand.CHROME -> false
     }

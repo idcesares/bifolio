@@ -9,6 +9,8 @@
     <string name="reader_back_to_library">Back to library</string>
     <string name="reader_image_no_alt">Image</string>
     <string name="reader_code_language">%1$s code</string>
+    <string name="reader_table_cell_separator">", "</string>
+    <string name="reader_read_from_here">Read from here</string>
     <string name="reader_math_failed">Formula could not be drawn. Its source is shown.</string>
     <string name="reader_images_offer">Images in this document are in a folder. Show them?</string>
     <string name="reader_images_wrong_folder">That folder does not contain this document. Choose the folder it is in, or a parent of it.</string>

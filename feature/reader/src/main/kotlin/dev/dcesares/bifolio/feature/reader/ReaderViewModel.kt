@@ -222,7 +222,8 @@ public class ReaderViewModel(
         if (mutableChromeVisible.value) showChrome()
     }
 
-    private fun showChrome() {
+    /** Shows the chrome and restarts the countdown: Tab on the reading surface asks for it (A11Y-06). */
+    public fun showChrome() {
         mutableChromeVisible.value = true
         chromeHiding?.cancel()
         chromeHiding =

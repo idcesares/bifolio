@@ -11,13 +11,20 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.ScrollAxisRange
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.horizontalScrollAxisRange
 import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.scrollBy
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.text
@@ -115,6 +122,7 @@ internal fun PagedPageSemantics(
     originY: Float,
     renderer: MathRenderer?,
     onNote: (NoteTap) -> Unit,
+    reading: PagedReading? = null,
 ) {
     if (index < 0) return
     // Read so a formula found to fail while it is shown changes its description.
@@ -124,7 +132,24 @@ internal fun PagedPageSemantics(
     val resources = LocalContext.current.resources
     val side = with(LocalDensity.current) { Spacing.TouchTarget.toPx() }
     val geometry = layout.geometry
-    Box(Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
+    val readLabel = stringResource(R.string.reader_read_from_here)
+    Box(
+        Modifier.fillMaxSize().semantics {
+            isTraversalGroup = true
+            if (reading != null) {
+                customActions =
+                    listOf(
+                        CustomAccessibilityAction(readLabel) {
+                            reading.onStart()
+                            true
+                        },
+                    )
+                horizontalScrollAxisRange =
+                    ScrollAxisRange({ index.toFloat() }, { (reading.spreadCount - 1).toFloat() })
+                scrollBy { x, _ -> reading.onTurn(x > 0f) }
+            }
+        },
+    ) {
         for ((column, page) in layout.flow.pagesOfSpread(index).withIndex()) {
             val prepared = store.columns[page] ?: continue
             val dx = originX + geometry.columnLefts[column]
@@ -149,6 +174,7 @@ internal fun PagedPageSemantics(
                 if (row.spoken.isEmpty()) continue
                 SemanticsBox(dx + row.x, dy + row.y, row.width, row.height) {
                     text = AnnotatedString(row.spoken)
+                    if (row.header) heading()
                     traversalIndex = readingOrder(column, row.y)
                 }
             }
@@ -185,7 +211,50 @@ internal fun PagedPageSemantics(
                 }
             }
         }
+        if (reading?.active == true) {
+            val speech = spreadSpeech(layout, store, index, noAlt)
+            // Last in the order, so moving focus through the page does not read it a second time up front.
+            SemanticsBox(0f, 0f, 1f, 1f) {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = speech
+                traversalIndex = Float.MAX_VALUE
+            }
+        }
     }
+}
+
+/**
+ * "Read from here" (A11Y-01): [active] once the user chose the action; [onStart] is the action; [onTurn] moves to the
+ * next (true) or previous spread by anchor and says whether it could. TalkBack calls it as scroll forward when it has
+ * read the last node of the spread, which is how reading goes on to the following spread.
+ */
+internal class PagedReading(
+    val active: Boolean,
+    val spreadCount: Int,
+    val onStart: () -> Unit,
+    val onTurn: (forward: Boolean) -> Boolean,
+)
+
+/** The text of spread [index] in reading order, as one string for TalkBack to read through (A11Y-01). */
+internal fun spreadSpeech(
+    layout: PagedLayout,
+    store: SpreadStore,
+    index: Int,
+    noAlt: String,
+): String {
+    val parts = ArrayList<Pair<Float, String>>(0)
+    for ((column, page) in layout.flow.pagesOfSpread(index).withIndex()) {
+        val prepared = store.columns[page] ?: continue
+        for (text in prepared.texts) parts.add(readingOrder(column, text.top) to text.spoken)
+        for (row in prepared.rows) parts.add(readingOrder(column, row.y) to row.spoken)
+        for (image in prepared.images) parts.add(readingOrder(column, image.y) to image.block.alt.ifBlank { noAlt })
+        for (box in prepared.maths) parts.add(readingOrder(column, box.y) to box.block.tex)
+    }
+    return parts
+        .sortedBy { it.first }
+        .map { it.second }
+        .filter { it.isNotBlank() }
+        .joinToString("\n")
 }
 
 private fun TextRole.isHeading(): Boolean =

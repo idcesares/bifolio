@@ -31,14 +31,20 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -46,9 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.dcesares.bifolio.data.AppearanceProfile
@@ -88,6 +92,10 @@ internal data class ChromeActions(
     val onOpenAppearance: () -> Unit = {},
     val onMode: (ReadingMode) -> Unit = {},
     val onAppearance: ((AppearanceProfile) -> AppearanceProfile) -> Unit = {},
+    /** Escape inside the chrome: the reading surface takes the keyboard focus back (A11Y-06). */
+    val onReturnFocus: () -> Unit = {},
+    /** Any key used in the chrome, so it does not hide under the hand (UI-03). */
+    val onInteract: () -> Unit = {},
 )
 
 /**
@@ -108,6 +116,9 @@ internal fun ReaderChrome(
     appearance: AppearanceProfile = AppearanceProfile(),
     mode: ReadingMode = ReadingMode.PAGED,
     actions: ChromeActions = ChromeActions(),
+    /** True once the reader asked for the keyboard focus to move to the first control (Tab on the surface). */
+    focusFirst: Boolean = false,
+    onFocusedFirst: () -> Unit = {},
 ) {
     val reduced = rememberReducedMotion()
     val insets = ChromeInsets.asPaddingValues()
@@ -140,7 +151,14 @@ internal fun ReaderChrome(
                 ),
             contentAlignment = Alignment.TopCenter,
         ) {
-            ToolbarPanel(appearance, mode, actions)
+            val first = remember { FocusRequester() }
+            LaunchedEffect(focusFirst) {
+                if (focusFirst) {
+                    first.requestFocus()
+                    onFocusedFirst()
+                }
+            }
+            ToolbarPanel(appearance, mode, actions, first)
         }
     }
 }
@@ -150,7 +168,9 @@ private val PanelRadius = 28.dp
 private val PanelElevation = 8.dp
 private val PanelMaxWidth = 520.dp
 private val SlotHeight = 56.dp
-private val SlotRadius = 20.dp
+
+// The same radius as the focus ring (FocusRingIndication), so the ring follows the clip of the slot.
+private val SlotRadius = 12.dp
 private val IconSlot = 24.dp
 
 /** Fixed size, whatever the reading size is: the chrome never follows the text. */
@@ -159,11 +179,11 @@ private val CaptionSize = 11.sp
 private val CaptionLine = 14.sp
 
 /**
- * The toolbar slots are about 48dp wide and 56dp tall whatever the font scale, so their text follows the system scale
- * only up to this factor. Past it a caption would break inside its word (A11Y-03); every control keeps its full
- * description for TalkBack, and the appearance sheet scales without limit.
+ * Above this font scale the captions leave the toolbar and the icons stay (A11Y-03). The slots are about 48dp wide
+ * whatever the scale, so a caption would break inside its word. Nothing is lost for TalkBack, every control keeps its
+ * full description with the current value, and the appearance sheet reflows without limit.
  */
-private const val TOOLBAR_MAX_FONT_SCALE = 1.2f
+private const val CAPTION_MAX_FONT_SCALE = 1.2f
 
 /**
  * The few settings that change often, one tap each on the same global profile as the appearance sheet. The panel
@@ -175,6 +195,7 @@ private fun ToolbarPanel(
     appearance: AppearanceProfile,
     mode: ReadingMode,
     actions: ChromeActions,
+    first: FocusRequester,
 ) {
     val palette = BifolioTheme.palette
     val shape = RoundedCornerShape(PanelRadius)
@@ -201,13 +222,19 @@ private fun ToolbarPanel(
                 .border(Spacing.Rule, palette.rule, shape)
                 // The panel sits over the page: its taps must not turn pages or hide the chrome.
                 .pointerInput(Unit) { detectTapGestures { } }
-                .padding(horizontal = Spacing.Xs),
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown) actions.onInteract()
+                    val escape = event.type == KeyEventType.KeyDown && event.key == Key.Escape
+                    if (escape) actions.onReturnFocus()
+                    escape
+                }.padding(horizontal = Spacing.Xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ToolbarItem(
             description = stringResource(R.string.reader_chrome_back),
             onClick = actions.onBack,
             icon = BifolioIcons.ChevronLeft,
+            first = first,
         )
         ToolbarItem(
             description = stringResource(R.string.reader_quick_columns, columns),
@@ -258,31 +285,17 @@ private fun RowScope.ToolbarItem(
     glyph: String? = null,
     caption: String? = null,
     accent: Boolean = false,
+    first: FocusRequester? = null,
 ) {
     val palette = BifolioTheme.palette
     val tint = if (accent) palette.accent else palette.ink
     val text = BifolioTheme.typography.caption.copy(color = tint, fontWeight = FontWeight.SemiBold)
-    val density = LocalDensity.current
-    val capped = remember(density) { Density(density.density, minOf(density.fontScale, TOOLBAR_MAX_FONT_SCALE)) }
-    CompositionLocalProvider(LocalDensity provides capped) {
-        ToolbarSlot(description, onClick, icon, glyph, caption, tint, text)
-    }
-}
-
-@Composable
-private fun RowScope.ToolbarSlot(
-    description: String,
-    onClick: () -> Unit,
-    icon: ImageVector?,
-    glyph: String?,
-    caption: String?,
-    tint: Color,
-    text: TextStyle,
-) {
+    val showCaption = LocalDensity.current.fontScale <= CAPTION_MAX_FONT_SCALE
     Column(
         modifier =
             Modifier
                 .weight(1f)
+                .then(if (first != null) Modifier.focusRequester(first) else Modifier)
                 .height(SlotHeight)
                 .clip(RoundedCornerShape(SlotRadius))
                 .clickable(role = Role.Button, onClick = onClick)
@@ -294,7 +307,7 @@ private fun RowScope.ToolbarSlot(
         if (glyph != null) {
             BasicText(text = glyph, maxLines = 1, style = text.copy(fontSize = GlyphSize, lineHeight = GlyphSize))
         }
-        if (caption != null) {
+        if (caption != null && showCaption) {
             Crossfade(targetState = caption, animationSpec = BifolioMotion.fade(), label = "toolbarCaption") { value ->
                 BasicText(
                     text = value,

@@ -9,7 +9,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 
 /** What a key asks of the reading surface (NAV-03, NAV-04, NAV-05). */
-internal enum class ReaderCommand { NEXT, PREVIOUS, FIRST, LAST, SEARCH, TOC, CLOSE }
+internal enum class ReaderCommand { NEXT, PREVIOUS, FIRST, LAST, SEARCH, TOC, CLOSE, CHROME }
 
 /** Fraction of the viewport a keyboard scroll moves in scroll mode (NAV-05). */
 internal const val KEY_SCROLL_FRACTION = 0.9f
@@ -26,6 +26,7 @@ private val Plain: Map<Key, ReaderCommand> =
         Key.MoveEnd to ReaderCommand.LAST,
         Key.T to ReaderCommand.TOC,
         Key.Escape to ReaderCommand.CLOSE,
+        Key.Tab to ReaderCommand.CHROME,
     )
 
 private val Volume: Map<Key, ReaderCommand> =

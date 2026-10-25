@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextLayoutResult
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -114,7 +115,7 @@ class FontScaleChromeTest {
                     Box(Modifier.fillMaxSize()) {
                         ReaderChrome(
                             visible = true,
-                            appearance = AppearanceProfile(theme = theme, columns = 2),
+                            appearance = AppearanceProfile(theme = theme, columns = null),
                             mode = mode,
                         )
                     }
@@ -145,4 +146,28 @@ class FontScaleChromeTest {
     @Test
     fun narrowestWindowFitsAtTwoInPagedMode() =
         chromeAt(2f, widthDp = 320, mode = ReadingMode.PAGED, theme = ThemeChoice.PAPER)
+
+    private fun captionTexts(): List<String> =
+        compose
+            .onAllNodes(
+                SemanticsMatcher("text") { it.config.contains(SemanticsProperties.Text) },
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes()
+            .flatMap { it.config[SemanticsProperties.Text].map { part -> part.text } }
+
+    @Test
+    fun captionsStayAtOnePointTwoAndFit() {
+        chromeAt(1.2f, widthDp = 320, mode = ReadingMode.SCROLL, theme = ThemeChoice.SEPIA)
+        assertTrue(captionTexts().toString(), captionTexts().containsAll(listOf("Auto", "Sepia", "Scroll")))
+    }
+
+    @Test
+    fun captionsLeaveAboveOnePointTwoAndTheDescriptionsKeepTheValues() {
+        chromeAt(1.5f, widthDp = 360, mode = ReadingMode.SCROLL, theme = ThemeChoice.SEPIA)
+        val shown = captionTexts()
+        assertTrue(shown.toString(), shown.none { it in listOf("Auto", "Sepia", "Scroll") })
+        compose.onNodeWithContentDescription("Columns: Auto", substring = true).assertExists()
+        compose.onNodeWithContentDescription("Sepia", substring = true).assertExists()
+        compose.onNodeWithContentDescription("Scroll", substring = true).assertExists()
+    }
 }

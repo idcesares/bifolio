@@ -109,6 +109,9 @@ public fun ReaderRoute(
     val returnAnchor by viewModel.returnAnchor.collectAsStateWithLifecycle()
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
+    // A11Y-06: Tab on the surface asks the chrome for the focus, Escape in the chrome gives it back.
+    var focusChrome by remember { mutableStateOf(false) }
+    var surfaceFocusTick by remember { mutableIntStateOf(0) }
     var tocOpen by rememberSaveable { mutableStateOf(false) }
     var tocCurrent by rememberSaveable { mutableStateOf<Int?>(null) }
     var openNote by remember { mutableStateOf<NoteTap?>(null) }
@@ -207,6 +210,10 @@ public fun ReaderRoute(
                             tocOpen = true
                         }
                     }
+                val focusChromeFromKeyboard: () -> Unit = {
+                    viewModel.showChrome()
+                    focusChrome = true
+                }
                 val anyOverlay =
                     searchState.panel == SearchPanel.List || tocOpen || openNote != null || pendingLink != null
                 // A new surface per document and mode; the anchor carries the place across (ANC-04).
@@ -241,6 +248,8 @@ public fun ReaderRoute(
                             imageBanner = banner,
                             onPickFolder = viewModel::onFolderPicked,
                             onDismissImageBanner = viewModel::dismissImageBanner,
+                            onFocusChrome = focusChromeFromKeyboard,
+                            focusTick = surfaceFocusTick,
                         )
                     } else {
                         ReaderScreen(
@@ -262,6 +271,8 @@ public fun ReaderRoute(
                             imageBanner = banner,
                             onPickFolder = viewModel::onFolderPicked,
                             onDismissImageBanner = viewModel::dismissImageBanner,
+                            onFocusChrome = focusChromeFromKeyboard,
+                            focusTick = surfaceFocusTick,
                         )
                     }
                 }
@@ -282,7 +293,11 @@ public fun ReaderRoute(
                             },
                             onMode = viewModel::setMode,
                             onAppearance = viewModel::updateAppearance,
+                            onReturnFocus = { surfaceFocusTick++ },
+                            onInteract = viewModel::keepChrome,
                         ),
+                    focusFirst = focusChrome,
+                    onFocusedFirst = { focusChrome = false },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 ReaderFooter(
@@ -457,6 +472,8 @@ internal fun ReaderScreen(
     imageBanner: ImageBanner = ImageBanner.Hidden,
     onPickFolder: (String?) -> Unit = {},
     onDismissImageBanner: () -> Unit = {},
+    onFocusChrome: (() -> Unit)? = null,
+    focusTick: Int = 0,
 ) {
     val palette = BifolioTheme.palette
     val blocks = ready.document.blocks
@@ -495,7 +512,7 @@ internal fun ReaderScreen(
 
     // NAV-05: the keyboard scrolls by 90% of the viewport; NAV-04 volume keys do the same when enabled.
     val focus = remember { FocusRequester() }
-    LaunchedEffect(overlayOpen) { if (!overlayOpen) focus.requestFocus() }
+    LaunchedEffect(overlayOpen, focusTick) { if (!overlayOpen) focus.requestFocus() }
     val keys = rememberUpdatedState(volumeKeysTurn)
     val openSearch = rememberUpdatedState(onOpenSearch)
     val closeOverlay = rememberUpdatedState(onCloseOverlay)
@@ -521,6 +538,7 @@ internal fun ReaderScreen(
                         ReaderCommand.SEARCH -> openSearch.value != null
                         ReaderCommand.CLOSE -> closeOverlay.value?.invoke() ?: false
                         ReaderCommand.TOC -> onOpenToc != null
+                        ReaderCommand.CHROME -> onFocusChrome != null
                         else -> true
                     }
                 if (handled) {
@@ -534,6 +552,7 @@ internal fun ReaderScreen(
                             ReaderCommand.LAST -> listState.scrollToItem((blocks.size - 1).coerceAtLeast(0))
                             ReaderCommand.TOC -> onOpenToc?.invoke()
                             ReaderCommand.SEARCH -> openSearch.value?.invoke()
+                            ReaderCommand.CHROME -> onFocusChrome?.invoke()
                             else -> Unit
                         }
                     }

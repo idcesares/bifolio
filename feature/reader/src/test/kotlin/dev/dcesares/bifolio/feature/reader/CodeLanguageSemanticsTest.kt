@@ -34,4 +34,14 @@ class CodeLanguageSemanticsTest {
     fun fencedCodeAnnouncesItsLanguage() {
         assertEquals("kotlin code", stateOf(CodeBlock("kotlin", "val x = 1", true, SourceRange(0, 9))))
     }
+
+    @Test
+    fun fencedCodeWithoutALanguageAnnouncesNothing() {
+        assertEquals(null, stateOf(CodeBlock(null, "val y = 2", true, SourceRange(0, 9))))
+    }
+
+    @Test
+    fun indentedCodeAnnouncesNothing() {
+        assertEquals(null, stateOf(CodeBlock(null, "val z = 3", false, SourceRange(0, 9))))
+    }
 }
