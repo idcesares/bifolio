@@ -38,7 +38,6 @@ If the spec is ambiguous or wrong, stop and propose a spec edit. Do not invent b
 :feature:library        Library screen
 :feature:reader         Reader surface, chrome, TOC, search, footnotes, posture handling
 :feature:settings       Appearance sheet, settings, about, licenses
-:benchmark              Macrobenchmark tests
 :baselineprofile        Baseline and startup profile generator
 ```
 
@@ -58,7 +57,6 @@ These commands are established in milestone M0. Keep this section in sync with t
 | Policy checks (no INTERNET, no WebView, license allow list) | `./gradlew checkPolicy` |
 | Debug build | `./gradlew :app:assembleDebug` |
 | Foldable emulator tests | `./gradlew pixelFoldApi37DebugAndroidTest` |
-| Benchmarks (device attached) | `./gradlew :benchmark:connectedBenchmarkAndroidTest` |
 | Baseline profile | `./gradlew :app:generateBaselineProfile` |
 
 ## How to work

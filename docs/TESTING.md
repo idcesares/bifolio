@@ -9,7 +9,7 @@ Implements ADR-0011. Spec IDs: QA-01 to QA-05.
 | 1 | JUnit + property tests (kotest-property or jqwik) | JVM, every commit, Stop hook | Parsing, geometry, pagination, anchors obey SPEC rules |
 | 2 | Roborazzi screenshot tests (Robolectric) | JVM, every PR | Every reader state renders correctly across the device matrix |
 | 3 | Instrumented tests on Gradle Managed Devices | CI emulators with foldable profiles | Fold, unfold, posture changes, predictive back, process death keep the anchor |
-| 4 | Macrobenchmark | Real device | PRF budgets |
+| 4 | Manual device measurement | Real device | PRF budgets |
 | 5 | Owner review | Owner's foldable | Motion feel, typography, signature moments (milestones M1, M4, M6) |
 
 ## 2. Device matrix (screenshot and emulator tests)

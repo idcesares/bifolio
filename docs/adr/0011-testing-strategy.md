@@ -11,7 +11,7 @@ Verification is layered so that agents and humans get fast, objective feedback. 
 1. **JVM unit and property tests** for `core:model`, `core:parse`, `core:layout` (seconds).
 2. **Screenshot tests** with Roborazzi on Robolectric across the device matrix, including fake folds (minutes, headless).
 3. **Instrumented tests** on Gradle Managed Devices with foldable emulator profiles for fold, unfold and posture transitions (CI).
-4. **Macrobenchmarks** on a real device for performance budgets.
+4. **Manual measurements** on a real device for performance budgets (the Macrobenchmark module was dropped by the owner on 2026-10-25).
 5. **Owner review on the foldable** for motion and typography at milestones M1, M4 and M6.
 
 ## Dependencies

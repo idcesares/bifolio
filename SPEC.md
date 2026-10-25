@@ -305,13 +305,13 @@ All values in px at the current density; `W` is the usable window width after in
 
 ## 13. Performance budgets
 
-Measured with Macrobenchmark on a mid-range reference phone (to be fixed at M0, for example a Pixel 7a class device) and on the owner's foldable.
+Measured on a device (no Macrobenchmark module in v1.0) on a mid-range reference phone (to be fixed at M0, for example a Pixel 7a class device) and on the owner's foldable.
 
 | ID | Budget |
 |---|---|
 | PRF-01 | Cold start to library interactive: under 400ms (P50) |
 | PRF-02 | Open a 100 KB document to first rendered spread: under 500ms (P50), under 800ms (P90) |
-| PRF-03 | Page turn: zero janky frames at 120Hz on the reference foldable in a 50-turn benchmark |
+| PRF-03 | Page turn: zero janky frames at 120Hz on the reference foldable over 50 turns |
 | PRF-04 | Re-pagination of the visible spread after a geometry change: under 100ms; full background pagination of a 1 MB document: under 3s, never on the main thread |
 | PRF-05 | Memory: under 150 MB heap for a 1 MB document with images |
 | PRF-06 | Download size per ABI: under 8 MB |

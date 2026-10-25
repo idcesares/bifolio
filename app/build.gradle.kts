@@ -46,15 +46,6 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-    buildTypes {
-        // Release with R8, debug-signed, for :benchmark. Never published.
-        create("benchmark") {
-            initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
-            matchingFallbacks += "release"
-            isDebuggable = false
-        }
-    }
     // PRF-06 is measured per ABI.
     splits {
         abi {

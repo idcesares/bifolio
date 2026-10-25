@@ -42,6 +42,5 @@ include(
     ":feature:library",
     ":feature:reader",
     ":feature:settings",
-    ":benchmark",
     ":baselineprofile",
 )
