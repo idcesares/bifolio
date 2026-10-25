@@ -454,8 +454,7 @@ internal fun PagedSurface(
                 },
         )
         if (layout != null && store != null) {
-            PagedNoteSemantics(layout, store, index, startPx, topPx, onNote)
-            PagedMathSemantics(layout, store, index, startPx, topPx, math)
+            PagedPageSemantics(layout, store, index, startPx, topPx, math, onNote)
         }
         PagedSelectionOverlay(
             state = picked,

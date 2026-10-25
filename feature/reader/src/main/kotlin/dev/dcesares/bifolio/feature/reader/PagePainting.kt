@@ -70,6 +70,17 @@ internal class PreparedColumn(
     val texts: List<ColumnText> = emptyList(),
     /** The display formulas of the column (A11Y-04): TalkBack nodes are made from them. */
     val maths: List<MathBox> = emptyList(),
+    /** The images of the column (A11Y-04): TalkBack nodes carry their alt text. */
+    val images: List<ImageBox> = emptyList(),
+)
+
+/** One image in a column, in px from the column origin. */
+internal class ImageBox(
+    val block: ImageBlock,
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float,
 )
 
 /** One display formula in a column, in px from the column origin. */
@@ -96,7 +107,24 @@ internal class ColumnText(
     val visibleStart: Int,
     val visibleEnd: Int,
     val hidden: List<IntRange>,
-)
+    /** What the text is, for TalkBack: headings are marked as such (A11Y-01). */
+    val role: TextRole = TextRole.BODY,
+    /** Info string of a fenced code block this text belongs to (A11Y-04). */
+    val language: String? = null,
+) {
+    /** The characters TalkBack reads: the visible lines, without the footnote marker labels (they are nodes). */
+    val spoken: String
+        get() =
+            buildString {
+                val text = layout.text
+                for (i in visibleStart until visibleEnd.coerceAtMost(text.length)) {
+                    if (hidden.none { i in it }) append(text[i])
+                }
+            }.trim()
+
+    val top: Float get() = y + clipTop
+    val height: Float get() = clipBottom - clipTop
+}
 
 /** Callout labels resolved from string resources on the main thread (UI-13). */
 internal data class CalloutLabels(
@@ -229,6 +257,7 @@ internal class ColumnPainter(
         val targets = ArrayList<TargetBox>(0)
         val texts = ArrayList<ColumnText>()
         val maths = ArrayList<MathBox>(0)
+        val pictures = ArrayList<ImageBox>(0)
         for (item in draw.items) {
             when (item) {
                 is DrawText -> {
@@ -243,6 +272,7 @@ internal class ColumnPainter(
                 is DrawAtomic -> {
                     ops.add(atomicOrMediaOp(item))
                     mathBoxOf(item)?.let(maths::add)
+                    imageBoxOf(item)?.let(pictures::add)
                 }
                 is DrawCalloutTitle -> ops.add(titleOp(item))
                 is DrawContinuation -> marks.add(continuationOp(item))
@@ -272,8 +302,13 @@ internal class ColumnPainter(
             tableRects.map { (block, r) ->
                 TableHit(block, r[X], r[TOP], r[WIDTH], r[BOTTOM] - r[TOP], r[SCROLL])
             }
-        return PreparedColumn(ops, hits, targets, texts, maths)
+        return PreparedColumn(ops, hits, targets, texts, maths, pictures)
     }
+
+    private fun imageBoxOf(item: DrawAtomic): ImageBox? =
+        (item.block as? ImageBlock)?.let {
+            ImageBox(it, item.x.toFloat(), item.y.toFloat(), item.width.toFloat(), item.height.toFloat())
+        }
 
     private fun mathBoxOf(item: DrawAtomic): MathBox? =
         (item.block as? MathBlock)?.let {
@@ -340,6 +375,8 @@ internal class ColumnPainter(
             visibleStart = from,
             visibleEnd = to,
             hidden = hidden,
+            role = item.leaf.role,
+            language = item.leaf.language,
         )
     }
 
