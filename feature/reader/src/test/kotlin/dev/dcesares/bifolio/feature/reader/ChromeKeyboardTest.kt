@@ -7,8 +7,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -16,7 +14,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -54,7 +51,6 @@ class ChromeKeyboardTest {
 
     private var backs = 0
     private var smaller = 0
-    private lateinit var focusManager: FocusManager
     private lateinit var inputMode: InputModeManager
 
     private fun chrome(theme: ReadingThemeId = ReadingThemeId.Paper) {
@@ -63,7 +59,6 @@ class ChromeKeyboardTest {
             CompositionLocalProvider(LocalReducedMotionOverride provides true) {
                 BifolioTheme(theme) {
                     // Stands in for the reading surface, which holds the focus while the chrome opens.
-                    focusManager = LocalFocusManager.current
                     inputMode = LocalInputModeManager.current
                     val surface = remember { FocusRequester() }
                     LaunchedEffect(Unit) { surface.requestFocus() }
@@ -97,11 +92,9 @@ class ChromeKeyboardTest {
     }
 
     private fun tab() {
-        // What Tab does in the framework: the next focus target in reading order.
-        compose.runOnUiThread {
-            inputMode.requestInputMode(InputMode.Keyboard)
-            focusManager.moveFocus(FocusDirection.Next)
-        }
+        // A keyboard user is in keyboard input mode, where clickables take focus.
+        compose.runOnUiThread { inputMode.requestInputMode(InputMode.Keyboard) }
+        compose.onRoot().performKeyInput { pressKey(Key.Tab) }
         compose.waitForIdle()
     }
 
