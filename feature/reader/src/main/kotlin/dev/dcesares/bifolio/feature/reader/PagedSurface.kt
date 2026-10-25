@@ -255,6 +255,7 @@ internal fun PagedSurface(
         jumps.collect { target ->
             turn.reset()
             continuity.cancel()
+            reading = false
             shown = target
             onSettled(target)
         }
@@ -310,6 +311,7 @@ internal fun PagedSurface(
                                 val target = if (command == ReaderCommand.FIRST) 0 else flow.spreadCount - 1
                                 AnchorMapper.leftmostVisibleAnchor(flow, target)?.let { settled ->
                                     continuity.cancel()
+                                    reading = false
                                     shown = settled
                                     onSettled(settled)
                                 }
@@ -506,6 +508,7 @@ internal fun PagedSurface(
             seek.shown = { shown }
             seek.show = {
                 continuity.cancel()
+                reading = false
                 shown = it
             }
             seek.settled = onSettled

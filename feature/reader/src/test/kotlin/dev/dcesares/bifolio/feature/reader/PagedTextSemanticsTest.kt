@@ -280,6 +280,14 @@ class PagedTextSemanticsTest {
     }
 
     @Test
+    fun aJumpToTheEndStopsTheReading() {
+        show()
+        readFromHere()
+        compose.onRoot().performKeyInput { pressKey(Key.MoveEnd) }
+        compose.waitUntil(WAIT_MILLIS) { liveText() == null }
+    }
+
+    @Test
     fun scrollingPastTheLastSpreadIsRefused() {
         show()
         val axis = group().fetchSemanticsNode().config[SemanticsProperties.HorizontalScrollAxisRange]
