@@ -38,7 +38,6 @@ If the spec is ambiguous or wrong, stop and propose a spec edit. Do not invent b
 :feature:library        Library screen
 :feature:reader         Reader surface, chrome, TOC, search, footnotes, posture handling
 :feature:settings       Appearance sheet, settings, about, licenses
-:baselineprofile        Baseline and startup profile generator
 ```
 
 Dependency direction: `feature` -> `core`. `core:layout` depends on `core:model` and an interface for text measurement, never on Compose UI, so geometry and pagination stay testable on the JVM.
@@ -57,7 +56,6 @@ These commands are established in milestone M0. Keep this section in sync with t
 | Policy checks (no INTERNET, no WebView, license allow list) | `./gradlew checkPolicy` |
 | Debug build | `./gradlew :app:assembleDebug` |
 | Foldable emulator tests | `./gradlew pixelFoldApi37DebugAndroidTest` |
-| Baseline profile | `./gradlew :app:generateBaselineProfile` |
 
 ## How to work
 
@@ -73,7 +71,7 @@ These commands are established in milestone M0. Keep this section in sync with t
 
 - `engine`: core:model, core:parse, core:layout, core:text. Test-first, JVM-fast.
 - `ui-motion`: designsystem and features. Works from DESIGN.md and screenshot tests.
-- `perf-a11y`: baselines, benchmarks, accessibility, reduce motion.
+- `perf-a11y`: size budgets, accessibility, reduce motion.
 - `reviewer`: independent review of a diff against the spec, the hard rules and test quality. Read-only.
 
 Run `engine` and `ui-motion` in separate worktrees only when their files do not overlap.

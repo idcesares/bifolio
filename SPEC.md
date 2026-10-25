@@ -315,7 +315,7 @@ Measured on a device (no Macrobenchmark module in v1.0) on a mid-range reference
 | PRF-04 | Re-pagination of the visible spread after a geometry change: under 100ms; full background pagination of a 1 MB document: under 3s, never on the main thread |
 | PRF-05 | Memory: under 150 MB heap for a 1 MB document with images |
 | PRF-06 | Download size per ABI: under 8 MB |
-| PRF-07 | Baseline profile and startup profile shipped; R8 full mode and resource shrinking enabled for release |
+| PRF-07 | R8 full mode and resource shrinking enabled for release |
 
 ---
 

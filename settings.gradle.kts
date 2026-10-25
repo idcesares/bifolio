@@ -42,5 +42,4 @@ include(
     ":feature:library",
     ":feature:reader",
     ":feature:settings",
-    ":baselineprofile",
 )
