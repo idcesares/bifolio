@@ -248,20 +248,6 @@ class PagedTextSemanticsTest {
     }
 
     @Test
-    fun readFromHereIsOneActionOnTheFirstTextOfTheSpreadAndThereIsNoLiveRegion() {
-        show()
-        val carriers = nodes(SemanticsActions.CustomActions)
-        assertEquals(1, carriers.size)
-        val node = carriers.single()
-        assertEquals("Read from here", node.config[SemanticsActions.CustomActions].single().label)
-        assertTrue("the carrier is a text node TalkBack can focus", node.config.contains(SemanticsProperties.Text))
-        assertTrue(textOf(node), textOf(node).startsWith("Opening Heading"))
-        val first = nodes(SemanticsProperties.Text).minBy { it.config[SemanticsProperties.TraversalIndex] }
-        assertEquals("it is the first node read", textOf(first), textOf(node))
-        assertTrue("one reading mechanism, TalkBack's own", nodes(SemanticsProperties.LiveRegion).isEmpty())
-    }
-
-    @Test
     fun scrollingForwardTurnsToTheNextSpreadByAnchor() {
         show()
         scroll(forward = true)

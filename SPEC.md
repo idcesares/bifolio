@@ -281,7 +281,7 @@ All values in px at the current density; `W` is the usable window width after in
 
 | ID | Requirement |
 |---|---|
-| A11Y-01 | TalkBack reads page content in order with headings marked as headings, through its own continuous reading; in paged mode the shown spread exposes scroll semantics, so when TalkBack scrolls forward past the last node the reader turns to the next spread by anchor (never a page number), in the direction that fits the layout (RTL included), and refuses at the last spread. The first text of the spread carries a custom action "Read from here", reachable from the TalkBack actions menu |
+| A11Y-01 | TalkBack reads page content in order with headings marked as headings, through its own continuous reading; in paged mode the shown spread exposes scroll semantics, so when TalkBack scrolls forward past the last node the reader turns to the next spread by anchor (never a page number), in the direction that fits the layout (RTL included), and refuses at the last spread. Continuous reading is TalkBack's own ("read from next item"); that the scroll-forward at the end of a spread really arrives, and with which sign, is pending verification on a device |
 | A11Y-02 | All interactive targets at least 48dp |
 | A11Y-03 | Font scaling up to 200% stays usable: auto columns reduce, chrome reflows, nothing clips; above 120% (font scale 1.2) the toolbar drops its captions and keeps icons with full descriptions |
 | A11Y-04 | Images expose alt text; math exposes its TeX source as content description; code blocks announce language |

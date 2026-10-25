@@ -12,12 +12,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ScrollAxisRange
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.horizontalScrollAxisRange
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -132,9 +130,7 @@ internal fun PagedPageSemantics(
     val resources = LocalContext.current.resources
     val side = with(LocalDensity.current) { Spacing.TouchTarget.toPx() }
     val geometry = layout.geometry
-    val readLabel = stringResource(R.string.reader_read_from_here)
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val actionOn = firstTextOfSpread(layout, store, index)
     Box(
         Modifier.fillMaxSize().semantics {
             isTraversalGroup = true
@@ -163,7 +159,6 @@ internal fun PagedPageSemantics(
                     ) {
                         stateDescription = resources.getString(R.string.reader_code_language, language)
                     }
-                    if (text === actionOn) customActions = listOf(CustomAccessibilityAction(readLabel) { true })
                 }
             }
             for (row in prepared.rows) {
@@ -229,23 +224,6 @@ internal fun scrollsForward(
     x: Float,
     rtl: Boolean,
 ): Boolean = if (rtl) x < 0f else x > 0f
-
-/** The text that carries the "Read from here" action: the first one read on the spread, a node TalkBack can focus. */
-private fun firstTextOfSpread(
-    layout: PagedLayout,
-    store: SpreadStore,
-    index: Int,
-): ColumnText? {
-    for (page in layout.flow.pagesOfSpread(index)) {
-        val first =
-            store.columns[page]
-                ?.texts
-                ?.filter { it.spoken.isNotEmpty() }
-                ?.minByOrNull { it.top }
-        if (first != null) return first
-    }
-    return null
-}
 
 private fun TextRole.isHeading(): Boolean =
     when (this) {
