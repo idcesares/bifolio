@@ -111,4 +111,12 @@ class FolderPathsTest {
         assertEquals("content://downloads/document/msf%3A42", start)
         assertNull(FolderPaths.pickerStart("file:///sdcard/a.md"))
     }
+
+    @Test
+    fun treeNameIsTheLastFolder() {
+        assertEquals("Notes", FolderPaths.treeName("content://$storage/tree/primary%3ADocs%2FNotes"))
+        assertEquals("Docs", FolderPaths.treeName("content://$storage/tree/primary%3ADocs"))
+        assertNull(FolderPaths.treeName("content://$storage/tree/primary%3A"))
+        assertNull(FolderPaths.treeName("content://$storage/document/primary%3ADocs"))
+    }
 }

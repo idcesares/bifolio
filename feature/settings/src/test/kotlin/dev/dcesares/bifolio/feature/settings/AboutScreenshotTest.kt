@@ -25,10 +25,15 @@ class AboutScreenshotTest {
         name: String,
         theme: ReadingThemeId = ReadingThemeId.Paper,
         fontScale: Float = 1f,
+        folders: List<String> = emptyList(),
     ) {
         RuntimeEnvironment.setQualifiers("+w412dp-h915dp-xhdpi")
         RuntimeEnvironment.setFontScale(fontScale)
-        compose.setContent { BifolioTheme(theme) { AboutScreen(versionName = "1.0.0", onBack = {}) } }
+        compose.setContent {
+            BifolioTheme(theme) {
+                AboutScreen(versionName = "1.0.0", folders = folders, onRevokeFolder = {}, onBack = {})
+            }
+        }
         compose.onRoot().captureRoboImage("src/test/screenshots/$name.png")
     }
 
@@ -36,5 +41,18 @@ class AboutScreenshotTest {
     fun aboutPaperPhone() = shot("about-paper-phone")
 
     @Test
+    fun aboutFoldersPaperPhone() = shot("about-folders-paper-phone", folders = sampleFolders)
+
+    @Test
+    fun aboutFoldersNightFont200() =
+        shot("about-folders-night-font200", ReadingThemeId.Night, fontScale = 2f, folders = sampleFolders)
+
+    @Test
     fun aboutNightFont200() = shot("about-night-font200", ReadingThemeId.Night, fontScale = 2f)
+
+    private val sampleFolders =
+        listOf(
+            "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FNotes",
+            "content://com.android.externalstorage.documents/tree/primary%3A",
+        )
 }

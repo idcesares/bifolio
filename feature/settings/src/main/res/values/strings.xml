@@ -50,4 +50,9 @@
     <string name="about_contact">Contact: bifolio@dcesares.dev</string>
     <string name="about_licenses_heading">Open source licenses</string>
     <string name="about_licenses_unavailable">The license list could not be loaded.</string>
+    <string name="about_folders_heading">Folder access</string>
+    <string name="about_folders_note">Folders you allowed so images next to a document can load. Bifolio only reads them.</string>
+    <string name="about_folders_empty">No folders have been allowed.</string>
+    <string name="about_folders_unnamed">Storage root</string>
+    <string name="about_folders_revoke">Revoke access to %1$s</string>
 </resources>

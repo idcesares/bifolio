@@ -88,4 +88,14 @@ public object FolderPaths {
             } ?: return null
         return "$SCHEME${ref.authority}/document/${encode(parent)}"
     }
+
+    /**
+     * A readable name for a granted tree URI (PRV-04): the last folder of the tree id (`primary:Docs/Notes` gives
+     * `Notes`). Null when the URI is not a tree, or the tree is a volume root with no folder name.
+     */
+    public fun treeName(treeUri: String): String? {
+        val id = treeOf(treeUri)?.id ?: return null
+        val name = id.substringAfterLast('/').substringAfterLast(':')
+        return name.takeIf { it.isNotEmpty() }
+    }
 }

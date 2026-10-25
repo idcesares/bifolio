@@ -26,6 +26,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.dcesares.bifolio.data.AppearanceProfile
@@ -51,6 +52,7 @@ import dev.dcesares.bifolio.feature.settings.AboutScreen
 import dev.dcesares.bifolio.feature.settings.AppearanceSheet
 import dev.dcesares.bifolio.feature.settings.SheetActions
 import dev.dcesares.bifolio.feature.settings.SheetState
+import kotlinx.coroutines.launch
 
 private const val KEY_URI = "open.uri"
 private const val KEY_MIME = "open.mime"
@@ -199,7 +201,13 @@ class MainActivity : ComponentActivity() {
                 },
             )
             if (showAbout && state is ReaderUiState.Idle) {
-                AboutScreen(versionName = packageManager.versionNameOf(packageName), onBack = { showAbout = false })
+                val folders by app.folderGrants.trees.collectAsStateWithLifecycle(emptyList())
+                AboutScreen(
+                    versionName = packageManager.versionNameOf(packageName),
+                    folders = folders,
+                    onRevokeFolder = { tree -> lifecycleScope.launch { app.folderGrants.revoke(tree) } },
+                    onBack = { showAbout = false },
+                )
             }
         }
     }
