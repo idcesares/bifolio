@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
 
 private const val HIDE = CHROME_AUTO_HIDE_MILLIS
 
-/** UI-03 (center tap shows the chrome, 4 s auto-hide), UI-04 (bars follow it), NAV-02 (a tap never changes mode). */
+/** UI-03 (center tap shows the chrome, 8 s auto-hide), UI-04 (bars follow it), NAV-02 (a tap never changes mode). */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderChromeViewModelTest {
     private val repo = RecentsRepository(InMemoryPreferences(), RecordingGrants())
@@ -74,7 +74,7 @@ class ReaderChromeViewModelTest {
             val vm = viewModel()
             vm.toggleChrome()
             advanceTimeBy(HIDE - 1)
-            assertTrue(vm.chromeVisible.value, "still shown just before 4 s")
+            assertTrue(vm.chromeVisible.value, "still shown just before 8 s")
             advanceTimeBy(2)
             assertFalse(vm.chromeVisible.value)
         }
@@ -87,7 +87,7 @@ class ReaderChromeViewModelTest {
             advanceTimeBy(HIDE - 500)
             vm.toggleMode()
             advanceTimeBy(HIDE - 500)
-            assertTrue(vm.chromeVisible.value, "the mode control restarted the 4 s")
+            assertTrue(vm.chromeVisible.value, "the mode control restarted the 8 s")
             advanceTimeBy(1_000)
             assertFalse(vm.chromeVisible.value)
         }

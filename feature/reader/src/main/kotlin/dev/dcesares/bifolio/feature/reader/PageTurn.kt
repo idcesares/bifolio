@@ -85,8 +85,11 @@ internal class PageTurnController(
         if (canTurn(dir)) settle(dir, 0f) else onEdge(dir)
     }
 
-    /** Finishes the turn that was heading to [dir] at once. Used when a new input arrives during it. */
+    /** Finishes the turn heading to [dir] at once and ends its animation, so it cannot commit a second time. */
     fun commitNow(dir: Int) {
+        job?.cancel()
+        job = null
+        heading = 0
         commit(dir)
         progress = 0f
     }

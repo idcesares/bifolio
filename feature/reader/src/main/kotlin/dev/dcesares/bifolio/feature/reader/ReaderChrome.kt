@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -96,6 +97,8 @@ internal data class ChromeActions(
     val onReturnFocus: () -> Unit = {},
     /** Any key used in the chrome, so it does not hide under the hand (UI-03). */
     val onInteract: () -> Unit = {},
+    /** Whether a control of the chrome holds the focus, so hiding it can hand the focus back (A11Y-06). */
+    val onFocusWithin: (Boolean) -> Unit = {},
 )
 
 /**
@@ -173,7 +176,7 @@ private val SlotHeight = 56.dp
 private val SlotRadius = 12.dp
 private val IconSlot = 24.dp
 
-/** Fixed size, whatever the reading size is: the chrome never follows the text. */
+/** In sp: follows the system font scale (A11Y-03), never the reading size of the appearance profile. */
 private val GlyphSize = 16.sp
 private val CaptionSize = 11.sp
 private val CaptionLine = 14.sp
@@ -222,6 +225,7 @@ private fun ToolbarPanel(
                 .border(Spacing.Rule, palette.rule, shape)
                 // The panel sits over the page: its taps must not turn pages or hide the chrome.
                 .pointerInput(Unit) { detectTapGestures { } }
+                .onFocusChanged { actions.onFocusWithin(it.hasFocus) }
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown) actions.onInteract()
                     val escape = event.type == KeyEventType.KeyDown && event.key == Key.Escape

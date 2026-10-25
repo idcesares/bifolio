@@ -208,7 +208,7 @@ internal fun CodeView(
             .fillMaxWidth()
             .clip(RoundedCornerShape(Spacing.CodeRadius))
             .background(BifolioTheme.palette.codeSurface)
-            .semantics { if (announced != null) stateDescription = announced },
+            .semantics(mergeDescendants = true) { if (announced != null) stateDescription = announced },
     ) {
         Box(Modifier.horizontalScroll(rememberScrollState()).padding(Spacing.M)) {
             HighlightedText(text, block, BifolioTheme.typography.code, softWrap = false)

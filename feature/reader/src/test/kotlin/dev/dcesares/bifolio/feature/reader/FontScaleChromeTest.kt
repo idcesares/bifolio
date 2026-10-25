@@ -136,11 +136,11 @@ class FontScaleChromeTest {
     fun chromeFitsAtFontScaleTwo() = chromeAt(2f)
 
     @Test
-    fun narrowestWindowFitsAtOneAndAHalfWithTheLongestCaptions() =
+    fun narrowestWindowFitsAtOneAndAHalfWithIconsOnly() =
         chromeAt(1.5f, 320, ReadingMode.SCROLL, ThemeChoice.SEPIA, "chrome-narrow-font150")
 
     @Test
-    fun narrowestWindowFitsAtTwoWithTheLongestCaptions() =
+    fun narrowestWindowFitsAtTwoWithIconsOnly() =
         chromeAt(2f, 320, ReadingMode.SCROLL, ThemeChoice.SEPIA, "chrome-narrow-font200")
 
     @Test
@@ -169,5 +169,12 @@ class FontScaleChromeTest {
         compose.onNodeWithContentDescription("Columns: Auto", substring = true).assertExists()
         compose.onNodeWithContentDescription("Sepia", substring = true).assertExists()
         compose.onNodeWithContentDescription("Scroll", substring = true).assertExists()
+    }
+
+    @Test
+    fun justAboveTheThresholdTheCaptionsAreGoneAtTheNarrowestWidth() {
+        chromeAt(1.3f, widthDp = 320, mode = ReadingMode.SCROLL, theme = ThemeChoice.SEPIA)
+        assertTrue(captionTexts().toString(), captionTexts().none { it in listOf("Auto", "Sepia", "Scroll") })
+        compose.onNodeWithContentDescription("Columns: Auto", substring = true).assertExists()
     }
 }

@@ -10,9 +10,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ScrollAxisRange
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
@@ -21,7 +21,6 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.horizontalScrollAxisRange
 import androidx.compose.ui.semantics.isTraversalGroup
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.scrollBy
@@ -31,6 +30,7 @@ import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import dev.dcesares.bifolio.designsystem.Spacing
 import dev.dcesares.bifolio.layout.TargetKind
 import dev.dcesares.bifolio.layout.TextRole
@@ -133,20 +133,15 @@ internal fun PagedPageSemantics(
     val side = with(LocalDensity.current) { Spacing.TouchTarget.toPx() }
     val geometry = layout.geometry
     val readLabel = stringResource(R.string.reader_read_from_here)
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val actionOn = firstTextOfSpread(layout, store, index)
     Box(
         Modifier.fillMaxSize().semantics {
             isTraversalGroup = true
             if (reading != null) {
-                customActions =
-                    listOf(
-                        CustomAccessibilityAction(readLabel) {
-                            reading.onStart()
-                            true
-                        },
-                    )
                 horizontalScrollAxisRange =
                     ScrollAxisRange({ index.toFloat() }, { (reading.spreadCount - 1).toFloat() })
-                scrollBy { x, _ -> reading.onTurn(x > 0f) }
+                scrollBy { x, _ -> reading.onTurn(scrollsForward(x, rtl)) }
             }
         },
     ) {
@@ -168,6 +163,7 @@ internal fun PagedPageSemantics(
                     ) {
                         stateDescription = resources.getString(R.string.reader_code_language, language)
                     }
+                    if (text === actionOn) customActions = listOf(CustomAccessibilityAction(readLabel) { true })
                 }
             }
             for (row in prepared.rows) {
@@ -211,50 +207,43 @@ internal fun PagedPageSemantics(
                 }
             }
         }
-        if (reading?.active == true) {
-            val speech = spreadSpeech(layout, store, index, noAlt)
-            // Last in the order, so moving focus through the page does not read it a second time up front.
-            SemanticsBox(0f, 0f, 1f, 1f) {
-                liveRegion = LiveRegionMode.Polite
-                contentDescription = speech
-                traversalIndex = Float.MAX_VALUE
-            }
-        }
     }
 }
 
 /**
- * "Read from here" (A11Y-01): [active] once the user chose the action; [onStart] is the action; [onTurn] moves to the
- * next (true) or previous spread by anchor and says whether it could. TalkBack calls it as scroll forward when it has
- * read the last node of the spread, which is how reading goes on to the following spread.
+ * Scroll semantics of the spread (A11Y-01): TalkBack scrolls forward when it has read the last node of the spread, and
+ * that is how its own continuous reading goes on to the next one. [onTurn] moves to the next (true) or previous spread
+ * by anchor and says whether it could.
  */
 internal class PagedReading(
-    val active: Boolean,
     val spreadCount: Int,
-    val onStart: () -> Unit,
     val onTurn: (forward: Boolean) -> Boolean,
 )
 
-/** The text of spread [index] in reading order, as one string for TalkBack to read through (A11Y-01). */
-internal fun spreadSpeech(
+/**
+ * Whether a ScrollBy of [x] px means "forward". Compose negates the horizontal amount for a right-to-left layout unless
+ * the range is reversed, so there forward is negative. Which sign a real TalkBack sends needs a device.
+ */
+internal fun scrollsForward(
+    x: Float,
+    rtl: Boolean,
+): Boolean = if (rtl) x < 0f else x > 0f
+
+/** The text that carries the "Read from here" action: the first one read on the spread, a node TalkBack can focus. */
+private fun firstTextOfSpread(
     layout: PagedLayout,
     store: SpreadStore,
     index: Int,
-    noAlt: String,
-): String {
-    val parts = ArrayList<Pair<Float, String>>(0)
-    for ((column, page) in layout.flow.pagesOfSpread(index).withIndex()) {
-        val prepared = store.columns[page] ?: continue
-        for (text in prepared.texts) parts.add(readingOrder(column, text.top) to text.spoken)
-        for (row in prepared.rows) parts.add(readingOrder(column, row.y) to row.spoken)
-        for (image in prepared.images) parts.add(readingOrder(column, image.y) to image.block.alt.ifBlank { noAlt })
-        for (box in prepared.maths) parts.add(readingOrder(column, box.y) to box.block.tex)
+): ColumnText? {
+    for (page in layout.flow.pagesOfSpread(index)) {
+        val first =
+            store.columns[page]
+                ?.texts
+                ?.filter { it.spoken.isNotEmpty() }
+                ?.minByOrNull { it.top }
+        if (first != null) return first
     }
-    return parts
-        .sortedBy { it.first }
-        .map { it.second }
-        .filter { it.isNotBlank() }
-        .joinToString("\n")
+    return null
 }
 
 private fun TextRole.isHeading(): Boolean =

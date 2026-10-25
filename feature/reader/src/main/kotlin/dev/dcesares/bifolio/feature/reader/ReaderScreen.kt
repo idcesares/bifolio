@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
@@ -112,6 +113,9 @@ public fun ReaderRoute(
     // A11Y-06: Tab on the surface asks the chrome for the focus, Escape in the chrome gives it back.
     var focusChrome by remember { mutableStateOf(false) }
     var surfaceFocusTick by remember { mutableIntStateOf(0) }
+    val chromeFocused = remember { BooleanArray(1) }
+    // The chrome leaves with a control focused (a center tap, the auto-hide): the focus goes back to the surface.
+    LaunchedEffect(chromeVisible) { if (!chromeVisible && chromeFocused[0]) surfaceFocusTick++ }
     var tocOpen by rememberSaveable { mutableStateOf(false) }
     var tocCurrent by rememberSaveable { mutableStateOf<Int?>(null) }
     var openNote by remember { mutableStateOf<NoteTap?>(null) }
@@ -295,6 +299,7 @@ public fun ReaderRoute(
                             onAppearance = viewModel::updateAppearance,
                             onReturnFocus = { surfaceFocusTick++ },
                             onInteract = viewModel::keepChrome,
+                            onFocusWithin = { chromeFocused[0] = it },
                         ),
                     focusFirst = focusChrome,
                     onFocusedFirst = { focusChrome = false },
@@ -512,6 +517,8 @@ internal fun ReaderScreen(
 
     // NAV-05: the keyboard scrolls by 90% of the viewport; NAV-04 volume keys do the same when enabled.
     val focus = remember { FocusRequester() }
+    // A11Y-06: Tab is ours only while the surface itself holds the focus; with a link focused it moves between them.
+    val surfaceFocused = remember { BooleanArray(1) }
     LaunchedEffect(overlayOpen, focusTick) { if (!overlayOpen) focus.requestFocus() }
     val keys = rememberUpdatedState(volumeKeysTurn)
     val openSearch = rememberUpdatedState(onOpenSearch)
@@ -538,7 +545,7 @@ internal fun ReaderScreen(
                         ReaderCommand.SEARCH -> openSearch.value != null
                         ReaderCommand.CLOSE -> closeOverlay.value?.invoke() ?: false
                         ReaderCommand.TOC -> onOpenToc != null
-                        ReaderCommand.CHROME -> onFocusChrome != null
+                        ReaderCommand.CHROME -> onFocusChrome != null && surfaceFocused[0]
                         else -> true
                     }
                 if (handled) {
@@ -558,7 +565,8 @@ internal fun ReaderScreen(
                     }
                 }
                 handled
-            }.focusable()
+            }.onFocusChanged { surfaceFocused[0] = it.isFocused }
+            .focusable()
             .onGloballyPositioned { origin[0] = it.positionInWindow() }
             // NAV-02: a center tap shows or hides the chrome. It never changes the reading mode.
             .pointerInput(onToggleChrome) {

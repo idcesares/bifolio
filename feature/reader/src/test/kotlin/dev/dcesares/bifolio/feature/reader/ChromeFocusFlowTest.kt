@@ -1,6 +1,9 @@
 package dev.dcesares.bifolio.feature.reader
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -8,17 +11,21 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.LocalReducedMotionOverride
 import dev.dcesares.bifolio.model.Anchor
@@ -141,15 +148,40 @@ class ChromeFocusFlowTest {
     }
 
     @Test
-    fun tabIsLeftAloneWhenTheSurfaceHasNoChromeToOpen() {
+    fun shiftTabOnTheSurfaceAlsoOpensTheChrome() {
+        pagedSurface()
+        compose.onRoot().performKeyInput {
+            keyDown(Key.ShiftLeft)
+            pressKey(Key.Tab)
+            keyUp(Key.ShiftLeft)
+        }
+        compose.waitForIdle()
+        assertEquals(1, tabs)
+        compose.onNodeWithContentDescription(BACK_CONTROL).assertIsFocused()
+    }
+
+    @Test
+    fun tabMovesOnToTheNextControlWhenTheSurfaceHasNoChromeToOpen() {
         RuntimeEnvironment.setQualifiers("+w412dp-h915dp-xhdpi")
         compose.setContent {
             BifolioTheme {
-                ReaderScreen(ReaderUiState.Ready(document, "T", "h", emptySet(), Anchor(0, 0)), { settled += it })
+                inputMode = LocalInputModeManager.current
+                Column {
+                    Box(Modifier.weight(1f)) {
+                        ReaderScreen(
+                            ReaderUiState.Ready(document, "T", "h", emptySet(), Anchor(0, 0)),
+                            { settled += it },
+                        )
+                    }
+                    Box(Modifier.size(48.dp).testTag("next").focusable())
+                }
             }
         }
         compose.waitForIdle()
-        press(Key.Tab)
-        assertEquals(0, tabs)
+        compose.runOnUiThread { inputMode.requestInputMode(InputMode.Keyboard) }
+        // The first Tab enters the surface's own focus target, the second leaves it; none is taken for the chrome.
+        repeat(2) { press(Key.Tab) }
+        // Not consumed by the surface, so the focus moves on like for any other control.
+        compose.onNodeWithTag("next").assertIsFocused()
     }
 }

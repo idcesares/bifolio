@@ -217,7 +217,7 @@ public class ReaderViewModel(
         if (mutableChromeVisible.value) hideChrome() else showChrome()
     }
 
-    /** Any use of the chrome restarts the 4 s countdown (UI-03). */
+    /** Any use of the chrome restarts the 8 s countdown (UI-03). */
     public fun keepChrome() {
         if (mutableChromeVisible.value) showChrome()
     }

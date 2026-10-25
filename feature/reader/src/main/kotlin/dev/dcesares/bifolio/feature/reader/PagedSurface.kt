@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -201,9 +202,6 @@ internal fun PagedSurface(
     val continuity = remember { ContinuityMotion(scope) }
     val tableScroll = remember { mutableStateMapOf<Int, Int>() }
     var shown by remember { mutableStateOf(initialAnchor) }
-    // A11Y-01: "Read from here" stays on until the reader turns by hand; scroll forward from TalkBack keeps it.
-    var reading by remember { mutableStateOf(false) }
-    val turnedByAccessibility = remember { BooleanArray(1) }
     var noticesDismissed by rememberSaveable { mutableStateOf(false) }
     // UI-14: the folder banner takes its height from the page area, so it never covers text. The page is laid out
     // again for the shorter area and keeps the reading anchor like any other change of geometry.
@@ -240,7 +238,6 @@ internal fun PagedSurface(
             // ANC-01: the settled anchor is the first visible character of the leading column of the spread.
             val settled = flow?.let { AnchorMapper.leftmostVisibleAnchor(it, index - dir) }
             if (settled != null) {
-                if (!turnedByAccessibility[0]) reading = false
                 continuity.cancel()
                 shown = settled
                 onSettled(settled)
@@ -255,7 +252,6 @@ internal fun PagedSurface(
         jumps.collect { target ->
             turn.reset()
             continuity.cancel()
-            reading = false
             shown = target
             onSettled(target)
         }
@@ -269,6 +265,8 @@ internal fun PagedSurface(
 
     // NAV-03, NAV-04: keys act on the surface, which asks for focus so they arrive without a tap first.
     val focus = remember { FocusRequester() }
+    // A11Y-06: Tab is ours only while the surface itself holds the focus; with a link focused it moves between them.
+    val surfaceFocused = remember { BooleanArray(1) }
     LaunchedEffect(overlayOpen, focusTick) { if (!overlayOpen) focus.requestFocus() }
     val keys = rememberUpdatedState(volumeKeysTurn)
     val assets = LocalContext.current.assets
@@ -288,7 +286,7 @@ internal fun PagedSurface(
                         true
                     } ?: false
                 } else if (command == ReaderCommand.CHROME) {
-                    onFocusChrome?.let {
+                    onFocusChrome?.takeIf { surfaceFocused[0] }?.let {
                         it()
                         true
                     } ?: false
@@ -311,7 +309,6 @@ internal fun PagedSurface(
                                 val target = if (command == ReaderCommand.FIRST) 0 else flow.spreadCount - 1
                                 AnchorMapper.leftmostVisibleAnchor(flow, target)?.let { settled ->
                                     continuity.cancel()
-                                    reading = false
                                     shown = settled
                                     onSettled(settled)
                                 }
@@ -320,7 +317,8 @@ internal fun PagedSurface(
                     }
                     handled
                 }
-            }.focusable(),
+            }.onFocusChanged { surfaceFocused[0] = it.isFocused }
+            .focusable(),
     ) {
         val startPx = with(density) { insetStart.toPx() }
         // Platform fold bounds are physical, so the fold shifts by the left inset, not the start inset (RTL).
@@ -474,20 +472,13 @@ internal fun PagedSurface(
                 },
         )
         if (layout != null && store != null) {
-            val spreads = layout.flow.spreadCount
             val readingState =
                 PagedReading(
-                    active = reading,
-                    spreadCount = spreads,
-                    onStart = { reading = true },
+                    spreadCount = layout.flow.spreadCount,
                     onTurn = { forward ->
                         val dir = if (forward) -1 else 1
                         val can = turn.canTurn(dir)
-                        if (can) {
-                            turnedByAccessibility[0] = true
-                            turn.commitNow(dir)
-                            turnedByAccessibility[0] = false
-                        }
+                        if (can) turn.commitNow(dir)
                         can
                     },
                 )
@@ -508,7 +499,6 @@ internal fun PagedSurface(
             seek.shown = { shown }
             seek.show = {
                 continuity.cancel()
-                reading = false
                 shown = it
             }
             seek.settled = onSettled

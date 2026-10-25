@@ -25,9 +25,9 @@ class CodeLanguageSemanticsTest {
 
     private fun stateOf(block: CodeBlock): String? {
         compose.setContent { BifolioTheme { CodeView(block.code, block = block) } }
+        // The merged tree is what TalkBack walks: the state must sit on the node that carries the code text itself.
         val node = compose.onNodeWithText(block.code.trim(), substring = true).fetchSemanticsNode()
-        return generateSequence(node) { it.parent }
-            .firstNotNullOfOrNull { it.config.getOrNull(SemanticsProperties.StateDescription) }
+        return node.config.getOrNull(SemanticsProperties.StateDescription)
     }
 
     @Test

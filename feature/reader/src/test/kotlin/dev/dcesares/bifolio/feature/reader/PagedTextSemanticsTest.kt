@@ -1,9 +1,9 @@
 package dev.dcesares.bifolio.feature.reader
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
@@ -11,11 +11,10 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.LayoutDirection
 import dev.dcesares.bifolio.designsystem.BifolioTheme
+import dev.dcesares.bifolio.layout.AnchorMapper
 import dev.dcesares.bifolio.model.Anchor
 import dev.dcesares.bifolio.parse.MarkdownParser
 import org.junit.Assert.assertEquals
@@ -58,24 +57,34 @@ class PagedTextSemanticsTest {
             append("[^n]: The note.\n")
         }
 
-    private fun show(source: String = markdown) {
+    private lateinit var shownLayout: PagedLayout
+
+    private fun show(
+        source: String = markdown,
+        rtl: Boolean = false,
+    ) {
         RuntimeEnvironment.setQualifiers("+w752dp-h835dp-xhdpi")
         val layout =
             buildLayout(
                 MarkdownParser.parse(source),
                 PageRequest(WIDTH_PX, HEIGHT_PX, 2f, 1f, 18f, "en", forcedColumns = 2),
             )
+        shownLayout = layout
         compose.setContent {
-            BifolioTheme {
-                PagedSurface(
-                    layout = layout,
-                    initialAnchor = Anchor(0, 0),
-                    onRequest = {},
-                    onSettled = { settled.add(it) },
-                    onFirstDrawn = {},
-                    onToggleChrome = {},
-                    modifier = Modifier.fillMaxSize(),
-                )
+            CompositionLocalProvider(
+                LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr,
+            ) {
+                BifolioTheme {
+                    PagedSurface(
+                        layout = layout,
+                        initialAnchor = Anchor(0, 0),
+                        onRequest = {},
+                        onSettled = { settled.add(it) },
+                        onFirstDrawn = {},
+                        onToggleChrome = {},
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
         // Columns are prepared off the main thread: the nodes appear once both are ready.
@@ -187,7 +196,7 @@ class PagedTextSemanticsTest {
     }
 
     @Test
-    fun aFencedCodeBlockAnnouncesItsLanguageOnceAndPlainCodeDoesNot() {
+    fun aFencedCodeBlockAnnouncesItsLanguageAndPlainCodeDoesNot() {
         show("```kotlin\nval x = 1\n```\n\n```\nplain\n```\n\n$markdown")
         val code = nodes(SemanticsProperties.Text).filter { textOf(it).startsWith("val x") || textOf(it) == "plain" }
         assertEquals(2, code.size)
@@ -213,90 +222,77 @@ class PagedTextSemanticsTest {
         )
     }
 
-    private fun group(): androidx.compose.ui.test.SemanticsNodeInteraction =
-        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
-
-    private fun liveText(): String? =
-        nodes(SemanticsProperties.LiveRegion)
-            .singleOrNull { it.config[SemanticsProperties.LiveRegion] == LiveRegionMode.Polite }
-            ?.config
-            ?.get(SemanticsProperties.ContentDescription)
-            ?.joinToString()
-
-    private fun readFromHere() {
-        val action = group().fetchSemanticsNode().config[SemanticsActions.CustomActions].single()
-        assertEquals("Read from here", action.label)
-        compose.runOnUiThread { action.action() }
-        compose.waitForIdle()
-    }
-
-    private fun scroll(forward: Boolean) {
-        group().performSemanticsAction(SemanticsActions.ScrollBy) { it(if (forward) 1f else -1f, 0f) }
-        compose.waitForIdle()
-    }
-
     private fun firstTextOfSpread(): String =
         nodes(SemanticsProperties.Text)
             .filter { it.config.contains(SemanticsProperties.TraversalIndex) }
             .minBy { it.config[SemanticsProperties.TraversalIndex] }
             .let { textOf(it) }
 
-    @Test
-    fun readFromHereExposesTheWholeSpreadInReadingOrderOnce() {
-        show()
-        assertEquals("nothing is announced before the action", null, liveText())
-        readFromHere()
-        val speech = liveText().orEmpty()
-        val lines = speech.lines()
-        assertTrue(speech.take(200), lines.first().startsWith("Opening Heading"))
-        val claim = lines.indexOfFirst { it.startsWith("A claim worth a note") }
-        val second = lines.indexOfFirst { it.startsWith("Second Heading") }
-        val formula = lines.indexOfFirst { it.contains("E = mc^2") }
-        assertTrue("$lines", 0 < claim && claim < second && second < formula)
-        assertFalse("the footnote label is not spoken inline", "Footnote" in lines[claim])
+    private fun group(): androidx.compose.ui.test.SemanticsNodeInteraction =
+        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange))
+
+    private fun spreadNow(): Float {
+        val axis = group().fetchSemanticsNode().config[SemanticsProperties.HorizontalScrollAxisRange]
+        return axis.value()
+    }
+
+    /** One ScrollBy as TalkBack sends it for scroll forward or back, then waits until the spread has changed. */
+    private fun scroll(
+        forward: Boolean,
+        rtl: Boolean = false,
+    ) {
+        val before = spreadNow()
+        val x = if (forward != rtl) 1f else -1f
+        group().performSemanticsAction(SemanticsActions.ScrollBy) { it(x, 0f) }
+        compose.waitUntil(WAIT_MILLIS) { spreadNow() != before }
     }
 
     @Test
-    fun scrollingForwardTurnsToTheNextSpreadByAnchorAndKeepsReading() {
+    fun readFromHereIsOneActionOnTheFirstTextOfTheSpreadAndThereIsNoLiveRegion() {
         show()
-        readFromHere()
-        val before = liveText()
+        val carriers = nodes(SemanticsActions.CustomActions)
+        assertEquals(1, carriers.size)
+        val node = carriers.single()
+        assertEquals("Read from here", node.config[SemanticsActions.CustomActions].single().label)
+        assertTrue("the carrier is a text node TalkBack can focus", node.config.contains(SemanticsProperties.Text))
+        assertTrue(textOf(node), textOf(node).startsWith("Opening Heading"))
+        val first = nodes(SemanticsProperties.Text).minBy { it.config[SemanticsProperties.TraversalIndex] }
+        assertEquals("it is the first node read", textOf(first), textOf(node))
+        assertTrue("one reading mechanism, TalkBack's own", nodes(SemanticsProperties.LiveRegion).isEmpty())
+    }
+
+    @Test
+    fun scrollingForwardTurnsToTheNextSpreadByAnchor() {
+        show()
         scroll(forward = true)
-        assertEquals("one anchor settled, the first character of the next spread", 1, settled.size)
-        assertTrue("past the start of the document: ${settled[0]}", settled[0] != Anchor(0, 0))
-        compose.waitUntil(WAIT_MILLIS) { liveText() != null && liveText() != before }
+        assertEquals(listOf(AnchorMapper.leftmostVisibleAnchor(shownLayout.flow, 1)), settled)
         assertFalse("the new spread starts elsewhere", firstTextOfSpread().startsWith("Opening Heading"))
         scroll(forward = false)
-        compose.waitUntil(WAIT_MILLIS) { liveText() == before }
-        assertEquals("back at the start", Anchor(0, 0), settled.last())
+        assertEquals(AnchorMapper.leftmostVisibleAnchor(shownLayout.flow, 0), settled.last())
+        assertTrue(firstTextOfSpread().startsWith("Opening Heading"))
     }
 
     @Test
-    fun aTurnByHandStopsTheReading() {
-        show()
-        readFromHere()
-        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        compose.waitUntil(WAIT_MILLIS) { liveText() == null }
-    }
-
-    @Test
-    fun aJumpToTheEndStopsTheReading() {
-        show()
-        readFromHere()
-        compose.onRoot().performKeyInput { pressKey(Key.MoveEnd) }
-        compose.waitUntil(WAIT_MILLIS) { liveText() == null }
+    fun inARightToLeftLayoutForwardIsTheNegativeAmount() {
+        show(rtl = true)
+        scroll(forward = true, rtl = true)
+        assertEquals(listOf(AnchorMapper.leftmostVisibleAnchor(shownLayout.flow, 1)), settled)
+        assertTrue(scrollsForward(1f, rtl = false) && !scrollsForward(-1f, rtl = false))
+        assertTrue(scrollsForward(-1f, rtl = true) && !scrollsForward(1f, rtl = true))
     }
 
     @Test
     fun scrollingPastTheLastSpreadIsRefused() {
         show()
-        val axis = group().fetchSemanticsNode().config[SemanticsProperties.HorizontalScrollAxisRange]
-        repeat(axis.maxValue().toInt()) {
-            scroll(forward = true)
-            compose.waitUntil(WAIT_MILLIS) { axis.value() >= 0f }
-        }
-        val last = settled.size
-        scroll(forward = true)
+        val last = shownLayout.flow.spreadCount - 1
+        assertTrue("the document spans several spreads", last >= 2)
+        repeat(last) { scroll(forward = true) }
+        assertEquals("the end was reached", last.toFloat(), spreadNow(), 0f)
+        assertEquals(last, settled.size)
+        assertEquals(AnchorMapper.leftmostVisibleAnchor(shownLayout.flow, last), settled.last())
+        group().performSemanticsAction(SemanticsActions.ScrollBy) { it(1f, 0f) }
+        compose.waitForIdle()
         assertEquals("no turn beyond the end", last, settled.size)
+        assertEquals(last.toFloat(), spreadNow(), 0f)
     }
 }

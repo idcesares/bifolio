@@ -83,4 +83,17 @@ class PageTurnControllerTest {
             assertEquals(listOf(-1, -1), edges)
             assertEquals(emptyList<Int>(), turns)
         }
+
+    @Test
+    fun `committing at once while a turn animates does not turn twice`() =
+        runTest {
+            val turns = mutableListOf<Int>()
+            val c = controller(this, turns)
+            c.style = PageTurnStyle.SLIDE
+            c.turn(-1)
+            c.commitNow(-1)
+            advanceUntilIdle()
+            assertEquals(listOf(-1), turns)
+            assertEquals(0f, c.progress, 0f)
+        }
 }

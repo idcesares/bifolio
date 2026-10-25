@@ -211,7 +211,7 @@ All values in px at the current density; `W` is the usable window width after in
 |---|---|
 | NAV-01 | Paged mode: horizontal swipe turns spreads, following finger velocity |
 | NAV-02 | Tap zones on the reading surface: outer 30% left goes back, outer 30% right goes forward, center toggles chrome. Mirrored for RTL documents. In tabletop posture the zones stay active over the text region and the control deck repeats previous and next as large zones (POS-04) |
-| NAV-03 | Keyboard: Right, Page Down, Space, J go forward; Left, Page Up, Shift+Space, K go back; Home and End jump; Ctrl+F opens search; T opens table of contents; Tab shows the chrome and focuses its first control; Escape closes overlays, and from the chrome returns focus to the reading surface |
+| NAV-03 | Keyboard: Right, Page Down, Space, J go forward; Left, Page Up, Shift+Space, K go back; Home and End jump; Ctrl+F opens search; T opens table of contents; Tab, when the reading surface itself holds the focus, shows the chrome and focuses its first control (Shift+Tab does the same); with a link or other child focused, Tab and Shift+Tab move between them as usual; Escape closes overlays, and from the chrome returns focus to the reading surface; a chrome that hides with a control focused returns the focus to the surface |
 | NAV-04 | Volume keys turn pages when enabled in settings (off by default) |
 | NAV-05 | Scroll mode: standard fling, plus the same keyboard shortcuts scrolling by 90% of the viewport |
 | NAV-06 | Predictive back: from reader to library animates the reader shrinking toward its library item; from overlays closes the overlay |
@@ -281,12 +281,12 @@ All values in px at the current density; `W` is the usable window width after in
 
 | ID | Requirement |
 |---|---|
-| A11Y-01 | TalkBack reads page content in order with headings marked as headings; a custom action "Read from here" exposes the text of the shown spread and, when TalkBack scrolls forward past its last node, turns to the next spread by anchor and keeps reading |
+| A11Y-01 | TalkBack reads page content in order with headings marked as headings, through its own continuous reading; in paged mode the shown spread exposes scroll semantics, so when TalkBack scrolls forward past the last node the reader turns to the next spread by anchor (never a page number), in the direction that fits the layout (RTL included), and refuses at the last spread. The first text of the spread carries a custom action "Read from here", reachable from the TalkBack actions menu |
 | A11Y-02 | All interactive targets at least 48dp |
-| A11Y-03 | Font scaling up to 200% stays usable: auto columns reduce, chrome reflows, nothing clips; above about 120% the toolbar drops its captions and keeps icons with full descriptions |
+| A11Y-03 | Font scaling up to 200% stays usable: auto columns reduce, chrome reflows, nothing clips; above 120% (font scale 1.2) the toolbar drops its captions and keeps icons with full descriptions |
 | A11Y-04 | Images expose alt text; math exposes its TeX source as content description; code blocks announce language |
 | A11Y-05 | Reduce motion per MOT-07 |
-| A11Y-06 | Full keyboard operation per NAV-03, with visible focus indicators in chrome; Tab in the reader shows the chrome and focuses its first control, Escape returns focus to the surface |
+| A11Y-06 | Full keyboard operation per NAV-03, with visible focus indicators in chrome |
 
 ---
 
