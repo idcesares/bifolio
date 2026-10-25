@@ -2,7 +2,8 @@
 name: reviewer
 description: Independent read-only reviewer. Use before every pull request to review a diff against SPEC.md, the hard rules in CLAUDE.md, the clean-room rule, license policy and test quality. Does not write code.
 tools: Read, Glob, Grep, Bash
-model: inherit
+model: opus
+effort: high
 color: red
 ---
 
