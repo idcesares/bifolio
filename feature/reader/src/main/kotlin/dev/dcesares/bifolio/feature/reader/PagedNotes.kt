@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -18,6 +19,7 @@ import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.AnnotatedString
@@ -119,6 +121,7 @@ internal fun PagedPageSemantics(
     renderer?.observe()
     val failedText = stringResource(R.string.reader_math_failed)
     val noAlt = stringResource(R.string.reader_image_no_alt)
+    val resources = LocalContext.current.resources
     val side = with(LocalDensity.current) { Spacing.TouchTarget.toPx() }
     val geometry = layout.geometry
     Box(Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
@@ -133,6 +136,13 @@ internal fun PagedPageSemantics(
                     this.text = AnnotatedString(spoken)
                     traversalIndex = readingOrder(column, text.top)
                     if (text.role.isHeading()) heading()
+                    // Said once, where the block starts; a block split over two pages does not repeat it.
+                    val language = text.language?.takeIf { it.isNotBlank() && text.visibleStart == 0 }
+                    if (language !=
+                        null
+                    ) {
+                        stateDescription = resources.getString(R.string.reader_code_language, language)
+                    }
                 }
             }
             for (image in prepared.images) {

@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -201,11 +202,13 @@ internal fun CodeView(
     val tokens = BifolioTheme.palette.codeTokens
     val spans = rememberTokenSpans(code, language)
     val text = remember(code, spans, tokens) { spans?.let { codeAnnotated(code, it, tokens) } ?: AnnotatedString(code) }
+    val announced = language?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.reader_code_language, it) }
     Box(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Spacing.CodeRadius))
-            .background(BifolioTheme.palette.codeSurface),
+            .background(BifolioTheme.palette.codeSurface)
+            .semantics { if (announced != null) stateDescription = announced },
     ) {
         Box(Modifier.horizontalScroll(rememberScrollState()).padding(Spacing.M)) {
             HighlightedText(text, block, BifolioTheme.typography.code, softWrap = false)

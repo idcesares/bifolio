@@ -2,6 +2,7 @@ package dev.dcesares.bifolio.feature.reader
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -48,11 +49,11 @@ class PagedTextSemanticsTest {
             append("[^n]: The note.\n")
         }
 
-    private fun show() {
+    private fun show(source: String = markdown) {
         RuntimeEnvironment.setQualifiers("+w752dp-h835dp-xhdpi")
         val layout =
             buildLayout(
-                MarkdownParser.parse(markdown),
+                MarkdownParser.parse(source),
                 PageRequest(WIDTH_PX, HEIGHT_PX, 2f, 1f, 18f, "en", forcedColumns = 2),
             )
         compose.setContent {
@@ -155,5 +156,24 @@ class PagedTextSemanticsTest {
         val second = labels.indexOfFirst { it.startsWith("Second Heading") }
         val formula = labels.indexOfFirst { it.contains("E = mc^2") }
         assertTrue("$labels", opening < claim && claim < note && note < second && second < formula)
+    }
+
+    @Test
+    fun imagesAreImageNodesWithTheirAltTextOrAPlainFallback() {
+        show("![A red dot on white](dot.png)\n\n![](plain.png)\n\n$markdown")
+        val images =
+            nodes(SemanticsProperties.Role).filter { it.config[SemanticsProperties.Role] == Role.Image }
+        val labels = images.map { it.config[SemanticsProperties.ContentDescription].joinToString() }
+        assertEquals(listOf("A red dot on white", "Image"), labels.sorted())
+    }
+
+    @Test
+    fun aFencedCodeBlockAnnouncesItsLanguageOnceAndPlainCodeDoesNot() {
+        show("```kotlin\nval x = 1\n```\n\n```\nplain\n```\n\n$markdown")
+        val code = nodes(SemanticsProperties.Text).filter { textOf(it).startsWith("val x") || textOf(it) == "plain" }
+        assertEquals(2, code.size)
+        val states = code.associate { textOf(it) to it.config.getOrNull(SemanticsProperties.StateDescription) }
+        assertEquals("kotlin code", states["val x = 1"])
+        assertEquals(null, states["plain"])
     }
 }
