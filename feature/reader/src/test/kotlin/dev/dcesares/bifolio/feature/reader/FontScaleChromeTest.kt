@@ -12,8 +12,10 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextLayoutResult
+import com.github.takahirom.roborazzi.captureRoboImage
 import dev.dcesares.bifolio.data.AppearanceProfile
 import dev.dcesares.bifolio.data.ReadingMode
+import dev.dcesares.bifolio.data.ThemeChoice
 import dev.dcesares.bifolio.designsystem.BifolioTheme
 import dev.dcesares.bifolio.designsystem.LocalReducedMotionOverride
 import dev.dcesares.bifolio.designsystem.ReadingThemeId
@@ -25,6 +27,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+
+private const val SLOT_AIR_PX = 8f
 
 /** The text laid out by [this] node, or null when it is not a text node. */
 internal fun SemanticsNode.textLayout(): TextLayoutResult? {
@@ -64,7 +68,8 @@ class FontScaleChromeTest {
                     ) { it.parent }.firstOrNull { it.boundsInRoot != box }?.boundsInRoot
                 val last = layout.lineCount - 1
                 val cut = layout.getLineEnd(last, visibleEnd = false) < words.length
-                val wide = layout.getLineRight(last) > box.width + 0.5f
+                // A little air at both ends: a glyph that touches the slot edge reads as clipped.
+                val wide = layout.getLineRight(last) > (slot?.width ?: box.width) - SLOT_AIR_PX
                 val outside =
                     slot != null &&
                         (
@@ -94,19 +99,30 @@ class FontScaleChromeTest {
         }
     }
 
-    private fun chromeAt(fontScale: Float) {
-        RuntimeEnvironment.setQualifiers("+w360dp-h780dp-xhdpi")
+    private fun chromeAt(
+        fontScale: Float,
+        widthDp: Int = 360,
+        mode: ReadingMode = ReadingMode.SCROLL,
+        theme: ThemeChoice? = null,
+        shot: String? = null,
+    ) {
+        RuntimeEnvironment.setQualifiers("+w${widthDp}dp-h780dp-xhdpi")
         RuntimeEnvironment.setFontScale(fontScale)
         compose.setContent {
             CompositionLocalProvider(LocalReducedMotionOverride provides true) {
                 BifolioTheme(ReadingThemeId.Paper) {
                     Box(Modifier.fillMaxSize()) {
-                        ReaderChrome(visible = true, appearance = AppearanceProfile(), mode = ReadingMode.SCROLL)
+                        ReaderChrome(
+                            visible = true,
+                            appearance = AppearanceProfile(theme = theme, columns = 2),
+                            mode = mode,
+                        )
                     }
                 }
             }
         }
-        assertNothingClips("chrome at $fontScale")
+        assertNothingClips("chrome at $fontScale, ${widthDp}dp, $mode, $theme")
+        if (shot != null) compose.onRoot().captureRoboImage("src/test/screenshots/$shot.png")
     }
 
     @Test
@@ -117,4 +133,16 @@ class FontScaleChromeTest {
 
     @Test
     fun chromeFitsAtFontScaleTwo() = chromeAt(2f)
+
+    @Test
+    fun narrowestWindowFitsAtOneAndAHalfWithTheLongestCaptions() =
+        chromeAt(1.5f, 320, ReadingMode.SCROLL, ThemeChoice.SEPIA, "chrome-narrow-font150")
+
+    @Test
+    fun narrowestWindowFitsAtTwoWithTheLongestCaptions() =
+        chromeAt(2f, 320, ReadingMode.SCROLL, ThemeChoice.SEPIA, "chrome-narrow-font200")
+
+    @Test
+    fun narrowestWindowFitsAtTwoInPagedMode() =
+        chromeAt(2f, widthDp = 320, mode = ReadingMode.PAGED, theme = ThemeChoice.PAPER)
 }

@@ -145,6 +145,13 @@ internal fun PagedPageSemantics(
                     }
                 }
             }
+            for (row in prepared.rows) {
+                if (row.spoken.isEmpty()) continue
+                SemanticsBox(dx + row.x, dy + row.y, row.width, row.height) {
+                    text = AnnotatedString(row.spoken)
+                    traversalIndex = readingOrder(column, row.y)
+                }
+            }
             for (image in prepared.images) {
                 val description = image.block.alt.ifBlank { noAlt }
                 SemanticsBox(dx + image.x, dy + image.y, image.width, image.height) {

@@ -163,7 +163,7 @@ private val CaptionLine = 14.sp
  * only up to this factor. Past it a caption would break inside its word (A11Y-03); every control keeps its full
  * description for TalkBack, and the appearance sheet scales without limit.
  */
-private const val TOOLBAR_MAX_FONT_SCALE = 1.3f
+private const val TOOLBAR_MAX_FONT_SCALE = 1.2f
 
 /**
  * The few settings that change often, one tap each on the same global profile as the appearance sheet. The panel

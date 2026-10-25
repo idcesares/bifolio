@@ -176,4 +176,15 @@ class PagedTextSemanticsTest {
         assertEquals("kotlin code", states["val x = 1"])
         assertEquals(null, states["plain"])
     }
+
+    @Test
+    fun tableCellsReachTalkBack() {
+        show("| Alpha | Beta |\n|---|---|\n| Gamma | Delta |\n\n$markdown")
+        val spoken =
+            nodes(SemanticsProperties.Text).joinToString(" ") { textOf(it) } +
+                nodes(SemanticsProperties.ContentDescription).joinToString(" ") {
+                    it.config[SemanticsProperties.ContentDescription].joinToString()
+                }
+        assertTrue(spoken.take(300), "Gamma" in spoken && "Delta" in spoken)
+    }
 }

@@ -72,6 +72,18 @@ internal class PreparedColumn(
     val maths: List<MathBox> = emptyList(),
     /** The images of the column (A11Y-04): TalkBack nodes carry their alt text. */
     val images: List<ImageBox> = emptyList(),
+    /** The table rows of the column (A11Y-01): TalkBack reads a row as one line of cells. */
+    val rows: List<RowBox> = emptyList(),
+)
+
+/** One table row in a column, in px from the column origin, with its cells' text in order. */
+internal class RowBox(
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float,
+    val spoken: String,
+    val header: Boolean,
 )
 
 /** One image in a column, in px from the column origin. */
@@ -258,6 +270,7 @@ internal class ColumnPainter(
         val texts = ArrayList<ColumnText>()
         val maths = ArrayList<MathBox>(0)
         val pictures = ArrayList<ImageBox>(0)
+        val rows = ArrayList<RowBox>(0)
         for (item in draw.items) {
             when (item) {
                 is DrawText -> {
@@ -278,6 +291,7 @@ internal class ColumnPainter(
                 is DrawContinuation -> marks.add(continuationOp(item))
                 is DrawTableRow -> {
                     ops.add(tableRowOp(item))
+                    rows.add(rowBoxOf(item))
                     if (item.tableWidth > item.columnWidth) {
                         val r =
                             tableRects.getOrPut(item.blockIndex) {
@@ -302,8 +316,22 @@ internal class ColumnPainter(
             tableRects.map { (block, r) ->
                 TableHit(block, r[X], r[TOP], r[WIDTH], r[BOTTOM] - r[TOP], r[SCROLL])
             }
-        return PreparedColumn(ops, hits, targets, texts, maths, pictures)
+        return PreparedColumn(ops, hits, targets, texts, maths, pictures, rows)
     }
+
+    private fun rowBoxOf(row: DrawTableRow): RowBox =
+        RowBox(
+            x = row.x.toFloat(),
+            y = row.y.toFloat(),
+            width = row.columnWidth.toFloat(),
+            height = row.height.toFloat(),
+            spoken =
+                row.cells
+                    .mapNotNull { it.leaf?.text?.trim() }
+                    .filter { it.isNotEmpty() }
+                    .joinToString(", "),
+            header = row.header,
+        )
 
     private fun imageBoxOf(item: DrawAtomic): ImageBox? =
         (item.block as? ImageBlock)?.let {
