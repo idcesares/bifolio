@@ -1,5 +1,6 @@
 package dev.dcesares.bifolio.designsystem
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -49,7 +50,13 @@ public fun BifolioTheme(
         remember(palette, bodySp, lineHeight, font) {
             readingTypography(palette, bodySp.sp, lineHeight, font.family(assets), monoFamily(assets))
         }
-    CompositionLocalProvider(LocalPalette provides palette, LocalTypography provides typography, content = content)
+    val indication = remember(palette) { FocusRingIndication(ring = palette.accent, press = palette.ink) }
+    CompositionLocalProvider(
+        LocalPalette provides palette,
+        LocalTypography provides typography,
+        LocalIndication provides indication,
+        content = content,
+    )
 }
 
 private const val DEFAULT_BODY_SP = 18f

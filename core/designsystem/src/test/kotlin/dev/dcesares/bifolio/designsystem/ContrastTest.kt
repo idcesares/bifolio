@@ -47,6 +47,14 @@ class ContrastTest {
     }
 
     @Test
+    fun focusRingAccentHoldsThreeToOneOnPageAndChromeSurface() {
+        all.forEach {
+            assertTrue(ratio(it.accent, it.page) >= 3.0, "${it.id} ring on page")
+            assertTrue(ratio(it.accent, it.codeSurface) >= 3.0, "${it.id} ring on chrome surface")
+        }
+    }
+
+    @Test
     fun searchHitsKeepInkAtFourPointFiveAndShowAgainstThePage() {
         all.forEach {
             val hit = it.searchHit.compositeOver(it.page)
