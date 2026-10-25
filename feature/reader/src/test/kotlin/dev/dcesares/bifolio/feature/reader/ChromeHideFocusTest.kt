@@ -1,5 +1,6 @@
 package dev.dcesares.bifolio.feature.reader
 
+import android.os.Looper
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
@@ -26,8 +27,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.time.Duration
 
 private const val BACK_CONTROL = "Back to the library"
 private const val WAIT_MILLIS = 20_000L
@@ -45,7 +48,7 @@ class ChromeHideFocusTest {
 
     private lateinit var inputMode: InputModeManager
 
-    private fun open(): ReaderViewModel {
+    private fun open(reducedMotion: Boolean = true): ReaderViewModel {
         RuntimeEnvironment.setQualifiers("+w412dp-h915dp-xhdpi")
         val text = List(60) { "Paragraph $it. " + "The quick brown fox jumps over the lazy dog. ".repeat(6) }
         val viewModel =
@@ -58,7 +61,7 @@ class ChromeHideFocusTest {
                 chromeDispatcher = Dispatchers.Main,
             )
         compose.setContent {
-            CompositionLocalProvider(LocalReducedMotionOverride provides true) {
+            CompositionLocalProvider(LocalReducedMotionOverride provides reducedMotion) {
                 BifolioTheme {
                     inputMode = LocalInputModeManager.current
                     ReaderRoute(viewModel = viewModel, onBack = {})
@@ -74,6 +77,22 @@ class ChromeHideFocusTest {
     private fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         compose.waitForIdle()
+    }
+
+    @Test
+    fun theAutoHideWithAControlFocusedGivesTheFocusBackToTheSurface() {
+        val viewModel = open(reducedMotion = false)
+        press(Key.Tab)
+        compose.waitUntil(WAIT_MILLIS) { viewModel.chromeVisible.value }
+        compose.onNodeWithContentDescription(BACK_CONTROL).assertIsFocused()
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(CHROME_AUTO_HIDE_MILLIS + 1))
+        compose.waitUntil(WAIT_MILLIS) { !viewModel.chromeVisible.value }
+        compose.waitUntil(WAIT_MILLIS) { compose.onNodeWithContentDescription(BACK_CONTROL).isNotThere() }
+        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        val before = viewModel.anchor.value
+        press(Key.PageDown)
+        compose.waitUntil(WAIT_MILLIS) { viewModel.anchor.value != before }
     }
 
     @Test
@@ -96,4 +115,7 @@ class ChromeHideFocusTest {
         assertNotEquals("page keys reach the surface after the chrome is gone", before, viewModel.anchor.value)
         assertTrue(viewModel.anchor.value.blockIndex >= 0)
     }
+
+    private fun androidx.compose.ui.test.SemanticsNodeInteraction.isNotThere(): Boolean =
+        runCatching { assertDoesNotExist() }.isSuccess
 }

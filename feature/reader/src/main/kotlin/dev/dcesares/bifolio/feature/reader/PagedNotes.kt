@@ -221,8 +221,9 @@ internal class PagedReading(
 )
 
 /**
- * Whether a ScrollBy of [x] px means "forward". Compose negates the horizontal amount for a right-to-left layout unless
- * the range is reversed, so there forward is negative. Which sign a real TalkBack sends needs a device.
+ * Whether a ScrollBy of [x] px means "forward". Assumes Compose negates the horizontal amount in a right-to-left layout
+ * (unverified, taken from how its scrollable ranges are documented): there forward is negative. Which sign a real
+ * TalkBack sends in RTL must be checked on a device; the JVM tests send the sign this function expects.
  */
 internal fun scrollsForward(
     x: Float,

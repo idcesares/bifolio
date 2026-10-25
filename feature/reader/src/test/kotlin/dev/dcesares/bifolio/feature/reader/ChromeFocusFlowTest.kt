@@ -24,6 +24,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import dev.dcesares.bifolio.designsystem.BifolioTheme
@@ -184,4 +185,48 @@ class ChromeFocusFlowTest {
         // Not consumed by the surface, so the focus moves on like for any other control.
         compose.onNodeWithTag("next").assertIsFocused()
     }
+
+    private fun tabFromInsideTheSurface(surface: @Composable () -> Unit) {
+        RuntimeEnvironment.setQualifiers("+w412dp-h915dp-xhdpi")
+        compose.setContent {
+            BifolioTheme {
+                inputMode = LocalInputModeManager.current
+                Column {
+                    Box(Modifier.weight(1f)) {
+                        surface()
+                    }
+                    Box(Modifier.size(48.dp).testTag("next").focusable())
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.runOnUiThread { inputMode.requestInputMode(InputMode.Keyboard) }
+        compose
+            .onNodeWithTag(
+                "next",
+            ).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+        compose.onRoot().performKeyInput {
+            keyDown(Key.ShiftLeft)
+            pressKey(Key.Tab)
+            keyUp(Key.ShiftLeft)
+        }
+        compose.waitForIdle()
+        // Shift+Tab lands on a focus stop inside the surface that is not the surface itself, with no node.
+        assertEquals("Shift+Tab from outside is not the chrome", 0, tabs)
+        compose.onNodeWithTag("next").assertIsNotFocused()
+        press(Key.Tab)
+        assertEquals("Tab from that stop is not the chrome either", 0, tabs)
+        compose.onNodeWithTag("next").assertIsFocused()
+    }
+
+    @Test
+    fun scrollTabFromAFocusStopInsideTheSurfaceIsNotTakenForTheChrome() =
+        tabFromInsideTheSurface {
+            ReaderScreen(
+                ReaderUiState.Ready(document, "T", "h", emptySet(), Anchor(0, 0)),
+                { settled += it },
+                onFocusChrome = { tabs++ },
+            )
+        }
 }
