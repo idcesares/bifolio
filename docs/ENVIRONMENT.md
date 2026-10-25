@@ -46,7 +46,7 @@ Gradle is provided by the wrapper. Docker is not needed.
 |---|---|
 | GitHub repository `idcesares/bifolio` | Private until the first release, then public |
 | Google Play Console developer account | One-time fee and identity verification; new personal accounts must run a closed test with the required number of testers (12 at the time of writing) for 14 days before production. Start early |
-| Upload keystore | Created locally, stored in a password manager plus an offline backup; Play App Signing enabled. Never committed |
+| Upload keystore | Created locally, stored in a password manager plus an offline backup; Play App Signing enabled. Never committed. The release build reads `BIFOLIO_KEYSTORE`, `BIFOLIO_KEYSTORE_PASSWORD`, `BIFOLIO_KEY_ALIAS` and `BIFOLIO_KEY_PASSWORD` from the environment or `local.properties`; without them `assembleRelease` produces unsigned APKs |
 | `bifolio@dcesares.dev` | Play contact and privacy policy contact |
 
 ## Quick check

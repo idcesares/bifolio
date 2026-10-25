@@ -298,7 +298,7 @@ All values in px at the current density; `W` is the usable window width after in
 | PRV-02 | No analytics, crash reporting, ads or tracking libraries. No Google Play Services dependency |
 | PRV-03 | No WebView class may be referenced by app code |
 | PRV-04 | Only URIs the user granted are read. Folder grants are stored and listed in settings with a revoke action |
-| PRV-05 | `android:allowBackup` limited to preferences and recents metadata (no file content) via backup rules |
+| PRV-05 | `android:allowBackup="false"`: nothing leaves the device through Android backup or device transfer (owner decision 2026-10-23, stricter than the earlier "preferences and recents only") |
 | PRV-06 | Play Data safety: "No data collected, no data shared". Privacy policy text lives in `docs/PRIVACY.md` |
 
 ---
