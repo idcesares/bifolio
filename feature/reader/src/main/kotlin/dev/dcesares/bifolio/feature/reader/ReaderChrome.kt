@@ -31,18 +31,24 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.dcesares.bifolio.data.AppearanceProfile
@@ -153,6 +159,13 @@ private val CaptionSize = 11.sp
 private val CaptionLine = 14.sp
 
 /**
+ * The toolbar slots are about 48dp wide and 56dp tall whatever the font scale, so their text follows the system scale
+ * only up to this factor. Past it a caption would break inside its word (A11Y-03); every control keeps its full
+ * description for TalkBack, and the appearance sheet scales without limit.
+ */
+private const val TOOLBAR_MAX_FONT_SCALE = 1.3f
+
+/**
  * The few settings that change often, one tap each on the same global profile as the appearance sheet. The panel
  * sits on the tonal surface of the theme with a hairline edge and a soft shadow, so it reads as a layer over the
  * page and not as part of it. Everything else stays in the sheet.
@@ -249,6 +262,23 @@ private fun RowScope.ToolbarItem(
     val palette = BifolioTheme.palette
     val tint = if (accent) palette.accent else palette.ink
     val text = BifolioTheme.typography.caption.copy(color = tint, fontWeight = FontWeight.SemiBold)
+    val density = LocalDensity.current
+    val capped = remember(density) { Density(density.density, minOf(density.fontScale, TOOLBAR_MAX_FONT_SCALE)) }
+    CompositionLocalProvider(LocalDensity provides capped) {
+        ToolbarSlot(description, onClick, icon, glyph, caption, tint, text)
+    }
+}
+
+@Composable
+private fun RowScope.ToolbarSlot(
+    description: String,
+    onClick: () -> Unit,
+    icon: ImageVector?,
+    glyph: String?,
+    caption: String?,
+    tint: Color,
+    text: TextStyle,
+) {
     Column(
         modifier =
             Modifier
