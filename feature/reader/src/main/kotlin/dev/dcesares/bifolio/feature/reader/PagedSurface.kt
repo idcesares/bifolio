@@ -221,8 +221,7 @@ internal fun PagedSurface(
 
     // NAV-09: a selection belongs to one spread of one layout; turning, jumping or relayout drops it.
     val picked = remember(layout, store, index) { PagedSelection() }
-    val turnStyle = turnStyleOf(appearance.turn)
-    turn.style = if (reduced && turnStyle == PageTurnStyle.SLIDE) PageTurnStyle.FADE else turnStyle
+    turn.style = turnStyleFor(appearance.turn, reduced)
     SideEffect {
         turn.canTurn = { dir -> flow != null && (index - dir) in 0 until flow.spreadCount }
         turn.commit = { dir ->

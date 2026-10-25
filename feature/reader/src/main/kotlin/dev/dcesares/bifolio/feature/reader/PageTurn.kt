@@ -124,3 +124,12 @@ internal fun turnStyleOf(choice: TurnChoice): PageTurnStyle =
         TurnChoice.FADE -> PageTurnStyle.FADE
         TurnChoice.NONE -> PageTurnStyle.NONE
     }
+
+/** The style a turn really uses: under reduced motion Slide becomes Fade, Fade and None stay (MOT-07). */
+internal fun turnStyleFor(
+    choice: TurnChoice,
+    reducedMotion: Boolean,
+): PageTurnStyle {
+    val style = turnStyleOf(choice)
+    return if (reducedMotion && style == PageTurnStyle.SLIDE) PageTurnStyle.FADE else style
+}
