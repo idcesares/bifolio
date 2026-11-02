@@ -89,6 +89,6 @@ State: M5 code is complete and checked on the foldable (SM-F976B): images, folde
 - PAG-07: 60% floor for math. `|` in a table cell needs `\|`. Macros are rejected. Paged semantics for math and images.
 
 ### Isaac's pending decisions and checks
-- Freeze tokens in DESIGN.md at the end of M4 (still marked pending).
-- M4 and M5 owner checkpoints on the device.
-- Structure talk "anything else beyond the reader": ask at the start of M6 (M5 is closed).
+- Closed as of 2026-11-01: tokens frozen in DESIGN.md (M6, 2026-10-22); owner device checks accepted (`docs/perf/M6.md`).
+- Open: structure talk "anything else beyond the reader", to hold before work on v1.1.
+- Open: `verifyRoborazziDebug` is not in CI and needs a documented reference platform (`docs/TESTING.md`).

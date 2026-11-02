@@ -4,7 +4,7 @@
 
 Bifolio is a read-only Markdown reader for Android that typesets documents like a book and turns a foldable phone into a true two-page spread. A bifolio is one sheet folded once into two leaves: that is your device, and that is the spread.
 
-> Status: feature complete, in release preparation. Target: v1.0 on Google Play.
+> Status: v1.0.0, feature complete. Distributed as source on GitHub; build it yourself (see [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md)). No store release is planned yet.
 
 ## What it does
 

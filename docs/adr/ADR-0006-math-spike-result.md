@@ -81,6 +81,8 @@ Fallback: `io.github.erweixin:ratex-android:0.1.15` (MIT, fonts OFL-1.1).
 
 ## Device-pending checks (not verifiable on the JVM)
 
+Status: the owner accepted these on a device on 2026-11-01 with no problems found (see `docs/perf/M6.md`). The list is kept as the record of what the spike could not prove.
+
 - Rendering of an R8 full-mode release build (size was measured, runtime behavior of the minified build was not).
 - Real Android text metrics, cold-start and warm-up cost of the first formula (550 ms seen on JVM once).
 - Thread safety of the measurer off the main thread (it worked on a worker thread in Robolectric; treat as not safe until proven).
@@ -161,4 +163,4 @@ color-author:         \textcolor{red}{x} + \color{#00ff00} y
 
 ## Appendix C: reproducing
 
-The spike project lives outside the repo (`C:\Users\idces\.claude\jobs\6e1fe991\tmp\math-spike`). It holds `Formulas.kt` (the sets above), `MathSpikeTest.kt` (ten Robolectric tests), the three size-comparison apps and the binary scan scripts. It is disposable and not part of the build.
+The spike project lives outside the repo (a throwaway Gradle project, not kept). It held `Formulas.kt` (the sets above), `MathSpikeTest.kt` (ten Robolectric tests), the three size-comparison apps and the binary scan scripts. It is disposable and not part of the build.
