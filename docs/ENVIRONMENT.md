@@ -40,13 +40,13 @@ Gradle is provided by the wrapper. Docker is not needed.
 2. `adb devices` lists the device as `device`.
 3. For benchmarks: unlocked, long screen timeout, battery saver off, charging.
 
-## Accounts and secrets (needed by M7)
+## Accounts and secrets
 
 | Item | Notes |
 |---|---|
 | GitHub repository `idcesares/bifolio` | Private until the first release, then public |
-| Google Play Console developer account | One-time fee and identity verification; new personal accounts must run a closed test with the required number of testers (12 at the time of writing) for 14 days before production. Start early |
-| Upload keystore | Created locally, stored in a password manager plus an offline backup; Play App Signing enabled. Never committed. The release build reads `BIFOLIO_KEYSTORE`, `BIFOLIO_KEYSTORE_PASSWORD`, `BIFOLIO_KEY_ALIAS` and `BIFOLIO_KEY_PASSWORD` from the environment or `local.properties`; without them `assembleRelease` produces unsigned APKs |
+| Google Play Console developer account | Deferred; not required for GitHub distribution. Check current requirements if publishing on Play later. |
+| Release keystore | Keep a secure backup of the keystore and store its password separately. Never commit either. The release build reads `BIFOLIO_KEYSTORE`, `BIFOLIO_KEYSTORE_PASSWORD`, `BIFOLIO_KEY_ALIAS` and `BIFOLIO_KEY_PASSWORD` from the environment or `local.properties`; without them `assembleRelease` produces unsigned APKs |
 | `bifolio@dcesares.dev` | Play contact and privacy policy contact |
 
 ## Quick check

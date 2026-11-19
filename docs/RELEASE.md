@@ -1,70 +1,53 @@
-# Release checklist (M7)
+# Release checklist
 
-Everything the owner does to ship v1.0. Items marked **agent** can be done in a session; the rest need Isaac.
+The first distribution is planned for GitHub. Google Play is deferred. The
+roadmap's formal M6 and M7 definitions remain unchanged; a GitHub release does
+not by itself close those milestones.
 
-## 1. Before the store
+## Current preparation
 
-| # | Item | Who | Done when |
-|---|---|---|---|
-| 1 | Device measurements PRF-02 to PRF-05 | Isaac | Numbers recorded in `docs/perf/M6.md`, all inside budget (SPEC performance section) |
-| 2 | TalkBack, 200% font on the foldable, hardware keyboard, RTL | Isaac | A11Y-01 moves from "pending device" to done |
-| 3 | A week of real reading (M6 checkpoint) | Isaac | No data loss, no lost position |
-| 4 | Upload keystore generated and backed up outside the repository | Isaac | `BIFOLIO_KEYSTORE`, `BIFOLIO_KEYSTORE_PASSWORD`, `BIFOLIO_KEY_ALIAS`, `BIFOLIO_KEY_PASSWORD` set in the environment or `local.properties` (never committed) |
-| 5 | Signed release build per ABI | agent | `./gradlew :app:assembleRelease` with the key set; verify with `apksigner verify --print-certs` |
-| 6 | Policy checks on the release APK | agent | `checkPolicy` green; merged manifest has no INTERNET (PRV-01) and `allowBackup="false"` (PRV-05) |
-| 7 | Folder grants list with revoke in settings (PRV-04) | agent | Screen and tests merged |
+- Version `1.0.0` (version code `1`) is configured in the application build.
+- On 2026-11-19 the owner reported successful Fold testing. A signed ARM64
+  release was installed and launched on the owner's SM-F976B. This report does
+  not establish individual performance measurements or the week-long reading
+  checkpoint.
+- `assembleRelease` and `checkPolicy` passed locally; the signed APKs were
+  verified with `apksigner`. Reverify the exact artifacts and commit selected
+  for publication.
+- PRF-02 to PRF-05 device measurements and the week of reading remain without
+  recorded evidence; see [M6 performance](perf/M6.md) and the [roadmap](../ROADMAP.md).
+- The release keystore is backed up outside the repository. Keep its password
+  separately and protect both; losing the key prevents ordinary in-place
+  updates for GitHub installs.
 
-## 2. Play Console
+## Before publishing on GitHub
 
-| # | Item | Notes |
-|---|---|---|
-| 1 | Developer account and app entry | Package `dev.dcesares.bifolio` |
-| 2 | Privacy policy URL | Publish `docs/PRIVACY.md` at a public URL (for example GitHub Pages once the repository is public). Contact: bifolio@dcesares.dev |
-| 3 | Data safety form | "No data collected, no data shared" (PRV-06). Matches: no INTERNET permission, no SDKs, no backup |
-| 4 | App access, ads, content rating | No login needed, no ads. Fill the content rating questionnaire |
-| 5 | Listing assets | Icon 512 px, feature graphic 1024x500, phone screenshots, foldable and tablet screenshots (spread, fold continuity), the unfold video |
-| 6 | Upload the AAB | Enroll in Play App Signing; the keystore from 1.4 is the upload key |
-| 7 | Closed test | Check the current Play rules for your account type (minimum testers and duration) before counting days |
-| 8 | Production release | Isaac presses publish |
+1. Review the intended public repository and its complete Git history for
+   secrets, personal information, licensing, and provenance. Resolve findings
+   before changing visibility. A clean scan is useful evidence, not a guarantee.
+2. Review and commit the final documentation and select the release commit.
+   Confirm CI and the appropriate release checks against that commit.
+3. Build with the release key and verify every APK with `apksigner verify
+   --print-certs`. Confirm all artifacts have the expected signing certificate
+   and version. Never commit the key or passwords. The build reads
+   `BIFOLIO_KEYSTORE`, `BIFOLIO_KEYSTORE_PASSWORD`, `BIFOLIO_KEY_ALIAS`, and
+   `BIFOLIO_KEY_PASSWORD` from the environment or untracked `local.properties`.
+4. Test installation and launch of the exact signed ARM64 artifact on the Fold.
+   A debug-signed install cannot be updated by a differently signed release;
+   uninstalling it removes its local data.
+5. Prepare release notes and SHA-256 checksums for the three ABI APKs. Review
+   the README, privacy policy, LICENSE, NOTICE, and PROVENANCE.
+6. With the owner's approval, make the repository public, tag the selected
+   commit `v1.0.0`, and publish the GitHub release with the signed APKs,
+   checksums, and notes. Confirm the public links and downloads.
 
-Build the bundle with `./gradlew :app:bundleRelease`. Per-ABI APK splits are for sideloading and local checks; Play takes the AAB.
+`arm64-v8a` serves most modern Android phones, `armeabi-v7a` 32-bit ARM, and
+`x86_64` compatible x86-64 devices and emulators. There is no universal APK.
 
-## 3. Repository
+## Later: Google Play
 
-| # | Item | Who |
-|---|---|---|
-| 1 | README, LICENSE, NOTICE, PROVENANCE present and current | agent (checked 2026-10-25) |
-| 2 | Scan history and files for secrets (keystore, passwords, `local.properties`) before going public | agent |
-| 3 | Make the repository public | Isaac |
-| 4 | Tag `v1.0.0` and attach the release notes | Isaac |
-
-## 4. Listing text (PT-BR draft)
-
-**Nome:** Bifolio
-
-**Descrição curta (até 80 caracteres):**
-Leitor de Markdown que diagrama como livro e abre duas páginas no dobrável.
-
-**Descrição completa:**
-
-Bifolio lê arquivos Markdown como se fossem um livro.
-
-O texto é diagramado com medida de linha confortável, hifenização e paginação cuidadosa, sem linhas viúvas ou órfãs. Em um celular dobrável aberto, o app mostra duas páginas lado a lado, com a lombada exatamente sobre a dobra. Ao dobrar ou desdobrar, você continua no mesmo ponto do texto.
-
-O que ele faz:
-- Leitura paginada ou em rolagem
-- Quatro temas de leitura
-- Sumário, busca e notas de rodapé em popover
-- Fórmulas matemáticas e código com destaque de sintaxe
-- Imagens locais, com acesso à pasta concedido por você
-- Acessibilidade: TalkBack, tamanho de fonte, redução de movimento e navegação por teclado
-
-Privacidade:
-- Sem permissão de Internet, sem contas, sem anúncios, sem análise de uso
-- Somente leitura: seus arquivos nunca são modificados
-- Nada sai do aparelho
-
-Código aberto sob licença Apache 2.0.
-
-**Notas da versão 1.0:**
-Primeira versão.
+A Play release needs its own readiness review: developer account and app entry,
+Play App Signing and upload-key decisions, signed AAB, listing assets, privacy
+policy URL, data safety and content-rating forms, and any applicable testing
+requirements. Check current Play requirements at that time. Distribution via
+GitHub does not require completing these steps now.

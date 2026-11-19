@@ -1,35 +1,104 @@
-# Bifolio
+<p align="center">
+  <img src="docs/design/app-icon-preview.png" alt="Bifolio app icon: an open book with a ribbon bookmark" width="160">
+</p>
 
-**Markdown, read like a book.**
+<h1 align="center">Bifolio</h1>
 
-Bifolio is a read-only Markdown reader for Android that typesets documents like a book and turns a foldable phone into a true two-page spread. A bifolio is one sheet folded once into two leaves: that is your device, and that is the spread.
+<p align="center"><strong>Markdown, read like a book.</strong></p>
 
-> Status: feature complete, in release preparation. Target: v1.0 on Google Play.
+<p align="center">
+  A quiet place for your words on Android.<br>
+  One page in your hand. A spread when your screen opens.
+</p>
 
-## What it does
+<p align="center">
+  <a href="#made-for-the-way-you-read">The reading experience</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#build-from-source">Build</a> ·
+  <a href="#privacy--license">Privacy &amp; license</a>
+</p>
 
-- Book-grade typography: measured line length, hyphenation, careful pagination with no widows or orphans.
-- Fold-aware spreads: two pages on an unfolded foldable, with the gutter placed exactly on the hinge, and a reading position that never moves when you fold or unfold.
-- Paged or scroll reading, four reading themes, table of contents, search, footnote popovers, native math and highlighted code.
-- Private by construction: no network permission, no accounts, no tracking.
-- Read-only: your files are never modified.
+<p align="center"><sub>OFFLINE &nbsp; · &nbsp; READ-ONLY &nbsp; · &nbsp; FOLD-AWARE</sub></p>
 
-## Documentation
+---
 
-| Document | Purpose |
-|---|---|
-| [SPEC.md](SPEC.md) | Product specification with requirement IDs |
-| [ROADMAP.md](ROADMAP.md) | Milestones and definitions of done |
-| [CLAUDE.md](CLAUDE.md) | Instructions for Claude Code sessions |
-| [docs/adr/](docs/adr/) | Architecture decisions |
-| [docs/design/DESIGN.md](docs/design/DESIGN.md) | Design system and motion |
-| [docs/TESTING.md](docs/TESTING.md) | Verification ladder, device matrix, test corpus |
-| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Workstation requirements |
-| [docs/PRIVACY.md](docs/PRIVACY.md) | Privacy policy |
-| [PROVENANCE.md](PROVENANCE.md) | Independent implementation statement |
+<p align="center">
+  <img src="feature/reader/src/test/screenshots/dm-05-book-paper.png" alt="Bifolio showing a two-page reading spread in the Paper theme" width="640">
+  <br>
+  <sub>Paper · a simulated foldable spread</sub>
+</p>
 
-## License
+> *A bifolio is one sheet folded into two leaves.*
 
-Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+## Made for the way you read
 
-Made by Isaac D'Césares, [dcesares.dev](https://dcesares.dev). Contact: bifolio@dcesares.dev
+**A page that feels like a page.** Read in paged or scrolling mode, with
+considered typography, hyphenation, and four themes: Paper, Sepia, Dusk, and
+Night. Adjust the type and spacing to suit your eyes.
+
+**A spread that follows your screen.** Bifolio adapts to your window and fold
+posture. On a separating book fold, the gutter follows the fold; as the layout
+changes, your place in the text comes with you.
+
+**The details stay close.** Find your way with the table of contents and search.
+Read footnotes in place, view local images, and follow documents with tables,
+syntax-highlighted code, and mathematical formulas.
+
+**Your files remain yours.** Bifolio reads the files you choose and never edits
+them. It has no Internet permission, accounts, advertising, or analytics.
+Reading positions, recent documents, and settings stay on your device.
+
+<p align="center">
+  <img src="feature/reader/src/test/screenshots/dm-05-book-night.png" alt="Bifolio showing a two-page reading spread in the Night theme" width="640">
+  <br>
+  <sub>Night · the same simulated spread, in a quieter light</sub>
+</p>
+
+## Install
+
+Bifolio requires **Android 8.0 or newer**. Download signed APKs from
+[GitHub Releases](https://github.com/idcesares/bifolio/releases).
+
+Choose the APK for your device: `arm64-v8a` for most modern Android phones,
+`armeabi-v7a` for 32-bit ARM devices, or `x86_64` for compatible emulators and
+devices. Open the downloaded APK and follow Android's installation prompts;
+you may need to allow your browser or file manager to install apps from that
+source. Future updates must be signed with the same release key.
+
+Open a Markdown file through Bifolio or Android's file picker. To load relative
+local images, grant access to their folder when prompted. You can revoke folder
+access in Settings.
+
+## Build from source
+
+Install JDK 21 and Android SDK Platform 37 and Build-Tools 36.0.0. The Gradle
+wrapper supplies Gradle:
+
+```sh
+./gradlew :app:assembleDebug
+```
+
+On Windows, use `gradlew.bat`. See the [development environment](docs/ENVIRONMENT.md)
+and [testing guide](docs/TESTING.md) for setup and verification. Release
+builds require a signing key; the [release checklist](docs/RELEASE.md) describes
+the process.
+
+## Under the cover
+
+Bifolio is a native, offline Android app. Its document model, Markdown parser,
+and layout engine are separate from the Android reading surface. Reading
+position is stored as a text anchor so it can survive changes in pagination.
+
+The [specification](SPEC.md) describes the behavior; the [design system](docs/design/DESIGN.md)
+sets the visual language. Architecture decisions live in [docs/adr](docs/adr/),
+and the [roadmap](ROADMAP.md) records milestones and their acceptance criteria.
+
+## Privacy & license
+
+Read the [privacy policy](docs/PRIVACY.md). Bifolio is licensed under the
+[Apache License 2.0](LICENSE); third-party notices are in [NOTICE](NOTICE),
+and its independent implementation is documented in [PROVENANCE.md](PROVENANCE.md).
+
+---
+
+Made by Isaac D'Césares · [dcesares.dev](https://dcesares.dev) · [Contact](mailto:bifolio@dcesares.dev)
