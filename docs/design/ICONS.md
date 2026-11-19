@@ -7,7 +7,7 @@ Path data in `BifolioIcons` is copied from the official SVGs, unmodified. Stroke
 
 Icons in use: book-open, folder-open, trash, info, circle-alert, chevron-right, chevron-down, chevron-left, chevrons-up-down, undo-2, list, type, search, x, arrow-right, external-link, copy, share-2.
 
-The ISC notice must appear on the licenses screen (M6).
+The ISC notice appears on the licenses screen (About, UI-11).
 
 ## ISC License text
 

@@ -299,7 +299,7 @@ All values in px at the current density; `W` is the usable window width after in
 | PRV-03 | No WebView class may be referenced by app code |
 | PRV-04 | Only URIs the user granted are read. Folder grants are stored and listed in settings with a revoke action |
 | PRV-05 | `android:allowBackup="false"`: nothing leaves the device through Android backup or device transfer (owner decision 2026-10-23, stricter than the earlier "preferences and recents only") |
-| PRV-06 | Play Data safety: "No data collected, no data shared". Privacy policy text lives in `docs/PRIVACY.md` |
+| PRV-06 | Data statement: "No data collected, no data shared". Any store listing form must say the same. Privacy policy text lives in `docs/PRIVACY.md` |
 
 ---
 

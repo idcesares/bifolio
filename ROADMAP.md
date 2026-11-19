@@ -11,10 +11,11 @@ SCO and OUT IDs are summaries; they are satisfied by the detailed IDs below. Eac
 | M4 | Design and motion | TYP-01 to TYP-10, UI-02 to UI-12, MOT-01 to MOT-09, OPN-03, OPN-04 | Tokens frozen in DESIGN.md; fonts and icons licensed and recorded; all four themes pass contrast checks in screenshot tests; reduced-motion path tested; app icon final | Isaac approves motion and typography on the device |
 | M5 | Rich content | SYN-08 to SYN-14, NAV-07 to NAV-09, UI-07 to UI-09, UI-14, OPN-02 | Corpus C-14 to C-19 and C-21 paginate per spec; math spike result recorded in ADR-0006; TOC, search and footnotes work in both modes | none |
 | M6 | Performance and accessibility | PRF-01 to PRF-07, A11Y-01 to A11Y-06 | Every PRF budget measured and passing on the reference phone and the foldable; TalkBack continuous reading works; 200% font scale screenshots pass; R8 full mode and resource shrinking on release | Isaac uses the app for a week of real reading |
-| M7 | Release | PRV-04 to PRV-06, UI-11, SCO-11 | Signed with the upload key; Play listing with foldable screenshots and the unfold video; Data safety form "no data collected"; privacy policy published; closed test completed; repository made public with README, LICENSE, NOTICE, PROVENANCE | Isaac presses publish |
+| M7 | Release (GitHub) | PRV-04 to PRV-06, UI-11, SCO-11 | CI green on the release commit; privacy policy in `docs/PRIVACY.md`; README, LICENSE, NOTICE, PROVENANCE current; history scanned for secrets; owner sign-off on device checks recorded in `docs/perf/M6.md`; repository made public and `v1.0.0` tagged with release notes and signed APKs | Isaac makes the repository public and tags |
 
 ## After v1.0 (not scheduled)
 
+- Store release: Play Console entry, signed AAB, listing assets and the unfold video, Data safety form, closed test. The checklist is kept in `docs/RELEASE.md`, section "If the app is ever published on a store".
 - v1.1: opt-in remote images (new ADR), bookmarks, pt-BR translation.
 - v1.2: tabletop control deck refinements, reading statistics.
 - v2: offline Mermaid rendering, multilingual UI, library folders.

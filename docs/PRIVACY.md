@@ -1,6 +1,6 @@
 # Bifolio Privacy Policy
 
-Effective: on first public release
+Effective: from version 1.0.0
 
 Bifolio is a reader for Markdown files on your device.
 

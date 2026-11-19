@@ -105,7 +105,7 @@ Chrome exits use the same spring with higher stiffness so leaving is faster than
 
 ## 7. Signature moments
 
-1. **The unfold.** Reader on the cover screen, unfold: the single column flows into a spread, and the line being read glides to its new place and glows briefly. This is the Play listing video.
+1. **The unfold.** Reader on the cover screen, unfold: the single column flows into a spread, and the line being read glides to its new place and glows briefly. This is the demo video.
 2. **The book posture.** Half-fold the device: the gutter widens slightly, the pages settle to each side of the hinge like a book opening.
 3. **The return chip.** After a jump, a small chip offers the way back; it follows the reader through folds.
 

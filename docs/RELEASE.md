@@ -11,6 +11,8 @@ not by itself close those milestones.
   release was installed and launched on the owner's SM-F976B. This report does
   not establish individual performance measurements or the week-long reading
   checkpoint.
+- The owner also accepted the device checks on 2026-11-01 without recorded
+  performance numbers; see [M6 performance](perf/M6.md).
 - `assembleRelease` and `checkPolicy` passed locally; the signed APKs were
   verified with `apksigner`. Reverify the exact artifacts and commit selected
   for publication.
@@ -26,7 +28,7 @@ not by itself close those milestones.
    secrets, personal information, licensing, and provenance. Resolve findings
    before changing visibility. A clean scan is useful evidence, not a guarantee.
 2. Review and commit the final documentation and select the release commit.
-   Confirm CI and the appropriate release checks against that commit.
+   Confirm CI and run `verifyRoborazziDebug` against that commit.
 3. Build with the release key and verify every APK with `apksigner verify
    --print-certs`. Confirm all artifacts have the expected signing certificate
    and version. Never commit the key or passwords. The build reads

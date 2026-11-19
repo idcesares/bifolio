@@ -12,7 +12,7 @@ Each ADR records one decision, its context and its consequences. ADRs are immuta
 | [0006](0006-math-renderer-adapter.md) | Math rendering behind an adapter | Accepted, huarangmeng/latex 1.6.1 (OPN-02) |
 | [0007](0007-code-highlighting-adapter.md) | Code highlighting behind an adapter | Accepted |
 | [0008](0008-no-network-v1.md) | No network access in v1 | Accepted |
-| [0009](0009-fonts-and-icons.md) | Bundled OFL fonts and Lucide icons | Accepted, licenses pending OPN-03, OPN-04 |
+| [0009](0009-fonts-and-icons.md) | Bundled OFL fonts and Lucide icons | Accepted, licenses recorded (OPN-03, OPN-04) |
 | [0010](0010-window-and-fold-detection.md) | Layout from window metrics and WindowManager folds | Accepted |
 | [0011](0011-testing-strategy.md) | Testing strategy and verification ladder | Accepted |
 | [0012](0012-android-runtime-dependencies.md) | Android runtime and UI test dependencies for M1 | Accepted |
